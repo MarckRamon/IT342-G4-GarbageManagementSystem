@@ -1,1 +1,1 @@
-# IT342-G4-GMS
+# IT342-G4-GarbageManagementSystem
