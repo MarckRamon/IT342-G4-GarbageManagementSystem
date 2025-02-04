@@ -16,5 +16,5 @@ Member2
 Name: Mykel Seth C. Gella
 Course & Year: BSIT-4
 
-Hello, I am Mykel Seth C. Gella, I play video games. 
+Hello, I am Mykel Seth C. Gella, I'm a 30 years old and currently a 3rd Year BSIT Student from Cebu's Institute of Technology - University. My hobbies are playing video games, petting my pets, listening to music, watching tv-shows and etc. 
 
