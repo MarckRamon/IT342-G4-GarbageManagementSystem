@@ -1,0 +1,2 @@
+INDEX VERSION 1.134+C:\Users\Mykel\Desktop\IT342-G4-GarbageManagementSystem\backend\.metadata\.plugins\org.eclipse.jdt.core
+1391942390.index
