@@ -18,3 +18,8 @@ Course & Year: BSIT-4
 
 Hello, I am Mykel Seth C. Gella, I play video games. 
 
+Member3
+Name: John Wayne M. Largo
+Course & Year: BSIT-4
+
+Hello I like sleeping
