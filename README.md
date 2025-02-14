@@ -39,6 +39,7 @@ The Garbage Management System is a web and mobile application designed to optimi
 - **Diagram:** [Diagram Link Here](#)  
 
 
+
 ## Developers Profile
 
 | Profile                                                                 | GitHub                                                                                          |
