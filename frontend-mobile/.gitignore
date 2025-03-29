@@ -13,3 +13,22 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Additional entries
+.idea/
+*.log
+*.keystore
+*.bak
+*.swp
+*.tmp
+*.orig
+*.class
+*.jar
+*.war
+.settings/
+.gradle/
+build/
+bin/
+gen/
+out/
+tmp/
