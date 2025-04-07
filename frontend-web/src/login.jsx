@@ -109,10 +109,7 @@ function Login() {
     }
     
     // Check if the password meets validation requirements
-    if (!isPasswordValid()) {
-      setError('Password must be at least 11 characters');
-      return;
-    }
+    
   
     // Clear any previous errors and set loading state
     setError('');
@@ -150,7 +147,7 @@ function Login() {
         // Redirect to dashboard
         setTimeout(() => {
           window.location.href = '/dashboard';
-        }, 50); // Changed to 5000ms for a more reasonable delay
+        }, 5000); // Changed to 5000ms for a more reasonable delay
       } else {
         // Handle unusual success response without expected data
         throw new Error('Invalid response format');
@@ -623,7 +620,7 @@ body {
             <button
               type="submit"
               className="login-button"
-              disabled={isLoading || !email || password.length < 8}
+              disabled={isLoading || !email || password.length < 3}
             >
               <div className="button-content">
                 {isLoading ? <CircularProgress size={24} color="inherit" /> : 'Login'}
