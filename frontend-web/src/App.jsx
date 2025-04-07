@@ -6,9 +6,9 @@ import './App.css'
 import Login from './login.jsx'
 import Signup from './signup.jsx'
 import ForgotPassword from './forgotpw.jsx';
-import VermigoDashboard from './dashboard.jsx';
-import VermigoSchedule from './Schedule.jsx';
-import VermigoComplaints from './complaints.jsx';
+import VermigoDashboard from './page/dashboard.jsx';
+import VermigoSchedule from './page/Schedule.jsx';
+import VermigoComplaints from './page/complaints.jsx';
 function App() {
   return (
     <BrowserRouter>
@@ -26,19 +26,6 @@ function App() {
   );
 }
 
-
-function Dashboard() {
-  return (
-    <div style={{ 
-      padding: '2rem', 
-      textAlign: 'center',
-      fontFamily: 'Poppins, sans-serif' 
-    }}>
-      <h1>Dashboard</h1>
-      <p>Welcome to your dashboard!</p>
-    </div>
-  );
-}
 
 export default App;
 
