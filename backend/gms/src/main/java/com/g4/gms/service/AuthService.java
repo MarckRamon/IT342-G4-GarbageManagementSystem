@@ -8,6 +8,7 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseAuthException;
 import com.google.firebase.auth.UserRecord;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
@@ -22,6 +23,9 @@ public class AuthService {
     
     @Autowired
     private UserService userService;
+    
+    @Autowired
+    private BCryptPasswordEncoder passwordEncoder;
 
     public AuthResponse register(RegisterRequest request) {
         try {
@@ -50,7 +54,8 @@ public class AuthService {
             user.setLastName(request.getLastName());
             user.setUsername(request.getUsername());
             user.setRole(request.getRole() != null ? request.getRole() : "USER");
-            user.setPassword(""); // We don't store the actual password in Firestore
+            // Store encrypted password in Firestore
+            user.setPassword(passwordEncoder.encode(request.getPassword()));
             user.setLocation(request.getLocation());
             user.setPhoneNumber(request.getPhoneNumber());
 
@@ -70,6 +75,11 @@ public class AuthService {
             User user = userService.getUserByEmail(request.getEmail());
             if (user == null) {
                 return new AuthResponse("User not found with email: " + request.getEmail());
+            }
+            
+            // Verify password using BCrypt
+            if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+                return new AuthResponse("Invalid password");
             }
             
             // Try to get the user from Firebase Auth
