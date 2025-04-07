@@ -95,7 +95,45 @@ function VermigoDashboard() {
         }
         
           /* for popup modal*/
+    @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
 
+        @keyframes fadeOut {
+            from {
+                opacity: 1;
+                transform: translateY(0);
+            }
+            to {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+        }
+
+        .profile-popup {
+            /* Existing styles... */
+            animation: fadeIn 0.3s forwards; /* Apply fadeIn animation */
+        }
+
+        .profile-popup.fade-out {
+            animation: fadeOut 0.3s forwards; /* Apply fadeOut animation */
+        }
+
+        .modal-container {
+            /* Existing styles... */
+            animation: fadeIn 0.3s forwards; /* Apply fadeIn animation */
+        }
+
+        .modal-container.fade-out {
+            animation: fadeOut 0.3s forwards; /* Apply fadeOut animation */
+        }
          .profile-popup {
   position: absolute; /* Position relative to the parent */
   bottom: 70px; /* Position above the user info */
@@ -650,7 +688,7 @@ function VermigoDashboard() {
             {/* Sidebar */}
             <div className="sidebar">
                 <div className="logo-container">
-                    <div className="logo">Vermigo</div>
+                    <div className="logo">Vermigo Admin</div>
                 </div>
                 <div className="sidebar-menu">
                     <ul>

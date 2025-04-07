@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { TextField, InputAdornment, IconButton, CircularProgress, Snackbar, Alert } from '@mui/material';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
+import axios from 'axios';
 
 function Login() {
   const [email, setEmail] = useState('');
@@ -13,6 +14,171 @@ function Login() {
   const [alertMessage, setAlertMessage] = useState('');
   const [alertSeverity, setAlertSeverity] = useState('error');
 
+  // Basic password validation - can be expanded further
+  const isPasswordValid = () => {
+    return password.length >= 8; // Changed from 11 to 8 characters minimum
+  };
+
+
+  /*
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    
+    // Check if form fields are filled
+    if (!email || !password) {
+      setError('Email and password are required');
+      return;
+    }
+    
+    // Check if the password meets validation requirements
+    if (!isPasswordValid()) {
+      setError('Password must be at least 8 characters');
+      return;
+    }
+  
+    // Clear any previous errors and set loading state
+    setError('');
+    setIsLoading(true);
+  
+    // Attempt login with backend
+    try {
+      const response = await axios.post('http://localhost:8080/api/auth/login', { 
+        email, 
+        password 
+      });
+      console.log('Login response:', response.data);
+      console.log('Login attempt:', { email, password });
+    
+   
+
+      // If login succeeds
+      if (response.data && response.data.success) {
+        // Store authentication token or user data
+        const token = response.data.token || '';
+        const userData = response.data.user || {};
+        
+        // Handle "Remember me" functionality
+        if (rememberMe) {
+          localStorage.setItem('authToken', token);
+          localStorage.setItem('userData', JSON.stringify(userData));
+        } else {
+          sessionStorage.setItem('authToken', token);
+          sessionStorage.setItem('userData', JSON.stringify(userData));
+        }
+        
+        // Show success message
+        setAlertMessage('Login successful! Redirecting to dashboard...');
+        setAlertSeverity('success');
+        setShowAlert(true);
+        
+        // Redirect to dashboard
+        setTimeout(() => {
+          window.location.href = '/dashboard';
+        }, 50000);
+      } else {
+        // Handle unusual success response without expected data
+        throw new Error('Invalid response format');
+      }
+    } catch (err) {
+      console.error('Login error:', err);
+      
+      // Handle specific error responses from server
+      if (err.response && err.response.data) {
+        // Use server's error message if available
+        setError(err.response.data.message || 'Invalid credentials');
+      } else {
+        // Generic error message
+        setError('Unable to log in. Please check your credentials and try again.');
+      }
+      
+      setAlertMessage(error || 'Login failed');
+      setAlertSeverity('error');
+      setShowAlert(true);
+    } finally {
+      setIsLoading(false);
+    }
+  };*/
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    
+    // Check if form fields are filled
+    if (!email || !password) {
+      setError('Email and password are required');
+      return;
+    }
+    
+    // Check if the password meets validation requirements
+    if (!isPasswordValid()) {
+      setError('Password must be at least 11 characters');
+      return;
+    }
+  
+    // Clear any previous errors and set loading state
+    setError('');
+    setIsLoading(true);
+  
+    // Attempt login with backend
+    try {
+      const response = await axios.post('http://localhost:8080/api/auth/login', { 
+        email, 
+        password 
+      });
+      console.log('Login response:', response.data);
+      console.log('Login attempt:', { email, password });
+  
+      // If login succeeds
+      if (response.data && response.data.success) {
+        // Store authentication token or user data
+        const token = response.data.token || '';
+        const userData = response.data.user || {};
+        
+        // Handle "Remember me" functionality
+        if (rememberMe) {
+          localStorage.setItem('authToken', token);
+          localStorage.setItem('userData', JSON.stringify(userData));
+        } else {
+          sessionStorage.setItem('authToken', token);
+          sessionStorage.setItem('userData', JSON.stringify(userData));
+        }
+        
+        // Show success message
+        setAlertMessage('Login successful! Redirecting to dashboard...');
+        setAlertSeverity('success');
+        setShowAlert(true);
+        
+        // Redirect to dashboard
+        setTimeout(() => {
+          window.location.href = '/dashboard';
+        }, 50); // Changed to 5000ms for a more reasonable delay
+      } else {
+        // Handle unusual success response without expected data
+        throw new Error('Invalid response format');
+      }
+    } catch (err) {
+      console.error('Login error:', err);
+      
+      // Handle specific error responses from server
+      if (err.response && err.response.data) {
+        // Use server's error message if available
+        setError(err.response.data.message || 'Invalid credentials');
+      } else {
+        // Generic error message
+        setError('Unable to log in. Please check your credentials and try again.');
+      }
+      
+      setAlertMessage(error || 'Login failed'); 
+      setAlertSeverity('error');
+      setShowAlert(true);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+
+  //debugging
+  
+  
   // Animation effect on component mount
   useEffect(() => {
     document.querySelector('.login-card').classList.add('animate-in');
@@ -24,46 +190,10 @@ function Login() {
   const handlePasswordChange = (e) => setPassword(e.target.value);
   const handleRememberMeChange = () => setRememberMe(!rememberMe);
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    setError('');
-    setIsLoading(true);
-    
-    // Simulate API call delay
-    setTimeout(() => {
-      // Dummy login account check
-      if (email === 'admin@example.com' && password === 'password123') {
-        console.log('Login successful:', { email, password });
-        // Store login state if "Remember me" is checked
-        if (rememberMe) {
-          localStorage.setItem('isLoggedIn', 'true');
-          localStorage.setItem('userEmail', email);
-        } else {
-          sessionStorage.setItem('isLoggedIn', 'true');
-          sessionStorage.setItem('userEmail', email);
-        }
-        
-        setAlertMessage('Login successful! Redirecting to dashboard...');
-        setAlertSeverity('success');
-        setShowAlert(true);
-        
-        // Redirect to dashboard after a short delay
-        setTimeout(() => {
-          window.location.href = '/dashboard';
-        }, 1500);
-      } else {
-        setError('Invalid email or password');
-        setAlertMessage('Invalid email or password');
-        setAlertSeverity('error');
-        setShowAlert(true);
-        setIsLoading(false);
-      }
-    }, 1000);
-  };
-
   const handleGoogleLogin = () => {
-    // Redirect to signup page instead of Google login
-    window.location.href = '/signup';
+    // Redirect to Google OAuth endpoint or handle via library
+    // This is just a placeholder - implement actual Google OAuth logic
+    window.location.href = '/api/auth/google';
   };
 
   return (
@@ -102,7 +232,6 @@ body {
   font-family: 'Poppins', sans-serif;
   background-color: var(--background-color);
   background-image: url('/wallpaper.png');
-  //added
   background-size: cover;
   color: var(--text-dark);
   line-height: 1.6;
@@ -434,10 +563,9 @@ body {
       <div className="login-card">
         <div className="login-form-container">
           <h1 className="brand-name">Vermigo</h1>
-          
           <h2 className="login-title">Login</h2>
           <p className="login-subtitle">Please enter your email and password</p>
-          
+
           <form onSubmit={handleSubmit}>
             <div className="form-group">
               <TextField
@@ -446,9 +574,10 @@ body {
                 fullWidth
                 value={email}
                 onChange={handleEmailChange}
-                error={error !== ''}
-                className={error !== '' ? 'input-shake' : ''}
-                placeholder="admin@example.com"
+                error={!!error}
+                placeholder="Email"
+                required
+                type="email"
               />
             </div>
 
@@ -460,9 +589,9 @@ body {
                 fullWidth
                 value={password}
                 onChange={handlePasswordChange}
-                error={error !== ''}
-                className={error !== '' ? 'input-shake' : ''}
-                placeholder="password123"
+                error={!!error}
+                placeholder="Password"
+                required
                 InputProps={{
                   endAdornment: (
                     <InputAdornment position="end">
@@ -475,68 +604,67 @@ body {
               />
               {error && <p className="error-text">{error}</p>}
             </div>
-            
+
             <div className="checkbox-container">
               <div className="checkbox-group">
-                <input 
-                  type="checkbox" 
-                  id="remember-me" 
+                <input
+                  type="checkbox"
+                  id="remember-me"
                   checked={rememberMe}
                   onChange={handleRememberMeChange}
                 />
                 <label htmlFor="remember-me">Remember me</label>
               </div>
-              <a href="/forgot-password" className="forgot-password-link">Forgot Password?</a>
+              <a href="/forgot-password" className="forgot-password-link">
+                Forgot Password?
+              </a>
             </div>
-            
-            <button 
-              type="submit" 
-              className="login-button" 
-              disabled={isLoading}
+
+            <button
+              type="submit"
+              className="login-button"
+              disabled={isLoading || !email || password.length < 8}
             >
               <div className="button-content">
                 {isLoading ? <CircularProgress size={24} color="inherit" /> : 'Login'}
               </div>
             </button>
           </form>
-          
+
           <p className="signup-prompt">
             Don't have an account? <a href="/signup">Sign up</a>
           </p>
-          
+
           <div className="or-divider">
             <span>or continue with</span>
           </div>
-          
-          <button 
-            className="google-login-button" 
-            onClick={handleGoogleLogin}
-          >
+
+          <button className="google-login-button" onClick={handleGoogleLogin} disabled={isLoading}>
             <img src="/google-icon.png" alt="Google" className="google-icon" />
             Sign in with Google
           </button>
         </div>
-        
+
         <div className="login-image-container">
           <img src="/loginimage2.png" alt="Authentication" className="auth-image" />
         </div>
-      </div>
-      
-      {/* Notification Alert */}
-      <Snackbar 
-        open={showAlert} 
-        autoHideDuration={6000} 
-        onClose={() => setShowAlert(false)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert 
-          onClose={() => setShowAlert(false)} 
-          severity={alertSeverity} 
-          sx={{ width: '100%' }}
+
+        {/* Notification Alert */}
+        <Snackbar
+          open={showAlert}
+          autoHideDuration={6000}
+          onClose={() => setShowAlert(false)}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
         >
-          {alertMessage}
-        </Alert>
-      </Snackbar>
+          <Alert
+            onClose={() => setShowAlert(false)}
+            severity={alertSeverity}
+            sx={{ width: '100%' }}
+          >
+            {alertMessage}
+          </Alert>
+        </Snackbar>
+      </div>
     </div>
   );
 }

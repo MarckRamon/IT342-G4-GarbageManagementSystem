@@ -1,20 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { TextField, InputAdornment, IconButton, CircularProgress } from '@mui/material';
 import { Visibility, VisibilityOff, CheckCircle, Cancel } from '@mui/icons-material';
+import axios from 'axios';
+import { useNavigate } from 'react-router-dom'; // Import for navigation
 
 function Signup() {
+  const navigate = useNavigate(); // Hook for navigation
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
-  const [emailError, setEmailError] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [role] = useState('USER'); // Default role
+  const [location, setLocation] = useState('');
+  const [error, setError] = useState('');
+  const [emailError, setEmailError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
-  
+
   // Password validation states
   const [passwordValidation, setPasswordValidation] = useState({
     length: false,
@@ -27,6 +33,15 @@ function Signup() {
   useEffect(() => {
     document.querySelector('.signup-card').classList.add('animate-in');
   }, []);
+
+  const handleLocationChange = (e) => {
+    let newLocation = e.target.value;
+    
+    // Optional: Check if newLocation is a URL and handle it accordingly
+    if (newLocation && !newLocation.startsWith('http')) {
+      setLocation(newLocation);  // Only set if it's not an invalid URL
+    }
+  };
 
   // Validate email format
   const validateEmail = (email) => {
@@ -71,44 +86,82 @@ function Signup() {
     return Object.values(passwordValidation).every(value => value === true);
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    
-    // Enhanced validation
-    if (!validateEmail(email)) {
-      setError('Please enter a valid email address');
+  const handleSubmit = async (event) => {
+    event.preventDefault(); // Prevent the page reload
+  
+    // Check for form validation before submission
+    if (!isPasswordValid() || password !== confirmPassword || !validateEmail(email)) {
+      setError('Please fix the form errors before submitting.');
       return;
     }
-    
-    if (!isPasswordValid()) {
-      setError('Please ensure your password meets all requirements');
-      return;
-    }
-    
-    if (password !== confirmPassword) {
-      setError('Passwords do not match');
-      return;
-    }
-    
-    setError('');
+  
+    // Create registration request object based on backend expectations
+    const registerRequest = {
+      firstName,
+      lastName,
+      email,
+      phoneNumber,
+      username,
+      location,
+      password,
+      role // Include role from state
+    };
+
     setIsLoading(true);
+    setError('');
     
-    // Simulate API call delay
-    setTimeout(() => {
-      console.log('Signup submitted:', { firstName, lastName, email, phoneNumber });
-      // Redirect to login page
-      window.location.href = '/login';
-    }, 1500);
+    try {
+      // Call the backend registration endpoint
+      const response = await axios.post('http://localhost:8080/api/auth/register', registerRequest);
+      
+      if (response.data && response.data.token) {
+        // Store the authentication token in localStorage
+        localStorage.setItem('authToken', response.data.token);
+        localStorage.setItem('userId', response.data.userId);
+        localStorage.setItem('userEmail', response.data.email);
+        localStorage.setItem('userRole', response.data.role);
+        
+        // Show success message and redirect to login
+        alert('Registration successful! Please login with your credentials.');
+        navigate('/login');
+      } else if (response.data && response.data.error) {
+        // Handle specific error from backend
+        setError(response.data.error);
+      } else {
+        setError('Registration failed. Please try again.');
+      }
+    } catch (error) {
+      // Handle error responses
+      if (error.response && error.response.data) {
+        setError(error.response.data.error || 'Registration failed: ' + error.response.data);
+      } else {
+        setError('Registration failed: ' + (error.message || 'Unknown error'));
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleGoogleSignup = () => {
+  const handleGoogleSignup = async () => {
     setIsLoading(true);
-    
-    // Simulate Google signup process
-    setTimeout(() => {
-      console.log('Google signup attempted');
-      window.location.href = '/dashboard';
-    }, 1500);
+    try {
+      // This is a placeholder for Firebase Google authentication
+      // You'll need to implement this based on your Firebase configuration
+      
+      // Example Google auth flow:
+      // 1. Import Firebase auth: import { getAuth, signInWithPopup, GoogleAuthProvider } from "firebase/auth";
+      // 2. Initialize provider: const provider = new GoogleAuthProvider();
+      // 3. Authenticate: const result = await signInWithPopup(getAuth(), provider);
+      // 4. Get the Firebase token: const token = await result.user.getIdToken();
+      // 5. Send token to backend for verification
+
+      // For now, show an alert that this feature is not yet implemented
+      alert('Google signup is not yet implemented');
+    } catch (error) {
+      setError('Google signup failed: ' + error.message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -457,13 +510,14 @@ function Signup() {
         <div className="signup-image-container">
           <img src="/signinimage.png" alt="Signup Illustration" className="hands-image" />
         </div>
-        
+
         <div className="signup-form-container">
-          <h1 className="brand-name">Vermigo</h1>
-          
+          <h1 className="brand-name">Vermigone</h1>
           <h2 className="signup-title">Sign up</h2>
           <p className="signup-subtitle">Let's get you all set up so you can access your personal account.</p>
-          
+
+          {error && <div className="error-alert">{error}</div>}
+
           <form onSubmit={handleSubmit}>
             <div className="form-row">
               <div className="form-group">
@@ -473,7 +527,7 @@ function Signup() {
                   fullWidth
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
-                  placeholder="Name"
+                  placeholder="First Name"
                   required
                 />
               </div>
@@ -485,7 +539,7 @@ function Signup() {
                   fullWidth
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
-                  placeholder="Name"
+                  placeholder="Last Name"
                   required
                 />
               </div>
@@ -514,11 +568,37 @@ function Signup() {
                   fullWidth
                   value={phoneNumber}
                   onChange={(e) => setPhoneNumber(e.target.value)}
-                  placeholder="Number "
+                  placeholder="Phone Number"
                 />
               </div>
             </div>
             
+            <div className="form-group">
+              <TextField
+                label="Username"
+                variant="outlined"
+                fullWidth
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Username"
+                required
+              />
+            </div>
+
+            <div className="form-group">
+              <TextField
+                label="Location"
+                variant="outlined"
+                fullWidth
+                value={location}
+                onChange={handleLocationChange}
+                placeholder="Enter your location"
+                required
+                name="location"
+                autoComplete="off"
+              />
+            </div>
+
             <div className="form-group">
               <TextField
                 label="Password"
@@ -577,7 +657,7 @@ function Signup() {
                 </div>
               </div>
             </div>
-            
+
             <div className="form-group">
               <TextField
                 label="Confirm Password"
@@ -599,7 +679,6 @@ function Signup() {
                   ),
                 }}
               />
-              {error && <p className="error-text">{error}</p>}
             </div>
             
             <button 
@@ -610,17 +689,17 @@ function Signup() {
               {isLoading ? <CircularProgress size={24} color="inherit" /> : 'Create account'}
             </button>
           </form>
-          
+
           <p className="login-prompt">
             Already have an account? <a href="/login">Login</a>
           </p>
-          
+
           <div className="or-divider">
             <span>or sign up with</span>
           </div>
-          
-          <button 
-            className="google-signup-button" 
+
+          <button
+            className="google-signup-button"
             onClick={handleGoogleSignup}
             disabled={isLoading}
           >
@@ -632,5 +711,6 @@ function Signup() {
     </div>
   );
 }
+
 
 export default Signup;
