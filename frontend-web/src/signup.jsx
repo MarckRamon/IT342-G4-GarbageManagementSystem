@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { TextField, InputAdornment, IconButton, CircularProgress } from '@mui/material';
-import { Visibility, VisibilityOff } from '@mui/icons-material';
+import { Visibility, VisibilityOff, CheckCircle, Cancel } from '@mui/icons-material';
 
 function Signup() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
+  const [emailError, setEmailError] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -13,19 +14,77 @@ function Signup() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  
+  // Password validation states
+  const [passwordValidation, setPasswordValidation] = useState({
+    length: false,
+    capital: false,
+    number: false,
+    symbol: false
+  });
 
   // Animation effect on component mount
   useEffect(() => {
     document.querySelector('.signup-card').classList.add('animate-in');
   }, []);
 
+  // Validate email format
+  const validateEmail = (email) => {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(email);
+  };
+
+  // Handle email change with validation
+  const handleEmailChange = (e) => {
+    const newEmail = e.target.value;
+    setEmail(newEmail);
+    
+    if (newEmail && !validateEmail(newEmail)) {
+      setEmailError('Please enter a valid email address');
+    } else {
+      setEmailError('');
+    }
+  };
+
+  // Check password strength and update validation state
+  const checkPassword = (password) => {
+    setPasswordValidation({
+      length: password.length >= 11,
+      capital: /[A-Z]/.test(password),
+      number: /[0-9]/.test(password),
+      symbol: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)
+    });
+  };
+
+  // Handle password change with validation
+  const handlePasswordChange = (e) => {
+    const newPassword = e.target.value;
+    setPassword(newPassword);
+    checkPassword(newPassword);
+  };
+
   const handleShowPassword = () => setShowPassword((show) => !show);
   const handleShowConfirmPassword = () => setShowConfirmPassword((show) => !show);
+
+  // Check if all password requirements are met
+  const isPasswordValid = () => {
+    return Object.values(passwordValidation).every(value => value === true);
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
     
-    // Basic validation
+    // Enhanced validation
+    if (!validateEmail(email)) {
+      setError('Please enter a valid email address');
+      return;
+    }
+    
+    if (!isPasswordValid()) {
+      setError('Please ensure your password meets all requirements');
+      return;
+    }
+    
     if (password !== confirmPassword) {
       setError('Passwords do not match');
       return;
@@ -60,15 +119,16 @@ function Signup() {
       @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
 
       :root {
-        --primary-color: #6366f1;
-        --primary-hover: #4f46e5;
+        --primary-color: #5da646;
+        --primary-hover: #40752f;
         --primary-light: #4f46e5;
         --text-dark: #1e293b;
         --text-light: #64748b;
-        --background-color: #f8fafc;
-        --card-background: #ffffff;
+        --background-color: rgba(248, 250, 252, 0.8); /* 80% opacity */
+        --card-background: rgba(248, 250, 252, 0.85); /* 85s% opacity */  
         --border-color: #e2e8f0;
         --error-color: #ef4444;
+        --success-color: #22c55e;
       }
 
       * {
@@ -80,6 +140,7 @@ function Signup() {
       body {
         font-family: 'Poppins', sans-serif;
         background-color: var(--background-color);
+        background-image: url('/wallpaper.png');
         color: var(--text-dark);
         line-height: 1.6;
       }
@@ -156,7 +217,7 @@ function Signup() {
 
       .signup-image-container {
         flex: 1;
-        background-color: #f1f5f9;
+     background-color: rgba(241, 245, 249, 0.85); /* 85% opaque */
         display: flex;
         justify-content: center;
         align-items: center;
@@ -266,7 +327,7 @@ function Signup() {
       }
 
       .signup-button:disabled {
-        background-color: #d8b4fe;
+        background-color: #90eb73;
         cursor: not-allowed;
       }
 
@@ -342,6 +403,35 @@ function Signup() {
         margin-top: 0.5rem;
       }
 
+      /* Password Requirements */
+      .password-requirements {
+        margin-top: 10px;
+        font-size: 0.8rem;
+      }
+
+      .requirement-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 4px;
+      }
+
+      .requirement-icon {
+        margin-right: 8px;
+        font-size: 1rem;
+      }
+
+      .requirement-valid {
+        color: var(--success-color);
+      }
+
+      .requirement-invalid {
+        color: var(--error-color);
+      }
+
+      .requirement-text {
+        color: var(--text-light);
+      }
+
       /* Responsive styles */
       @media (max-width: 768px) {
         .signup-card {
@@ -383,7 +473,7 @@ function Signup() {
                   fullWidth
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
-                  placeholder="James"
+                  placeholder="Name"
                   required
                 />
               </div>
@@ -395,7 +485,7 @@ function Signup() {
                   fullWidth
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
-                  placeholder="Peterson"
+                  placeholder="Name"
                   required
                 />
               </div>
@@ -409,9 +499,11 @@ function Signup() {
                   fullWidth
                   type="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="james.peterson@email.com"
+                  onChange={handleEmailChange}
+                  placeholder="Email"
                   required
+                  error={!!emailError}
+                  helperText={emailError}
                 />
               </div>
               
@@ -422,7 +514,7 @@ function Signup() {
                   fullWidth
                   value={phoneNumber}
                   onChange={(e) => setPhoneNumber(e.target.value)}
-                  placeholder="123456789"
+                  placeholder="Number "
                 />
               </div>
             </div>
@@ -434,7 +526,7 @@ function Signup() {
                 variant="outlined"
                 fullWidth
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={handlePasswordChange}
                 required
                 InputProps={{
                   endAdornment: (
@@ -446,6 +538,44 @@ function Signup() {
                   ),
                 }}
               />
+              <div className="password-requirements">
+                <div className="requirement-item">
+                  <span className="requirement-icon">
+                    {passwordValidation.length ? 
+                      <CheckCircle fontSize="small" className="requirement-valid" /> : 
+                      <Cancel fontSize="small" className="requirement-invalid" />
+                    }
+                  </span>
+                  <span className="requirement-text">At least 11 characters</span>
+                </div>
+                <div className="requirement-item">
+                  <span className="requirement-icon">
+                    {passwordValidation.capital ? 
+                      <CheckCircle fontSize="small" className="requirement-valid" /> : 
+                      <Cancel fontSize="small" className="requirement-invalid" />
+                    }
+                  </span>
+                  <span className="requirement-text">At least one capital letter</span>
+                </div>
+                <div className="requirement-item">
+                  <span className="requirement-icon">
+                    {passwordValidation.number ? 
+                      <CheckCircle fontSize="small" className="requirement-valid" /> : 
+                      <Cancel fontSize="small" className="requirement-invalid" />
+                    }
+                  </span>
+                  <span className="requirement-text">At least one number</span>
+                </div>
+                <div className="requirement-item">
+                  <span className="requirement-icon">
+                    {passwordValidation.symbol ? 
+                      <CheckCircle fontSize="small" className="requirement-valid" /> : 
+                      <Cancel fontSize="small" className="requirement-invalid" />
+                    }
+                  </span>
+                  <span className="requirement-text">At least one symbol (!@#$%^&*())</span>
+                </div>
+              </div>
             </div>
             
             <div className="form-group">
@@ -475,7 +605,7 @@ function Signup() {
             <button 
               type="submit" 
               className="signup-button"
-              disabled={isLoading || password !== confirmPassword}
+              disabled={isLoading || !isPasswordValid() || password !== confirmPassword || !validateEmail(email)}
             >
               {isLoading ? <CircularProgress size={24} color="inherit" /> : 'Create account'}
             </button>

@@ -99,12 +99,12 @@ function ForgotPassword() {
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
 
 :root {
-  --primary-color: #6366f1;
-  --primary-hover: #4f46e5;
+  --primary-color: #5da646;
+  --primary-hover: #40752f;
   --text-dark: #1e293b;
   --text-light: #64748b;
   --background-color: #f8fafc;
-  --card-background: #ffffff;
+  --card-background: rgba(255, 255, 255, 0.85);
   --border-color: #e2e8f0;
   --success-color: #22c55e;
   --error-color: #ef4444;
@@ -119,6 +119,7 @@ function ForgotPassword() {
 body {
   font-family: 'Poppins', sans-serif;
   background-color: var(--background-color);
+    background-image: url('/wallpaper.png');
   color: var(--text-dark);
   line-height: 1.6;
 }
@@ -334,7 +335,7 @@ body {
 
 .login-image-container {
   flex: 1;
-  background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+  background: linear-gradient(135deg, rgba(224, 231, 255, 0.4) 0%, rgba(199, 210, 254, 0.4) 100%);
   display: flex;
   justify-content: center;
   align-items: center;
