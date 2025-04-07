@@ -27,11 +27,6 @@ public class UserService {
         // Set creation timestamp
         user.setCreatedAt(Timestamp.now());
         
-        // Hash the password before storing
-        if (user.getPassword() != null && !user.getPassword().isEmpty()) {
-            user.setPassword(passwordEncoder.encode(user.getPassword()));
-        }
-        
         // If no role is specified, set a default role
         if (user.getRole() == null || user.getRole().isEmpty()) {
             user.setRole("USER");
