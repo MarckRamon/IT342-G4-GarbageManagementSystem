@@ -74,12 +74,12 @@ function Login() {
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
 
 :root {
-  --primary-color: #6366f1;
-  --primary-hover: #4f46e5;
+  --primary-color: #5da646;
+  --primary-hover: #40752f;
   --text-dark: #1e293b;
   --text-light: #64748b;
   --background-color: #f8fafc;
-  --card-background: #ffffff;
+  --card-background: rgba(255, 255, 255, 0.85);
   --border-color: #e2e8f0;
   --success-color: #22c55e;
   --error-color: #ef4444;
@@ -101,6 +101,9 @@ function Login() {
 body {
   font-family: 'Poppins', sans-serif;
   background-color: var(--background-color);
+  background-image: url('/wallpaper.png');
+  //added
+  background-size: cover;
   color: var(--text-dark);
   line-height: 1.6;
 }
@@ -111,6 +114,7 @@ body {
   align-items: center;
   min-height: 100vh;
   padding: 2rem;
+
 }
 
 /* Keyframe Animations */
@@ -167,8 +171,9 @@ body {
   border-radius: 1rem;
   overflow: hidden;
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
-  opacity: 0;
+  opacity: 0.9;
   transform: translateY(20px);
+  
 }
 
 .login-card.animate-in {
@@ -178,6 +183,7 @@ body {
 .login-form-container {
   flex: 1;
   padding: 2.5rem;
+  opacity: 1;
 }
 
 .brand-name {
@@ -329,7 +335,8 @@ body {
 
 .login-image-container {
   flex: 1;
-  background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+  background: linear-gradient(135deg, rgba(224, 231, 255, 0.4) 0%, rgba(199, 210, 254, 0.4) 100%);
+
   display: flex;
   justify-content: center;
   align-items: center;
@@ -511,7 +518,7 @@ body {
         </div>
         
         <div className="login-image-container">
-          <img src="/loginimage-removebg.png" alt="Authentication" className="auth-image" />
+          <img src="/loginimage2.png" alt="Authentication" className="auth-image" />
         </div>
       </div>
       

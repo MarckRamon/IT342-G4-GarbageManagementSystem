@@ -6,6 +6,9 @@ import './App.css'
 import Login from './login.jsx'
 import Signup from './signup.jsx'
 import ForgotPassword from './forgotpw.jsx';
+import VermigoDashboard from './dashboard.jsx';
+import VermigoSchedule from './Schedule.jsx';
+import VermigoComplaints from './complaints.jsx';
 function App() {
   return (
     <BrowserRouter>
@@ -13,8 +16,11 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/dashboard" element={<VermigoDashboard />} />
+        <Route path="/schedule" element={<VermigoSchedule />} />
+        <Route path="/complaints" element={<VermigoComplaints />} />
         <Route path="/" element={<Navigate to="/login" />} />
+
       </Routes>
     </BrowserRouter>
   );
