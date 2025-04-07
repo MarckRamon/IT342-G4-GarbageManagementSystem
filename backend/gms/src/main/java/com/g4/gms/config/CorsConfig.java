@@ -9,28 +9,17 @@ public class CorsConfig implements WebMvcConfigurer {
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
-        registry.addMapping("/**")
+        registry.addMapping("/api/**")
                 .allowedOrigins(
-                    // Web frontends
-                    "http://localhost:3000",     // React web frontend
-                    "http://localhost:4200",     // Angular web frontend
-                    "http://localhost:8080",     // Vue.js web frontend
-                    "http://localhost:5173",     // Vite web frontend
-                    
-                    // Mobile app origins
-                    "capacitor://localhost",     // Capacitor mobile app
-                    "ionic://localhost",         // Ionic mobile app
-                    "http://localhost",          // Android emulator
-                    "http://10.0.2.2",           // Android emulator special IP
-                    "http://10.0.3.2",           // Genymotion emulator
-                    "http://192.168.1.*",        // Local network for physical devices
-                    "http://127.0.0.1",          // Localhost
-                    "file://*",                  // File protocol for mobile apps
-                    "app://*"                    // Custom app protocol
+                    "http://localhost:5173",    
+                    "http://localhost:3000",    
+                    "http://localhost:8080",    
+                    "http://10.0.2.2:8080",     
+                    "http://10.0.2.2:5173"      
                 )
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH")
-                .allowedHeaders("Authorization", "Content-Type", "X-Requested-With", "Accept", "Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers")
-                .exposedHeaders("Access-Control-Allow-Origin", "Access-Control-Allow-Credentials")
+                .allowedHeaders("*")
+                .exposedHeaders("Authorization")
                 .allowCredentials(true)
                 .maxAge(3600);
     }
