@@ -1,788 +1,442 @@
 import React, { useState } from 'react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { Calendar, Clock, Home, MapPin, User, Mail, Phone, Briefcase, LogOut, ChevronLeft, ChevronRight, Plus, X, Trash2, Edit } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-
-function VermigoSchedule() {
-  const navigate = useNavigate();
+export default function VermigoSchedule() {
   const [showProfilePopup, setShowProfilePopup] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showAddScheduleModal, setShowAddScheduleModal] = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [schedules, setSchedules] = useState([
+    { id: 1, date: '2025-04-15', area: 'North District', type: 'General Waste', time: '08:00 AM', truck: 'Truck-01' },
+    { id: 2, date: '2025-04-18', area: 'East District', type: 'Recyclables', time: '09:30 AM', truck: 'Truck-03' },
+    { id: 3, date: '2025-04-22', area: 'South District', type: 'Organic Waste', time: '07:00 AM', truck: 'Truck-02' },
+    { id: 4, date: '2025-04-25', area: 'West District', type: 'General Waste', time: '08:30 AM', truck: 'Truck-04' },
+    { id: 5, date: '2025-04-29', area: 'Central District', type: 'Hazardous Waste', time: '10:00 AM', truck: 'Truck-05' }
+  ]);
+  
+  const [newSchedule, setNewSchedule] = useState({
+    date: '',
+    area: '',
+    type: 'General Waste',
+    time: '',
+    truck: ''
+  });
 
-  const handleLogout = () => {
-    // Here you would normally clear authentication tokens, etc.
-    navigate('/login');
-};
+  const profileData = {
+    name: "Primo Christian",
+    email: "primoMontejo@gmail.com",
+    role: "Waste Collection Manager",
+    phone: "+1 (555) 123-4567",
+    address: "123 Green Street, Eco City, EC 12345",
+    joinDate: "January 15, 2021",
+    department: "Field Operations"
+  };
 
-  const toggleProfilePopup = () => {
-    setShowProfilePopup(!showProfilePopup);
-};
-
-const openProfileModal = () => {
-    setShowProfilePopup(false);
-    setShowProfileModal(true);
-};
-
-const profileData = {
-  name: "Primo Christian",
-  email: "primoMontejo@gmail.com",
-  role: "Waste Collection Manager",
-  phone: "+1 (555) 123-4567",
-  address: "123 Green Street, Eco City, EC 12345",
-  joinDate: "January 15, 2021",
-  department: "Field Operations"
-};
-  return (
-    <div className="dashboard-container">
-      <style>
-      {`
-        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
-        
-        :root {
-          --primary-color: #5da646;
-          --primary-hover: #40752f;
-          --text-dark: #1e293b;
-          --text-light: #64748b;
-          --background-color: #f8fafc;
-          --card-background: #ffffff;
-          --border-color: #e2e8f0;
-          --chart-color: #4F46E5;
-          --success-color: #22c55e;
-          --error-color: #ef4444;
-        }
-        
-        * {
-          box-sizing: border-box;
-          margin: 0;
-          padding: 0;
-        }
-        
-          /* for popup modal*/
-
-         .profile-popup {
-  position: absolute; /* Position relative to the parent */
-  bottom: 70px; /* Position above the user info */
-  left: 10px; /* Position from the left */
-  width: 220px; /* Width of the popup */
-  background-color: var(--card-background); /* Background color */
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); /* Shadow for depth */
-  border-radius: 0.5rem; /* Rounded corners */
-  z-index: 30; /* Ensure it appears above other content */
-  border: 1px solid var(--border-color); /* Border color */
-  overflow: hidden; /* Hide overflow */
-}
-
-/* Popup Item Styles */
-.popup-item {
-  padding: 0.75rem 1rem; /* Padding around each item */
-  display: flex; /* Flexbox for layout */
-  align-items: center; /* Center items vertically */
-  cursor: pointer; /* Pointer cursor on hover */
-  transition: background-color 0.2s ease; /* Transition for hover effect */
-}
-
-.popup-item:hover {
-  background-color: rgba(93, 166, 70, 0.05); /* Light background on hover */
-}
-
-/* Popup Item Icon Styles */
-.popup-item-icon {
-  margin-right: 0.75rem; /* Margin to the right of the icon */
-  color: var(--text-light); /* Icon color */
-}
-
-/* Popup Item Text Styles */
-.popup-item-text {
-  font-size: 0.875rem; /* Font size for text */
-  color: var(--text-dark); /* Text color */
-}
-
-/* Popup Divider Styles */
-.popup-divider {
-  height: 1px; /* Height of the divider */
-  background-color: var(--border-color); /* Divider color */
-  margin: 0; /* No margin */
-}
-        body {
-          font-family: 'Poppins', sans-serif;
-          background-color: var(--background-color);
-          color: var(--text-dark);
-          line-height: 1.6;
-          margin:0;
-        }
-        
-        .dashboard-container {
-          display: flex;
-          min-height: 100vh;
-        }
-         /*popup modal*/
-         .modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent background */
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 100; /* Ensure it appears above other content */
-}
-
-.modal-container {
-  background-color: var(--card-background); /* Background color of the modal */
-  border-radius: 0.5rem; /* Rounded corners */
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1); /* Shadow for depth */
-  width: 90%; /* Responsive width */
-  max-width: 500px; /* Maximum width */
-  max-height: 80vh; /* Maximum height */
-  overflow-y: auto; /* Scroll if content overflows */
-  position: relative; /* For positioning child elements */
-}
-
-.modal-header {
-  display: flex; /* Flexbox for layout */
-  justify-content: space-between; /* Space between title and close button */
-  align-items: center; /* Center vertically */
-  padding: 1.25rem; /* Padding around header */
-  border-bottom: 1px solid var(--border-color); /* Bottom border */
-}
-
-.modal-title {
-  font-size: 1.25rem; /* Title font size */
-  font-weight: 600; /* Bold title */
-}
-
-.modal-close {
-  background: transparent; /* Transparent background */
-  border: none; /* No border */
-  cursor: pointer; /* Pointer cursor on hover */
-  display: flex; /* Flexbox for centering */
-  align-items: center; /* Center vertically */
-  justify-content: center; /* Center horizontally */
-  padding: 0.5rem; /* Padding around button */
-  border-radius: 0.25rem; /* Rounded corners */
-  color: var(--text-light); /* Text color */
-}
-
-.modal-close:hover {
-  background-color: #f1f5f9; /* Light background on hover */
-  color: var(--text-dark); /* Darker text on hover */
-}
-
-.modal-body {
-  padding: 1.25rem; /* Padding around body */
-}
-
-.profile-header {
-  display: flex; /* Flexbox for layout */
-  align-items: center; /* Center vertically */
-  margin-bottom: 1.5rem; /* Margin below header */
-}
-
-.profile-avatar {
-  width: 4rem; /* Avatar size */
-  height: 4rem; /* Avatar size */
-  border-radius: 50%; /* Circular avatar */
-  background-color: #f1f5f9; /* Background color */
-  display: flex; /* Flexbox for centering */
-  align-items: center; /* Center vertically */
-  justify-content: center; /* Center horizontally */
-  color: var(--text-dark); /* Text color */
-  font-weight: 500; /* Font weight */
-  font-size: 1.5rem; /* Font size */
-  margin-right: 1rem; /* Margin to the right */
-}
-
-.profile-name {
-  font-size: 1.25rem; /* Name font size */
-  font-weight: 600; /* Bold name */
-}
-
-.profile-role {
-  color: var(--text-light); /* Role text color */
-  font-size: 0.875rem; /* Role font size */
-}
-
-.profile-info-group {
-  margin-bottom: 1.5rem; /* Margin below group */
-}
-
-.profile-info-title {
-  font-size: 0.875rem; /* Title font size */
-  color: var(--text-light); /* Title text color */
-  margin-bottom: 0.5rem; /* Margin below title */
-}
-
-.profile-info-item {
-  display: flex; /* Flexbox for layout */
-  margin-bottom: 0.75rem; /* Margin below item */
-}
-
-.profile-info-icon {
-  color: var(--text-light); /* Icon color */
-  margin-right: 0.75rem; /* Margin to the right */
-  flex-shrink: 0; /* Prevent shrinking */
-  display: flex; /* Flexbox for centering */
-  align-items: center; /* Center vertically */
-}
-
-.profile-info-text {
-  font-size: 0.875rem; /* Text font size */
-}
-
-.profile-footer {
-  padding: 1.25rem; /* Padding around footer */
-  border-top: 1px solid var(--border-color); /* Top border */
-  display: flex; /* Flexbox for layout */
-  justify-content: flex-end; /* Align buttons to the right */
-}
-
-.profile-button {
-  padding: 0.5rem 1rem; /* Padding around button */
-  border-radius: 0.375rem; /* Rounded corners */
-  font-size: 0.875rem; /* Font size */
-  font-weight: 500; /* Font weight */
-  cursor: pointer; /* Pointer cursor on hover */
-  transition: all 0.2s ease; /* Transition for hover effects */
-}
-
-.profile-button.primary {
-  background-color: var(--primary-color); /* Primary button background */
-  color: white; /* Primary button text color */
-  border: none; /* No border */
-}
-
-.profile-button.primary:hover {
-  background-color: var(--primary-hover); /* Darker background on hover */
-}
-
-.profile-button.secondary {
-  background-color: transparent; /* Transparent background */
-  color: var(--text-dark); /* Text color */
-  border: 1px solid var(--border-color); /* Border */
-  margin-right: 0.75rem; /* Margin to the right */
-}
-
-.profile-button.secondary:hover {
-  background-color: #f1f5f9; /* Light background on hover */
-}
-
-        .sidebar {
-  width: 240px;
-  background-color: var(--card-background);
-  border-right: 1px solid var(--border-color);
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-  padding: 0;
-  position: fixed;
-  height: 100vh;
-  z-index: 10;
-  left: 0; /* Position the sidebar to the very left */
-  top: 0; /* Align the sidebar to the top */
-}
-        
-        .logo-container {
-          padding: 1.25rem;
-          border-bottom: 1px solid var(--border-color);
-        }
-        
-        .logo {
-          font-size: 1.5rem;
-          font-weight: 700;
-          color: var(--primary-color);
-        }
-        
-        .sidebar-menu {
-          padding: 1.25rem 0;
-        }
-        
-        .sidebar-menu ul {
-          list-style: none;
-        }
-        
-        .menu-item {
-          display: flex;
-          align-items: center;
-          padding: 0.75rem 1.25rem;
-          color: var(--text-light);
-          font-weight: 500;
-          cursor: pointer;
-          transition: all 0.3s ease;
-        }
-        
-        .menu-item.active {
-          color: var(--primary-color);
-          background-color: rgba(93, 166, 70, 0.08);
-        }
-        
-        .menu-item:hover {
-          background-color: rgba(93, 166, 70, 0.05);
-        }
-        
-        .menu-item-icon {
-          margin-right: 0.75rem;
-        }
-        
-        .main-content {
-  flex: 1;
-  padding: 1.5rem;
-  margin-left: 240px; /* Add margin to the left to accommodate the sidebar */
-}
-        
-        .header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 1.5rem;
-          padding-bottom: 1rem;
-          border-bottom: 1px solid var(--border-color);
-        }
-        
-        .page-title {
-          font-size: 1.5rem;
-          font-weight: 600;
-        }
-        
-        .filter-container {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 1.5rem;
-        }
-        
-        .filter-label {
-          color: var(--text-light);
-          margin-right: 0.5rem;
-        }
-        
-        .filter-select {
-          background-color: white;
-          border: 1px solid var(--border-color);
-          border-radius: 0.25rem;
-          padding: 0.5rem 2rem 0.5rem 0.75rem;
-          font-family: 'Poppins', sans-serif;
-          color: var(--text-dark);
-          appearance: none;
-          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%2364748b'%3E%3Cpath fill-rule='evenodd' d='M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z' clip-rule='evenodd' /%3E%3C/svg%3E");
-          background-repeat: no-repeat;
-          background-position: right 0.5rem center;
-          background-size: 1.25rem;
-          cursor: pointer;
-        }
-        
-        .filter-select:focus {
-          outline: none;
-          border-color: var(--primary-color);
-          box-shadow: 0 0 0 2px rgba(93, 166, 70, 0.2);
-        }
-        
-        .metrics-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-          gap: 1.5rem;
-          margin-bottom: 1.5rem;
-        }
-        
-        .metric-card {
-          background-color: var(--card-background);
-          padding: 1.5rem;
-          border-radius: 0.5rem;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-        }
-        
-        .metric-label {
-          font-size: 0.875rem;
-          color: var(--text-light);
-          margin-bottom: 0.5rem;
-        }
-        
-        .metric-value {
-          font-size: 1.75rem;
-          font-weight: 700;
-        }
-        
-        .charts-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-          gap: 1.5rem;
-          margin-bottom: 1.5rem;
-        }
-        
-        .chart-card {
-          background-color: var(--card-background);
-          padding: 1.5rem;
-          border-radius: 0.5rem;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-        }
-        
-        .chart-title {
-          font-size: 1.125rem;
-          font-weight: 600;
-          margin-bottom: 1rem;
-        }
-        
-        .chart-container {
-          height: 240px;
-        }
-        
-        .location-item {
-          margin-bottom: 1rem;
-        }
-        
-        .location-header {
-          display: flex;
-          justify-content: space-between;
-          font-size: 0.875rem;
-          margin-bottom: 0.25rem;
-        }
-        
-        .location-name {
-          color: var(--text-dark);
-        }
-        
-        .location-value {
-          font-weight: 500;
-        }
-        
-        .progress-bar {
-          width: 100%;
-          height: 0.5rem;
-          background-color: #f1f5f9;
-          border-radius: 9999px;
-          overflow: hidden;
-        }
-        
-        .progress-fill {
-          height: 100%;
-          border-radius: 9999px;
-          transition: width 0.3s ease;
-        }
-        
-        .calendar-card {
-          background-color: var(--card-background);
-          padding: 1.5rem;
-          border-radius: 0.5rem;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-        }
-        
-        .calendar-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 1rem;
-        }
-        
-        .calendar-title {
-          display: flex;
-          align-items: center;
-        }
-        
-        .month {
-          font-size: 1.25rem;
-          font-weight: 600;
-          margin-right: 0.5rem;
-        }
-        
-        .year {
-          font-size: 1.25rem;
-          color: var(--text-light);
-        }
-        
-        .calendar-nav {
-          display: flex;
-        }
-        
-        .calendar-nav-button {
-          background: transparent;
-          border: none;
-          color: var(--text-light);
-          cursor: pointer;
-          padding: 0.25rem;
-          border-radius: 0.25rem;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-        
-        .calendar-nav-button:hover {
-          background-color: #f1f5f9;
-          color: var(--text-dark);
-        }
-        
-        .calendar-grid {
-          display: grid;
-          grid-template-columns: repeat(7, 1fr);
-          gap: 0.25rem;
-        }
-        
-        .calendar-day-header {
-          font-size: 0.75rem;
-          color: var(--text-light);
-          text-align: center;
-          padding: 0.5rem 0;
-        }
-        
-        .calendar-day {
-          height: 2.5rem;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 0.875rem;
-          border-radius: 0.25rem;
-        }
-        
-        .calendar-day.pickup {
-          background-color: rgba(93, 166, 70, 0.1);
-          color: var(--primary-color);
-          font-weight: 500;
-          position: relative;
-        }
-        
-        .calendar-day.pickup:after {
-          content: 'Pickup Day';
-          position: absolute;
-          bottom: -0.1rem;
-          left: 50%;
-          transform: translateX(-50%);
-          font-size: 0.65rem;
-          color: var(--primary-color);
-          white-space: nowrap;
-        }
-        
-        .avatar {
-          width: 2rem;
-          height: 2rem;
-          border-radius: 50%;
-          background-color: #f1f5f9;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: var(--text-dark);
-          font-weight: 500;
-          font-size: 0.875rem;
-        }
-        
-        .user-info {
-          position: fixed;
-          bottom: 0;
-          left: 0;
-          width: 240px;
-          padding: 1rem;
-          display: flex;
-          align-items: center;
-          border-top: 1px solid var(--border-color);
-          background-color: var(--card-background);
-        }
-        
-        .user-details {
-          margin-left: 0.75rem;
-        }
-        
-        .user-name {
-          font-size: 0.875rem;
-          font-weight: 500;
-        }
-        
-        .user-email {
-          font-size: 0.75rem;
-          color: var(--text-light);
-        }
-        
-        @media (max-width: 768px) {
-          .sidebar {
-            width: 0;
-            overflow: hidden;
-          }
-          
-          .main-content {
-            margin-left: 0;
-          }
-          
-          .metrics-grid, .charts-grid {
-            grid-template-columns: 1fr;
-          }
-        }
-      `}
-      </style>
-
-      {/* Sidebar */}
-      <div className="sidebar">
-        <div className="logo-container">
-          <div className="logo">Vermigo Admin</div>
+  const monthNames = ["January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"];
+    
+  const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  
+  const getDaysInMonth = (month, year) => {
+    return new Date(year, month + 1, 0).getDate();
+  };
+  
+  const getFirstDayOfMonth = (month, year) => {
+    return new Date(year, month, 1).getDay();
+  };
+  
+  const generateCalendarDays = () => {
+    const daysInMonth = getDaysInMonth(selectedMonth, selectedYear);
+    const firstDayOfMonth = getFirstDayOfMonth(selectedMonth, selectedYear);
+    const calendarDays = [];
+    
+    // Add empty cells for days before the first day of the month
+    for (let i = 0; i < firstDayOfMonth; i++) {
+      calendarDays.push(<div key={`empty-${i}`} className="h-10 md:h-12"></div>);
+    }
+    
+    // Add cells for each day of the month
+    for (let day = 1; day <= daysInMonth; day++) {
+      const currentDate = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const hasSchedule = schedules.some(schedule => schedule.date === currentDate);
+      
+      calendarDays.push(
+        <div key={day} className={`h-10 md:h-12 flex flex-col items-center justify-center rounded ${hasSchedule ? 'bg-green-100 text-green-700 font-medium relative' : ''}`}>
+          <span>{day}</span>
+          {hasSchedule && <span className="text-xs text-green-700 absolute -bottom-1">Pickup</span>}
         </div>
-        <div className="sidebar-menu">
-          <ul>
-            <li className="menu-item">
-            <Link to="/dashboard" style={{ textDecoration: 'none', color: 'inherit' }}>
-              <span className="menu-item-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-                  <polyline points="9 22 9 12 15 12 15 22"></polyline>
-                </svg>
-              </span>
+      );
+    }
+    
+    return calendarDays;
+  };
+  
+  const handlePrevMonth = () => {
+    if (selectedMonth === 0) {
+      setSelectedMonth(11);
+      setSelectedYear(selectedYear - 1);
+    } else {
+      setSelectedMonth(selectedMonth - 1);
+    }
+  };
+  
+  const handleNextMonth = () => {
+    if (selectedMonth === 11) {
+      setSelectedMonth(0);
+      setSelectedYear(selectedYear + 1);
+    } else {
+      setSelectedMonth(selectedMonth + 1);
+    }
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setNewSchedule({
+      ...newSchedule,
+      [name]: value
+    });
+  };
+
+  const handleAddSchedule = () => {
+    const newId = schedules.length > 0 ? Math.max(...schedules.map(s => s.id)) + 1 : 1;
+    const updatedSchedules = [...schedules, { ...newSchedule, id: newId }];
+    setSchedules(updatedSchedules);
+    setNewSchedule({
+      date: '',
+      area: '',
+      type: 'General Waste',
+      time: '',
+      truck: ''
+    });
+    setShowAddScheduleModal(false);
+  };
+
+  const handleDeleteSchedule = (id) => {
+    const updatedSchedules = schedules.filter(schedule => schedule.id !== id);
+    setSchedules(updatedSchedules);
+  };
+
+  return (
+    <div className="flex min-h-screen bg-gray-50">
+      {/* Sidebar */}
+      <div className="fixed w-60 h-full bg-white border-r border-gray-200 shadow-sm z-10">
+        <div className="p-5 border-b border-gray-200">
+        <div className="text-2xl font-bold text-[#5da646]">Vermigo Admin</div>
+        </div>
+        
+        <div className="py-5">
+          <ul>  <Link to="/dashboard" className="flex items-center no-underline text-inherit">
+            <li className="flex items-center px-5 py-3 text-gray-500 font-medium cursor-pointer hover:bg-green-50 transition-colors">
+          
+              <Home className="mr-3 w-5 h-5" />
               Dashboard
-              </Link>
-            </li>
-            <li className="menu-item">
-            <Link to="/complaints" style={{ textDecoration: 'none', color: 'inherit' }}>
-              <span className="menu-item-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-                  <circle cx="12" cy="10" r="3"></circle>
-                </svg>
-              </span>
+          
+            </li>    </Link>
+            <Link to="/complaints" className="flex items-center no-underline text-inherit">
+            <li className="flex items-center px-5 py-3 text-gray-500 font-medium cursor-pointer hover:bg-green-50 transition-colors">
+              <MapPin className="mr-3 w-5 h-5" />
               Complaints
-              </Link>
-            </li>
-            <li className="menu-item active">
-              <span className="menu-item-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                  <line x1="16" y1="2" x2="16" y2="6"></line>
-                  <line x1="8" y1="2" x2="8" y2="6"></line>
-                  <line x1="3" y1="10" x2="21" y2="10"></line>
-                </svg>
-              </span>
+            </li></Link>
+            <Link to="/schedule" className="flex items-center no-underline text-inherit">
+            <li className="flex items-center px-5 py-3 text-green-600 font-medium cursor-pointer bg-green-50 hover:bg-green-50 transition-colors">
+              <Calendar className="mr-3 w-5 h-5" />
               Collection Schedule
             </li>
+            </Link>
           </ul>
         </div>
-        <div className="user-info" onClick={toggleProfilePopup}>
-          <div className="avatar">P</div>
-          <div className="user-details">
-            <div className="user-name">Primo Christian</div>
-            <div className="user-email">primoMontejo@gmail.com</div>
+        
+        <div className="absolute bottom-0 left-0 w-full p-4 flex items-center border-t border-gray-200 bg-white cursor-pointer" onClick={() => setShowProfilePopup(!showProfilePopup)}>
+          <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-700 font-medium">P</div>
+          <div className="ml-3">
+            <div className="text-sm font-medium">Primo Christian</div>
+            <div className="text-xs text-gray-500">primoMontejo@gmail.com</div>
           </div>
         </div>
-         {/* Profile Popup */}
-         {showProfilePopup && (
-                    <div className="profile-popup">
-                        <div className="popup-item" onClick={openProfileModal}>
-                            <div className="popup-item-icon">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                                    <circle cx="12" cy="7" r="4"></circle>
-                                </svg>
-                            </div>
-                            <div className="popup-item-text">View Profile</div>
-                        </div>
-                        <div className="popup-divider"></div>
-                        <div className="popup-item" onClick={handleLogout}>
-                            <div className="popup-item-icon">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                                    <polyline points="16 17 21 12 16 7"></polyline>
-                                    <line x1="21" y1="12" x2="9" y2="12"></line>
-                                </svg>
-                            </div>
-                            <div className="popup-item-text">Logout</div>
-                        </div>
-                    </div>
-                )}
+        
+        {/* Profile Popup */}
+        {showProfilePopup && (
+          <div className="absolute bottom-16 left-4 w-52 bg-white shadow-lg rounded-lg border border-gray-200 z-30 overflow-hidden">
+            <div className="p-3 flex items-center cursor-pointer hover:bg-green-50" onClick={() => {
+              setShowProfilePopup(false);
+              setShowProfileModal(true);
+            }}>
+              <User className="w-4.5 h-4.5 text-gray-500 mr-3" />
+              <div className="text-sm text-gray-700">View Profile</div>
+            </div>
+            <div className="h-px bg-gray-200"></div>
+            <div className="p-3 flex items-center cursor-pointer hover:bg-green-50">
+            <Link to="/login" className="flex items-center no-underline text-inherit">
+              <LogOut className="w-4.5 h-4.5 text-gray-500 mr-3" />
+              <div className="text-sm text-gray-700">Logout</div>
+              </Link>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Main Content */}
-      <div className="main-content">
+      <div className="flex-1 ml-60 p-6">
         {/* Header */}
-        <div className="header">
-          <h1 className="page-title">Collection Schedule</h1>
+        <div className="flex justify-between items-center mb-6 pb-4 border-b border-gray-200">
+          <h1 className="text-2xl font-semibold text-gray-800">Collection Schedule</h1>
+          <button 
+            onClick={() => setShowAddScheduleModal(true)}
+            className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Add Schedule
+          </button>
         </div>
 
-        
-
-          {/* Activity Chart */}
-     
-        </div>
-
-          
-              {/* Profile Modal */}
-              {showProfileModal && (
-                <div className="modal-overlay" onClick={() => setShowProfileModal(false)}>
-                    <div className="modal-container" onClick={(e) => e.stopPropagation()}>
-                        <div className="modal-header">
-                            <h3 className="modal-title">Profile Information</h3>
-                            <button className="modal-close" onClick={() => setShowProfileModal(false)}>
-                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                                    <line x1="6" y1="6" x2="18" y2="18"></line>
-                                </svg>
-                            </button>
-                        </div>
-                        <div className="modal-body">
-                            <div className="profile-header">
-                                <div className="profile-avatar">P</div>
-                                <div>
-                                    <div className="profile-name">{profileData.name}</div>
-                                    <div className="profile-role">{profileData.role}</div>
-                                </div>
-                            </div>
-
-                            <div className="profile-info-group">
-                                <div className="profile-info-title">Contact Information</div>
-                                <div className="profile-info-item">
-                                    <div className="profile-info-icon">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
-                                        </svg>
-                                    </div>
-                                    <div className="profile-info-text">{profileData.phone}</div>
-                                </div>
-                                <div className="profile-info-item">
-                                    <div className="profile-info-icon">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
-                                            <polyline points="22,6 12,13 2,6"></polyline>
-                                        </svg>
-                                    </div>
-                                    <div className="profile-info-text">{profileData.email}</div>
-                                </div>
-                                <div className="profile-info-item">
-                                    <div className="profile-info-icon">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-                                            <circle cx="12" cy="10" r="3"></circle>
-                                        </svg>
-                                    </div>
-                                    <div className="profile-info-text">{profileData.address}</div>
-                                </div>
-                            </div>
-
-                            <div className="profile-info-group">
-                                <div className="profile-info-title">Work Information</div>
-                                <div className="profile-info-item">
-                                    <div className="profile-info-icon">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                            <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
-                                            <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
-                                        </svg>
-                                    </div>
-                                    <div className="profile-info-text">{profileData.department}</div>
-                                </div>
-                                <div className="profile-info-item">
-                                    <div className="profile-info-icon">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                                            <line x1="16" y1="2" x2="16" y2="6"></line>
-                                            <line x1="8" y1="2" x2="8" y2="6"></line>
-                                            <line x1="3" y1="10" x2="21" y2="10"></line>
-                                        </svg>
-                                    </div>
-                                    <div className="profile-info-text">Joined on {profileData.joinDate}</div>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="profile-footer">
-                            <button className="profile-button secondary" onClick={() => setShowProfileModal(false)}>Close</button>
-                            <button className="profile-button primary">Edit Profile</button>
-                        </div>
-                    </div>
-                </div>
-            )}
-       
-      
+        {/* Schedule List */}
+        <div className="bg-white p-6 rounded-lg shadow-sm mb-6">
+          <h2 className="text-lg font-semibold mb-4">Upcoming Collections</h2>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-gray-200">
+                  <th className="text-left py-3 px-4 text-gray-500 font-medium">Date</th>
+                  <th className="text-left py-3 px-4 text-gray-500 font-medium">Time</th>
+                  <th className="text-left py-3 px-4 text-gray-500 font-medium">Area</th>
+                  <th className="text-left py-3 px-4 text-gray-500 font-medium">Waste Type</th>
+                  <th className="text-left py-3 px-4 text-gray-500 font-medium">Truck ID</th>
+                  <th className="text-right py-3 px-4 text-gray-500 font-medium">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {schedules.map(schedule => (
+                  <tr key={schedule.id} className="border-b border-gray-100 hover:bg-gray-50">
+                    <td className="py-3 px-4">{new Date(schedule.date).toLocaleDateString()}</td>
+                    <td className="py-3 px-4">{schedule.time}</td>
+                    <td className="py-3 px-4">{schedule.area}</td>
+                    <td className="py-3 px-4">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        schedule.type === 'General Waste' ? 'bg-gray-100 text-gray-700' :
+                        schedule.type === 'Recyclables' ? 'bg-blue-100 text-blue-700' :
+                        schedule.type === 'Organic Waste' ? 'bg-green-100 text-green-700' :
+                        schedule.type === 'Hazardous Waste' ? 'bg-red-100 text-red-700' :
+                        'bg-purple-100 text-purple-700'
+                      }`}>
+                        {schedule.type}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4">{schedule.truck}</td>
+                    <td className="py-3 px-4 text-right">
+                      <button className="text-gray-500 hover:text-gray-700 mr-2">
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      <button className="text-red-500 hover:text-red-700" onClick={() => handleDeleteSchedule(schedule.id)}>
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
+        </div>
+        
+        {/* Calendar View */}
+        <div className="bg-white p-6 rounded-lg shadow-sm">
+          <div className="flex justify-between items-center mb-4">
+            <div className="flex items-center">
+              <div className="text-xl font-semibold mr-2">{monthNames[selectedMonth]}</div>
+              <div className="text-xl text-gray-500">{selectedYear}</div>
+            </div>
+            <div className="flex">
+              <button 
+                onClick={handlePrevMonth}
+                className="p-1 hover:bg-gray-100 rounded-md text-gray-500 hover:text-gray-700"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+              <button 
+                onClick={handleNextMonth}
+                className="p-1 hover:bg-gray-100 rounded-md text-gray-500 hover:text-gray-700 ml-1"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-7 gap-1">
+            {dayNames.map(day => (
+              <div key={day} className="text-xs text-gray-500 text-center py-2">{day}</div>
+            ))}
+            {generateCalendarDays()}
+          </div>
+        </div>
+      </div>
       
-    
-   
+      {/* Profile Modal */}
+      {showProfileModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50" onClick={() => setShowProfileModal(false)}>
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-md max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center p-5 border-b border-gray-200">
+              <h3 className="text-lg font-semibold">Profile Information</h3>
+              <button className="text-gray-500 hover:text-gray-700" onClick={() => setShowProfileModal(false)}>
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-5">
+              <div className="flex items-center mb-6">
+                <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center text-gray-700 font-medium text-2xl">P</div>
+                <div className="ml-4">
+                  <div className="text-lg font-semibold">{profileData.name}</div>
+                  <div className="text-sm text-gray-500">{profileData.role}</div>
+                </div>
+              </div>
+              
+              <div className="mb-6">
+                <div className="text-sm text-gray-500 mb-2">Contact Information</div>
+                <div className="flex items-center mb-3">
+                  <Phone className="w-4 h-4 text-gray-500 mr-3 flex-shrink-0" />
+                  <div className="text-sm">{profileData.phone}</div>
+                </div>
+                <div className="flex items-center mb-3">
+                  <Mail className="w-4 h-4 text-gray-500 mr-3 flex-shrink-0" />
+                  <div className="text-sm">{profileData.email}</div>
+                </div>
+                <div className="flex items-center">
+                  <MapPin className="w-4 h-4 text-gray-500 mr-3 flex-shrink-0" />
+                  <div className="text-sm">{profileData.address}</div>
+                </div>
+              </div>
+              
+              <div>
+                <div className="text-sm text-gray-500 mb-2">Work Information</div>
+                <div className="flex items-center mb-3">
+                  <Briefcase className="w-4 h-4 text-gray-500 mr-3 flex-shrink-0" />
+                  <div className="text-sm">{profileData.department}</div>
+                </div>
+                <div className="flex items-center">
+                  <Calendar className="w-4 h-4 text-gray-500 mr-3 flex-shrink-0" />
+                  <div className="text-sm">Joined on {profileData.joinDate}</div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex justify-end p-5 border-t border-gray-200">
+              <button 
+                className="px-4 py-2 border border-gray-200 rounded-lg mr-3 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                onClick={() => setShowProfileModal(false)}
+              >
+                Close
+              </button>
+              <button className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700">
+                Edit Profile
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Add Schedule Modal */}
+      {showAddScheduleModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50" onClick={() => setShowAddScheduleModal(false)}>
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-md" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center p-5 border-b border-gray-200">
+              <h3 className="text-lg font-semibold">Add Collection Schedule</h3>
+              <button className="text-gray-500 hover:text-gray-700" onClick={() => setShowAddScheduleModal(false)}>
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-5">
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                <input 
+                  type="date" 
+                  name="date"
+                  value={newSchedule.date}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                />
+              </div>
+              
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Time</label>
+                <input 
+                  type="time" 
+                  name="time"
+                  value={newSchedule.time}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                />
+              </div>
+              
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Area</label>
+                <select 
+                  name="area"
+                  value={newSchedule.area}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                >
+                  <option value="">Select an area</option>
+                  <option value="North District">North District</option>
+                  <option value="South District">South District</option>
+                  <option value="East District">East District</option>
+                  <option value="West District">West District</option>
+                  <option value="Central District">Central District</option>
+                </select>
+              </div>
+              
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Waste Type</label>
+                <select 
+                  name="type"
+                  value={newSchedule.type}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                >
+                  <option value="General Waste">General Waste</option>
+                  <option value="Recyclables">Recyclables</option>
+                  <option value="Organic Waste">Organic Waste</option>
+                  <option value="Hazardous Waste">Hazardous Waste</option>
+                  <option value="Bulky Items">Bulky Items</option>
+                </select>
+              </div>
+              
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Truck ID</label>
+                <select 
+                  name="truck"
+                  value={newSchedule.truck}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                >
+                  <option value="">Select a truck</option>
+                  <option value="Truck-01">Truck-01</option>
+                  <option value="Truck-02">Truck-02</option>
+                  <option value="Truck-03">Truck-03</option>
+                  <option value="Truck-04">Truck-04</option>
+                  <option value="Truck-05">Truck-05</option>
+                </select>
+              </div>
+            </div>
+            
+            <div className="flex justify-end p-5 border-t border-gray-200">
+              <button 
+                className="px-4 py-2 border border-gray-200 rounded-lg mr-3 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                onClick={() => setShowAddScheduleModal(false)}
+              >
+                Cancel
+              </button>
+              <button 
+                className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700"
+                onClick={handleAddSchedule}
+                disabled={!newSchedule.date || !newSchedule.time || !newSchedule.area || !newSchedule.truck}
+              >
+                Add Schedule
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
-
-export default VermigoSchedule;

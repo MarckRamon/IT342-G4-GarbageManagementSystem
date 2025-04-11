@@ -165,362 +165,125 @@ function Signup() {
   };
 
   return (
-    <div className="signup-container">
-      <style>
-      {`
-      /* Signup.css */
-      @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
-
-      :root {
-        --primary-color: #5da646;
-        --primary-hover: #40752f;
-        --primary-light: #4f46e5;
-        --text-dark: #1e293b;
-        --text-light: #64748b;
-        --background-color: rgba(248, 250, 252, 0.8); /* 80% opacity */
-        --card-background: rgba(248, 250, 252, 0.85); /* 85s% opacity */  
-        --border-color: #e2e8f0;
-        --error-color: #ef4444;
-        --success-color: #22c55e;
-      }
-
-      * {
-        box-sizing: border-box;
-        margin: 0;
-        padding: 0;
-      }
-
-      body {
-        font-family: 'Poppins', sans-serif;
-        background-color: var(--background-color);
-        background-image: url('/wallpaper.png');
-        color: var(--text-dark);
-        line-height: 1.6;
-      }
-
-      .signup-container {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        min-height: 100vh;
-        padding: 2rem;
-      }
-
-      /* Keyframe Animations */
-      @keyframes slideInFromRight {
-        0% {
-          transform: translateX(50px);
-          opacity: 0;
-        }
-        100% {
-          transform: translateX(0);
-          opacity: 1;
-        }
-      }
-
-      @keyframes slideInFromLeft {
-        0% {
-          transform: translateX(-50px);
-          opacity: 0;
-        }
-        100% {
-          transform: translateX(0);
-          opacity: 1;
-        }
-      }
-
-      @keyframes fadeUp {
-        0% {
-          transform: translateY(20px);
-          opacity: 0;
-        }
-        100% {
-          transform: translateY(0);
-          opacity: 1;
-        }
-      }
-
-      @keyframes float {
-        0% {
-          transform: translateY(0);
-        }
-        50% {
-          transform: translateY(-10px);
-        }
-        100% {
-          transform: translateY(0);
-        }
-      }
-
-      .signup-card {
-        display: flex;
-        width: 100%;
-        max-width: 900px;
-        background-color: var(--card-background);
-        border-radius: 1rem;
-        overflow: hidden;
-        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
-        opacity: 0;
-        transform: translateY(20px);
-      }
-
-      .signup-card.animate-in {
-        animation: fadeUp 0.8s ease-out forwards;
-      }
-
-      .signup-image-container {
-        flex: 1;
-     background-color: rgba(241, 245, 249, 0.85); /* 85% opaque */
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        padding: 2rem;
-        position: relative;
-      }
-
-      .hands-image {
-        max-width: 100%;
-        height: auto;
-        animation: float 6s ease-in-out infinite;
-        z-index: 1;
-      }
-
-      .signup-form-container {
-        flex: 1;
-        padding: 2.5rem;
-      }
-
-      .brand-name {
-        font-size: 1.5rem;
-        font-weight: 700;
-        color: var(--text-dark);
-        margin-bottom: 1.5rem;
-        text-align: right;
-        animation: slideInFromRight 0.6s ease-out 0.3s forwards;
-        opacity: 0;
-      }
-
-      .signup-title {
-        font-size: 1.5rem;
-        font-weight: 600;
-        margin-bottom: 0.5rem;
-        animation: slideInFromLeft 0.6s ease-out 0.4s forwards;
-        opacity: 0;
-      }
-
-      .signup-subtitle {
-        color: var(--text-light);
-        margin-bottom: 1.5rem;
-        font-size: 0.875rem;
-        animation: slideInFromLeft 0.6s ease-out 0.5s forwards;
-        opacity: 0;
-      }
-
-      .form-row {
-        display: flex;
-        gap: 1rem;
-        margin-bottom: 1rem;
-        animation: fadeUp 0.6s ease-out 0.6s forwards;
-        opacity: 0;
-      }
-
-      .form-group {
-        flex: 1;
-        margin-bottom: 1rem;
-        animation: fadeUp 0.6s ease-out 0.7s forwards;
-        opacity: 0;
-      }
-
-      .input-field {
-        width: 100%;
-        padding: 0.75rem 1rem;
-        border: 1px solid var(--border-color);
-        border-radius: 0.375rem;
-        font-size: 0.875rem;
-        transition: border-color 0.2s;
-      }
-
-      .input-field:focus {
-        outline: none;
-        border-color: var(--primary-color);
-      }
-
-      .password-field {
-        position: relative;
-      }
-
-      .visibility-toggle {
-        position: absolute;
-        right: 10px;
-        top: 50%;
-        transform: translateY(-50%);
-        background: none;
-        border: none;
-        cursor: pointer;
-      }
-
-      .signup-button {
-        width: 100%;
-        padding: 0.75rem;
-        background-color: var(--primary-color);
-        color: white;
-        border: none;
-        border-radius: 0.375rem;
-        font-weight: 500;
-        font-size: 0.875rem;
-        cursor: pointer;
-        transition: background-color 0.2s;
-        margin-top: 1rem;
-        animation: fadeUp 0.6s ease-out 0.8s forwards;
-        opacity: 0;
-      }
-
-      .signup-button:hover {
-        background-color: var(--primary-hover);
-      }
-
-      .signup-button:disabled {
-        background-color: #90eb73;
-        cursor: not-allowed;
-      }
-
-      .login-prompt {
-        text-align: center;
-        margin: 1.5rem 0;
-        font-size: 0.875rem;
-        color: var(--text-light);
-        animation: fadeUp 0.6s ease-out 0.9s forwards;
-        opacity: 0;
-      }
-
-      .login-prompt a {
-        color: var(--primary-color);
-        font-weight: 500;
-        text-decoration: none;
-      }
-
-      .login-prompt a:hover {
-        text-decoration: underline;
-      }
-
-      .or-divider {
-        display: flex;
-        align-items: center;
-        margin: 1.5rem 0;
-        animation: fadeUp 0.6s ease-out 1s forwards;
-        opacity: 0;
-      }
-
-      .or-divider::before,
-      .or-divider::after {
-        content: "";
-        flex: 1;
-        height: 1px;
-        background-color: var(--border-color);
-      }
-
-      .or-divider span {
-        padding: 0 1rem;
-        color: var(--text-light);
-        font-size: 0.75rem;
-      }
-
-      .google-signup-button {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        width: 100%;
-        padding: 0.75rem;
-        background-color: white;
-        border: 1px solid var(--border-color);
-        border-radius: 0.375rem;
-        cursor: pointer;
-        color: black;
-        transition: all 0.3s ease;
-        animation: fadeUp 0.6s ease-out 1.1s forwards;
-        opacity: 0;
-      }
-
-      .google-signup-button:hover {
-        background-color: #f1f5f9;
-      }
-
-      .google-icon {
-        height: 1.5rem;
-        margin-right: 0.5rem;
-      }
-
-      .error-text {
-        color: var(--error-color);
-        font-size: 0.8rem;
-        margin-top: 0.5rem;
-      }
-
-      /* Password Requirements */
-      .password-requirements {
-        margin-top: 10px;
-        font-size: 0.8rem;
-      }
-
-      .requirement-item {
-        display: flex;
-        align-items: center;
-        margin-bottom: 4px;
-      }
-
-      .requirement-icon {
-        margin-right: 8px;
-        font-size: 1rem;
-      }
-
-      .requirement-valid {
-        color: var(--success-color);
-      }
-
-      .requirement-invalid {
-        color: var(--error-color);
-      }
-
-      .requirement-text {
-        color: var(--text-light);
-      }
-
-      /* Responsive styles */
-      @media (max-width: 768px) {
-        .signup-card {
-          flex-direction: column;
+    
+<div className="flex justify-center items-center h-[100dvh] min-h-[1100px] w-full p-0 bg-slate-50 bg-[url('/wallpaper.png')] bg-cover bg-center bg-no-repeat font-['Poppins'] absolute inset-0 overflow-auto">
+<style jsx>{`
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+        
+        @keyframes slideInFromRight {
+          0% {
+            transform: translateX(50px);
+            opacity: 0;
+          }
+          100% {
+            transform: translateX(0);
+            opacity: 1;
+          }
         }
         
-        .signup-image-container {
-          padding: 2rem 2rem 0;
+        @keyframes slideInFromLeft {
+          0% {
+            transform: translateX(-50px);
+            opacity: 0;
+          }
+          100% {
+            transform: translateX(0);
+            opacity: 1;
+          }
         }
         
-        .hands-image {
-          max-height: 200px;
+        @keyframes fadeUp {
+          0% {
+            transform: translateY(20px);
+            opacity: 0;
+          }
+          100% {
+            transform: translateY(0);
+            opacity: 1;
+          }
+        }
+        
+        @keyframes float {
+          0% {
+            transform: translateY(0);
+          }
+          50% {
+            transform: translateY(-10px);
+          }
+          100% {
+            transform: translateY(0);
+          }
+        }
+        
+        .animate-in {
+          animation: fadeUp 0.8s ease-out forwards;
+        }
+        
+        .brand-name {
+          animation: slideInFromRight 0.6s ease-out 0.3s forwards;
+          opacity: 0;
+        }
+        
+        .signup-title {
+          animation: slideInFromLeft 0.6s ease-out 0.4s forwards;
+          opacity: 0;
+        }
+        
+        .signup-subtitle {
+          animation: slideInFromLeft 0.6s ease-out 0.5s forwards;
+          opacity: 0;
         }
         
         .form-row {
-          flex-direction: column;
-          gap: 0;
+          animation: fadeUp 0.6s ease-out 0.6s forwards;
+          opacity: 0;
         }
-      }
-      `}
-      </style>
-      <div className="signup-card">
-        <div className="signup-image-container">
-          <img src="/signinimage.png" alt="Signup Illustration" className="hands-image" />
+        
+        .form-group {
+          animation: fadeUp 0.6s ease-out 0.7s forwards;
+          opacity: 0;
+        }
+        
+        .signup-button {
+          animation: fadeUp 0.6s ease-out 0.8s forwards;
+          opacity: 0;
+        }
+        
+        .login-prompt {
+          animation: fadeUp 0.6s ease-out 0.9s forwards;
+          opacity: 0;
+        }
+        
+        .or-divider {
+          animation: fadeUp 0.6s ease-out 1s forwards;
+          opacity: 0;
+        }
+        
+        .google-signup-button {
+          animation: fadeUp 0.6s ease-out 1.1s forwards;
+          opacity: 0;
+        }
+        
+        .hands-image {
+          animation: float 6s ease-in-out infinite;
+        }
+      `}</style>
+
+      <div className="signup-card flex flex-col md:flex-row w-full max-w-[900px] bg-slate-50 bg-opacity-85 rounded-2xl overflow-hidden shadow-lg opacity-0 transform translate-y-5">
+        <div className="signup-image-container md:flex-1 bg-slate-100 bg-opacity-85 flex justify-center items-center p-4 md:p-8 relative">
+          <img src="/signinimage.png" alt="Signup Illustration" className="hands-image max-w-full h-auto z-10" />
         </div>
 
-        <div className="signup-form-container">
-          <h1 className="brand-name">Vermigone</h1>
-          <h2 className="signup-title">Sign up</h2>
-          <p className="signup-subtitle">Let's get you all set up so you can access your personal account.</p>
+        <div className="signup-form-container md:flex-1 p-6 md:p-10">
+          <h1 className="brand-name text-2xl font-bold text-slate-900 mb-6 text-right">Vermigone</h1>
+          <h2 className="signup-title text-2xl font-semibold mb-2">Sign up</h2>
+          <p className="signup-subtitle text-sm text-slate-500 mb-6">Let's get you all set up so you can access your personal account.</p>
 
-          {error && <div className="error-alert">{error}</div>}
+          {error && <div className="bg-red-50 text-red-500 p-3 rounded mb-4">{error}</div>}
 
           <form onSubmit={handleSubmit}>
-            <div className="form-row">
-              <div className="form-group">
+            <div className="form-row flex flex-col md:flex-row gap-4 mb-4">
+              <div className="form-group flex-1 mb-4">
                 <TextField
                   label="First Name"
                   variant="outlined"
@@ -532,7 +295,7 @@ function Signup() {
                 />
               </div>
               
-              <div className="form-group">
+              <div className="form-group flex-1 mb-4">
                 <TextField
                   label="Last Name"
                   variant="outlined"
@@ -545,8 +308,8 @@ function Signup() {
               </div>
             </div>
             
-            <div className="form-row">
-              <div className="form-group">
+            <div className="form-row flex flex-col md:flex-row gap-4 mb-4">
+              <div className="form-group flex-1 mb-4">
                 <TextField
                   label="Email"
                   variant="outlined"
@@ -561,7 +324,7 @@ function Signup() {
                 />
               </div>
               
-              <div className="form-group">
+              <div className="form-group flex-1 mb-4">
                 <TextField
                   label="Phone Number"
                   variant="outlined"
@@ -573,7 +336,7 @@ function Signup() {
               </div>
             </div>
             
-            <div className="form-group">
+            <div className="form-group mb-4">
               <TextField
                 label="Username"
                 variant="outlined"
@@ -585,7 +348,7 @@ function Signup() {
               />
             </div>
 
-            <div className="form-group">
+            <div className="form-group mb-4">
               <TextField
                 label="Location"
                 variant="outlined"
@@ -599,7 +362,7 @@ function Signup() {
               />
             </div>
 
-            <div className="form-group">
+            <div className="form-group mb-4">
               <TextField
                 label="Password"
                 type={showPassword ? 'text' : 'password'}
@@ -618,47 +381,47 @@ function Signup() {
                   ),
                 }}
               />
-              <div className="password-requirements">
-                <div className="requirement-item">
-                  <span className="requirement-icon">
+              <div className="mt-2.5 text-xs">
+                <div className="flex items-center mb-1">
+                  <span className="mr-2">
                     {passwordValidation.length ? 
-                      <CheckCircle fontSize="small" className="requirement-valid" /> : 
-                      <Cancel fontSize="small" className="requirement-invalid" />
+                      <CheckCircle fontSize="small" className="text-green-500" /> : 
+                      <Cancel fontSize="small" className="text-red-500" />
                     }
                   </span>
-                  <span className="requirement-text">At least 11 characters</span>
+                  <span className="text-slate-500">At least 11 characters</span>
                 </div>
-                <div className="requirement-item">
-                  <span className="requirement-icon">
+                <div className="flex items-center mb-1">
+                  <span className="mr-2">
                     {passwordValidation.capital ? 
-                      <CheckCircle fontSize="small" className="requirement-valid" /> : 
-                      <Cancel fontSize="small" className="requirement-invalid" />
+                      <CheckCircle fontSize="small" className="text-green-500" /> : 
+                      <Cancel fontSize="small" className="text-red-500" />
                     }
                   </span>
-                  <span className="requirement-text">At least one capital letter</span>
+                  <span className="text-slate-500">At least one capital letter</span>
                 </div>
-                <div className="requirement-item">
-                  <span className="requirement-icon">
+                <div className="flex items-center mb-1">
+                  <span className="mr-2">
                     {passwordValidation.number ? 
-                      <CheckCircle fontSize="small" className="requirement-valid" /> : 
-                      <Cancel fontSize="small" className="requirement-invalid" />
+                      <CheckCircle fontSize="small" className="text-green-500" /> : 
+                      <Cancel fontSize="small" className="text-red-500" />
                     }
                   </span>
-                  <span className="requirement-text">At least one number</span>
+                  <span className="text-slate-500">At least one number</span>
                 </div>
-                <div className="requirement-item">
-                  <span className="requirement-icon">
+                <div className="flex items-center mb-1">
+                  <span className="mr-2">
                     {passwordValidation.symbol ? 
-                      <CheckCircle fontSize="small" className="requirement-valid" /> : 
-                      <Cancel fontSize="small" className="requirement-invalid" />
+                      <CheckCircle fontSize="small" className="text-green-500" /> : 
+                      <Cancel fontSize="small" className="text-red-500" />
                     }
                   </span>
-                  <span className="requirement-text">At least one symbol (!@#$%^&*())</span>
+                  <span className="text-slate-500">At least one symbol (!@#$%^&*())</span>
                 </div>
               </div>
             </div>
 
-            <div className="form-group">
+            <div className="form-group mb-4">
               <TextField
                 label="Confirm Password"
                 type={showConfirmPassword ? 'text' : 'password'}
@@ -683,27 +446,29 @@ function Signup() {
             
             <button 
               type="submit" 
-              className="signup-button"
+              className="signup-button w-full py-3 bg-[#5da646] hover:bg-[#40752f] text-white border-none rounded-md font-medium text-sm cursor-pointer transition-colors mt-4 disabled:bg-[#90eb73] disabled:cursor-not-allowed"
               disabled={isLoading || !isPasswordValid() || password !== confirmPassword || !validateEmail(email)}
             >
               {isLoading ? <CircularProgress size={24} color="inherit" /> : 'Create account'}
             </button>
           </form>
 
-          <p className="login-prompt">
-            Already have an account? <a href="/login">Login</a>
+          <p className="login-prompt text-center my-6 text-sm text-slate-500">
+            Already have an account? <a href="/login" className="text-[#5da646] font-medium hover:underline">Login</a>
           </p>
 
-          <div className="or-divider">
-            <span>or sign up with</span>
+          <div className="or-divider flex items-center my-6">
+            <div className="flex-1 h-px bg-slate-200"></div>
+            <span className="px-4 text-xs text-slate-500">or sign up with</span>
+            <div className="flex-1 h-px bg-slate-200"></div>
           </div>
 
           <button
-            className="google-signup-button"
+            className="google-signup-button flex justify-center items-center w-full py-3 bg-white border border-slate-200 rounded-md cursor-pointer text-black transition-all duration-300 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={handleGoogleSignup}
             disabled={isLoading}
           >
-            <img src="/google-icon.png" alt="Google" className="google-icon" />
+            <img src="/google-icon.png" alt="Google" className="h-6 mr-2" />
             Sign up with Google
           </button>
         </div>
@@ -711,6 +476,5 @@ function Signup() {
     </div>
   );
 }
-
 
 export default Signup;
