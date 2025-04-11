@@ -92,359 +92,156 @@ function ForgotPassword() {
   };
 
   return (
-    <div className="login-container">
-      <style>
-      {`
-      /* Login.css */
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
-
-:root {
-  --primary-color: #5da646;
-  --primary-hover: #40752f;
-  --text-dark: #1e293b;
-  --text-light: #64748b;
-  --background-color: #f8fafc;
-  --card-background: rgba(255, 255, 255, 0.85);
-  --border-color: #e2e8f0;
-  --success-color: #22c55e;
-  --error-color: #ef4444;
-}
-
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-body {
-  font-family: 'Poppins', sans-serif;
-  background-color: var(--background-color);
-    background-image: url('/wallpaper.png');
-  color: var(--text-dark);
-  line-height: 1.6;
-}
-
-.login-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh;
-  padding: 2rem;
-}
-
-/* Keyframe Animations */
-@keyframes slideInFromRight {
-  0% {
-    transform: translateX(50px);
-    opacity: 0;
-  }
-  100% {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
-
-@keyframes slideInFromLeft {
-  0% {
-    transform: translateX(-50px);
-    opacity: 0;
-  }
-  100% {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
-
-@keyframes fadeUp {
-  0% {
-    transform: translateY(20px);
-    opacity: 0;
-  }
-  100% {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-
-@keyframes pulse {
-  0% {
-    box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4);
-  }
-  70% {
-    box-shadow: 0 0 0 10px rgba(99, 102, 241, 0);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(99, 102, 241, 0);
-  }
-}
-
-.login-card {
-  display: flex;
-  width: 100%;
-  max-width: 900px;
-  background-color: var(--card-background);
-  border-radius: 1rem;
-  overflow: hidden;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
-  opacity: 0;
-  transform: translateY(20px);
-}
-
-.login-card.animate-in {
-  animation: fadeUp 0.8s ease-out forwards;
-}
-
-.login-form-container {
-  flex: 1;
-  padding: 2.5rem;
-}
-
-.back-link {
-  display: flex;
-  align-items: center;
-  color: var(--text-light);
-  text-decoration: none;
-  margin-bottom: 1rem;
-  font-size: 0.875rem;
-  animation: slideInFromLeft 0.6s ease-out 0.2s forwards;
-  opacity: 0;
-}
-
-.back-link:hover {
-  color: var(--primary-color);
-}
-
-.brand-name {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--primary-color);
-  margin-bottom: 2rem;
-  animation: slideInFromLeft 0.6s ease-out 0.3s forwards;
-  opacity: 0;
-}
-
-.login-title {
-  font-size: 1.5rem;
-  font-weight: 600;
-  margin-bottom: 0.5rem;
-  animation: slideInFromLeft 0.6s ease-out 0.4s forwards;
-  opacity: 0;
-}
-
-.login-subtitle {
-  color: var(--text-light);
-  margin-bottom: 2rem;
-  font-size: 0.875rem;
-  animation: slideInFromLeft 0.6s ease-out 0.5s forwards;
-  opacity: 0;
-}
-
-.form-group {
-  margin-bottom: 1.5rem;
-  animation: fadeUp 0.6s ease-out 0.6s forwards;
-  opacity: 0;
-}
-
-.login-button {
-  width: 100%;
-  padding: 0.75rem;
-  background-color: var(--primary-color);
-  color: white;
-  border: none;
-  border-radius: 0.375rem;
-  font-weight: 500;
-  font-size: 0.875rem;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  position: relative;
-  overflow: hidden;
-  animation: fadeUp 0.6s ease-out 0.8s forwards, pulse 2s infinite;
-  opacity: 0;
-}
-
-.login-button:hover {
-  background-color: var(--primary-hover);
-  transform: translateY(-2px);
-}
-
-.login-button:disabled {
-  background-color: #a5a6f6;
-  cursor: not-allowed;
-  animation: none;
-}
-
-.login-button .button-content {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.or-divider {
-  display: flex;
-  align-items: center;
-  margin: 1.5rem 0;
-  animation: fadeUp 0.6s ease-out 1s forwards;
-  opacity: 0;
-}
-
-.or-divider::before,
-.or-divider::after {
-  content: "";
-  flex: 1;
-  height: 1px;
-  background-color: var(--border-color);
-}
-
-.or-divider span {
-  padding: 0 1rem;
-  color: var(--text-light);
-  font-size: 0.75rem;
-}
-
-.google-login-button {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  width: 100%;
-  padding: 0.75rem;
-  background-color: white;
-  border: 1px solid var(--border-color);
-  border-radius: 0.375rem;
-  cursor: pointer;
-  color: black;
-  transition: all 0.3s ease;
-  animation: fadeUp 0.6s ease-out 1.1s forwards;
-  opacity: 0;
-}
-
-.google-login-button:hover {
-  background-color: #f1f5f9;
-  transform: translateY(-2px);
-  box-shadow: 0 5px 15px -3px rgba(0, 0, 0, 0.1);
-}
-
-.google-login-button:disabled {
-  cursor: not-allowed;
-  opacity: 0.7;
-}
-
-.google-icon {
-  height: 1.5rem;
-  margin-right: 0.5rem;
-}
-
-.login-image-container {
-  flex: 1;
-  background: linear-gradient(135deg, rgba(224, 231, 255, 0.4) 0%, rgba(199, 210, 254, 0.4) 100%);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 2rem;
-  position: relative;
-  overflow: hidden;
-}
-
-.auth-image {
-  max-width: 100%;
-  height: auto;
-  animation: slideInFromRight 0.8s ease-out 0.5s forwards;
-  opacity: 0;
-  position: relative;
-  z-index: 1;
-}
-
-.login-image-container::before {
-  content: '';
-  position: absolute;
-  width: 200px;
-  height: 200px;
-  background: rgba(99, 102, 241, 0.2);
-  border-radius: 50%;
-  top: -100px;
-  right: -100px;
-  animation: float 6s ease-in-out infinite;
-}
-
-.login-image-container::after {
-  content: '';
-  position: absolute;
-  width: 150px;
-  height: 150px;
-  background: rgba(99, 102, 241, 0.15);
-  border-radius: 50%;
-  bottom: -75px;
-  left: -75px;
-  animation: float 8s ease-in-out infinite reverse;
-}
-
-@keyframes float {
-  0% {
-    transform: translateY(0) rotate(0deg);
-  }
-  50% {
-    transform: translateY(-20px) rotate(10deg);
-  }
-  100% {
-    transform: translateY(0) rotate(0deg);
-  }
-}
-
-.error-text {
-  color: var(--error-color);
-  font-size: 0.8rem;
-  margin-top: 0.5rem;
-}
-
-.input-shake {
-  animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
-}
-
-@keyframes shake {
-  10%, 90% {
-    transform: translateX(-1px);
-  }
-  20%, 80% {
-    transform: translateX(2px);
-  }
-  30%, 50%, 70% {
-    transform: translateX(-4px);
-  }
-  40%, 60% {
-    transform: translateX(4px);
-  }
-}
-
-/* Responsive styles */
-@media (max-width: 768px) {
-  .login-card {
-    flex-direction: column-reverse;
-  }
-  
-  .login-image-container {
-    padding: 2rem 2rem 0;
-  }
-  
-  .auth-image {
-    max-height: 200px;
-  }
-}
-      `}
-      </style>
-      <div className="login-card">
-        <div className="login-form-container">
-          <h1 className="brand-name">Vermigo</h1>
+<div className="flex justify-center items-center h-[100dvh] min-h-[1100px] w-full p-0 bg-slate-50 bg-[url('/wallpaper.png')] bg-cover bg-center bg-no-repeat font-['Poppins'] absolute inset-0 overflow-auto">
+<style jsx>{`
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+        
+        @keyframes slideInFromRight {
+          0% {
+            transform: translateX(50px);
+            opacity: 0;
+          }
+          100% {
+            transform: translateX(0);
+            opacity: 0;
+          }
+        }
+        
+        @keyframes slideInFromLeft {
+          0% {
+            transform: translateX(-50px);
+            opacity: 0;
+          }
+          100% {
+            transform: translateX(0);
+            opacity: 1;
+          }
+        }
+        
+        @keyframes fadeUp {
+          0% {
+            transform: translateY(20px);
+            opacity: 0;
+          }
+          100% {
+            transform: translateY(0);
+            opacity: 1;
+          }
+        }
+        
+        @keyframes pulse {
+          0% {
+            box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4);
+          }
+          70% {
+            box-shadow: 0 0 0 10px rgba(99, 102, 241, 0);
+          }
+          100% {
+            box-shadow: 0 0 0 0 rgba(99, 102, 241, 0);
+          }
+        }
+        
+        @keyframes float {
+          0% {
+            transform: translateY(0) rotate(0deg);
+          }
+          50% {
+            transform: translateY(-20px) rotate(10deg);
+          }
+          100% {
+            transform: translateY(0) rotate(0deg);
+          }
+        }
+        
+        @keyframes shake {
+          10%, 90% {
+            transform: translateX(-1px);
+          }
+          20%, 80% {
+            transform: translateX(2px);
+          }
+          30%, 50%, 70% {
+            transform: translateX(-4px);
+          }
+          40%, 60% {
+            transform: translateX(4px);
+          }
+        }
+        
+        .login-card {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        
+        .login-card.animate-in {
+          animation: fadeUp 0.8s ease-out forwards;
+        }
+        
+        .back-link {
+          animation: slideInFromLeft 0.6s ease-out 0.2s forwards;
+          opacity: 0;
+        }
+        
+        .brand-name {
+          animation: slideInFromLeft 0.6s ease-out 0.3s forwards;
+          opacity: 0;
+        }
+        
+        .login-title {
+          animation: slideInFromLeft 0.6s ease-out 0.4s forwards;
+          opacity: 0;
+        }
+        
+        .login-subtitle {
+          animation: slideInFromLeft 0.6s ease-out 0.5s forwards;
+          opacity: 0;
+        }
+        
+        .form-group {
+          animation: fadeUp 0.6s ease-out 0.6s forwards;
+          opacity: 0;
+        }
+        
+        .login-button {
+          animation: fadeUp 0.6s ease-out 0.8s forwards, pulse 2s infinite;
+          opacity: 0;
+        }
+        
+        .or-divider {
+          animation: fadeUp 0.6s ease-out 1s forwards;
+          opacity: 0;
+        }
+        
+        .google-login-button {
+          animation: fadeUp 0.6s ease-out 1.1s forwards;
+          opacity: 0;
+        }
+        
+        .auth-image {
+                  animation: float 10s ease-in-out infinite;
+        }
+        
+        .input-shake {
+          animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+        }
+      `}</style>
+      
+      <div className="login-card flex w-full max-w-5xl bg-white/85 rounded-2xl overflow-hidden shadow-xl">
+        <div className="login-form-container flex-1 p-10">
+          <h1 className="brand-name text-2xl font-bold text-green-600 mb-8">Vermigo</h1>
           
           {step === 'email' ? (
             <>
-              <a href="/login" className="back-link">
+              <a href="/login" className="back-link flex items-center text-slate-500 no-underline mb-4 text-sm hover:text-green-600">
                 <ArrowBack style={{ fontSize: '0.9rem', marginRight: '0.5rem' }} />
                 Back to login
               </a>
-              <h2 className="login-title">Forgot your password?</h2>
-              <p className="login-subtitle">Don't worry, happens to all of us. Enter your email below to recover your password.</p>
+              <br></br><br></br><br></br>
+              <h2 className="login-title text-2xl font-semibold mb-2">Forgot your password?</h2>
+              <p className="login-subtitle text-slate-500 mb-8 text-sm">Don't worry, happens to all of us. Enter your email below to recover your password.</p>
               
               <form onSubmit={handleEmailSubmit}>
-                <div className="form-group">
+                <div className="form-group mb-6">
                   <TextField
                     label="Email"
                     variant="outlined"
@@ -455,39 +252,41 @@ body {
                     className={error !== '' ? 'input-shake' : ''}
                     placeholder="name@example.com"
                   />
-                  {error && <p className="error-text">{error}</p>}
+                  {error && <p className="text-red-500 text-xs mt-2">{error}</p>}
                 </div>
 
                 <button 
                   type="submit" 
-                  className="login-button" 
+                  className="login-button w-full py-3 bg-green-600 text-white border-none rounded-md font-medium text-sm cursor-pointer transition-all duration-300 relative overflow-hidden hover:bg-green-700 hover:-translate-y-0.5 disabled:bg-indigo-300 disabled:cursor-not-allowed"
                   disabled={isLoading}
                 >
-                  <div className="button-content">
+                  <div className="flex justify-center items-center">
                     {isLoading ? <CircularProgress size={24} color="inherit" /> : 'Submit'}
                   </div>
                 </button>
               </form>
               
-              <div className="or-divider">
-                <span>Or login with</span>
+              <div className="or-divider flex items-center my-6">
+                <div className="flex-1 h-px bg-slate-200"></div>
+                <span className="px-4 text-slate-500 text-xs">Or login with</span>
+                <div className="flex-1 h-px bg-slate-200"></div>
               </div>
               
               <button 
-                className="google-login-button" 
+                className="google-login-button flex justify-center items-center w-full py-3 bg-white border border-slate-200 rounded-md cursor-pointer text-black transition-all duration-300 hover:bg-slate-100 hover:-translate-y-0.5 hover:shadow-md disabled:opacity-70 disabled:cursor-not-allowed"
                 onClick={handleGoogleLogin}
               >
-                <img src="/google-icon.png" alt="Google" className="google-icon" />
+                <img src="/google-icon.png" alt="Google" className="h-6 mr-2" />
                 Google
               </button>
             </>
           ) : (
             <>
-              <h2 className="login-title">Set a password</h2>
-              <p className="login-subtitle">Your previous password has been resetted. Please set a new password for your account.</p>
+              <h2 className="login-title text-2xl font-semibold mb-2">Set a password</h2>
+              <p className="login-subtitle text-slate-500 mb-8 text-sm">Your previous password has been resetted. Please set a new password for your account.</p>
               
               <form onSubmit={handlePasswordReset}>
-                <div className="form-group">
+                <div className="form-group mb-6">
                   <TextField
                     label="Create Password"
                     type={showPassword ? 'text' : 'password'}
@@ -509,7 +308,7 @@ body {
                   />
                 </div>
 
-                <div className="form-group">
+                <div className="form-group mb-6">
                   <TextField
                     label="Re-enter Password"
                     type={showConfirmPassword ? 'text' : 'password'}
@@ -529,15 +328,15 @@ body {
                       ),
                     }}
                   />
-                  {error && <p className="error-text">{error}</p>}
+                  {error && <p className="text-red-500 text-xs mt-2">{error}</p>}
                 </div>
                 
                 <button 
                   type="submit" 
-                  className="login-button" 
+                  className="login-button w-full py-3 bg-green-600 text-white border-none rounded-md font-medium text-sm cursor-pointer transition-all duration-300 relative overflow-hidden hover:bg-green-700 hover:-translate-y-0.5 disabled:bg-indigo-300 disabled:cursor-not-allowed"
                   disabled={isLoading}
                 >
-                  <div className="button-content">
+                  <div className="flex justify-center items-center">
                     {isLoading ? <CircularProgress size={24} color="inherit" /> : 'Set password'}
                   </div>
                 </button>
@@ -546,9 +345,13 @@ body {
           )}
         </div>
         
-        <div className="login-image-container">
-          <img src="/forgotpw.png" alt="Authentication" className="auth-image" />
+        <div className="login-image-container flex-1 bg-gradient-to-br from-indigo-100/40 to-indigo-200/40 flex justify-center items-center p-8 relative overflow-hidden">
+          <div className="w-50 h-50 bg-indigo-500/20 rounded-full absolute -top-24 -right-24 animate-[float_6s_ease-in-out_infinite]"></div>
+          <div className="w-36 h-36 bg-indigo-500/15 rounded-full absolute -bottom-16 -left-16 animate-[float_8s_ease-in-out_infinite_reverse]"></div>
+          <img src="/forgotpw.png" alt="Authentication" className="auth-image max-w-full h-auto relative z-10" />
         </div>
+        {/*           <img src="/signinimage.png" alt="Signup Illustration" className="hands-image max-w-full h-auto z-10" />
+*/}
       </div>
       
       {/* Notification Alert */}
