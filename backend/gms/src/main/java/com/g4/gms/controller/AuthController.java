@@ -36,20 +36,4 @@ public class AuthController {
             return ResponseEntity.badRequest().body(response);
         }
     }
-    
-    @PostMapping("/verify")
-    public ResponseEntity<Boolean> verifyToken(@RequestHeader("Authorization") String token) {
-        // Remove "Bearer " prefix if present
-        if (token.startsWith("Bearer ")) {
-            token = token.substring(7);
-        }
-        
-        boolean isValid = authService.verifyToken(token);
-        
-        if (isValid) {
-            return ResponseEntity.ok(true);
-        } else {
-            return ResponseEntity.status(401).body(false);
-        }
-    }
 } 

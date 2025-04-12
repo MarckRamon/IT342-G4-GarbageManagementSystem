@@ -7,6 +7,12 @@ import com.google.cloud.firestore.DocumentReference;
 import com.google.cloud.firestore.DocumentSnapshot;
 import com.google.cloud.firestore.Firestore;
 import com.google.cloud.firestore.WriteResult;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseAuthException;
+import com.google.firebase.auth.UserRecord;
+import com.google.firebase.auth.AuthErrorCode;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -18,10 +24,14 @@ import java.util.Map;
 @Service
 public class UserService {
 
+    private static final Logger logger = LoggerFactory.getLogger(UserService.class);
     private static final String COLLECTION_NAME = "users";
     
     @Autowired
     private Firestore firestore;
+    
+    @Autowired
+    private FirebaseAuth firebaseAuth;
     
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
 
@@ -182,35 +192,73 @@ public class UserService {
     }
     
     /**
-     * Update email for a user
+     * Update email for a user in both Firebase Auth and Firestore.
      * @param userId User ID
-     * @param email New email address
-     * @return Updated user object
+     * @param newEmail New email address
+     * @return Updated user object from Firestore
      * @throws ExecutionException
      * @throws InterruptedException
+     * @throws FirebaseAuthException If updating Firebase Auth fails
+     * @throws IllegalArgumentException If user not found or email is already in use
      */
-    public User updateUserEmail(String userId, String email) 
-            throws ExecutionException, InterruptedException {
-        // Check if email is already in use by another user
-        User existingUserWithEmail = getUserByEmail(email);
-        if (existingUserWithEmail != null && !existingUserWithEmail.getUserId().equals(userId)) {
-            throw new IllegalArgumentException("Email is already in use by another user");
-        }
+    public User updateUserEmail(String userId, String newEmail) 
+            throws ExecutionException, InterruptedException, FirebaseAuthException, IllegalArgumentException {
         
+        logger.info("Attempting to update email for user ID: {} to {}", userId, newEmail);
+
+        // 1. Check if the new email is already in use in Firestore by ANOTHER user
+        User existingUserWithEmail = getUserByEmail(newEmail);
+        if (existingUserWithEmail != null && !existingUserWithEmail.getUserId().equals(userId)) {
+             logger.warn("Email update failed: {} is already in use by user ID: {}", newEmail, existingUserWithEmail.getUserId());
+            throw new IllegalArgumentException("Email is already in use by another user.");
+        }
+
+        // 2. Get the user data from Firestore
         User user = getUserById(userId);
         if (user == null) {
+            logger.warn("Email update failed: User not found with ID: {}", userId);
             throw new IllegalArgumentException("User not found with ID: " + userId);
         }
+
+        // 3. Attempt to update the email in Firebase Authentication FIRST
+        try {
+            UserRecord.UpdateRequest request = new UserRecord.UpdateRequest(userId)
+                    .setEmail(newEmail);
+            // You might also want to set setEmailVerified(false) here and trigger verification flow
+            // request.setEmailVerified(false); 
+            
+            UserRecord userRecord = firebaseAuth.updateUser(request);
+            logger.info("Successfully updated email in Firebase Auth for UID: {}", userRecord.getUid());
+            
+        } catch (FirebaseAuthException e) {
+            logger.error("Failed to update email in Firebase Auth for UID {}: {}", userId, e.getMessage(), e);
+            // Handle specific Firebase Auth errors
+            if (e.getAuthErrorCode() == AuthErrorCode.EMAIL_ALREADY_EXISTS) {
+                 throw new IllegalArgumentException("This email address is already associated with another Firebase Authentication account.", e);
+            } else if (e.getAuthErrorCode() == AuthErrorCode.USER_NOT_FOUND) {
+                 // This indicates an inconsistency if the user exists in Firestore but not Auth
+                 logger.error("Inconsistency detected: User {} found in Firestore but not in Firebase Auth.", userId);
+                 throw new IllegalArgumentException("User account not found in authentication system.", e);
+            }
+            // Re-throw other Firebase exceptions to be handled by the controller
+            throw e; 
+        }
+
+        // 4. If Firebase Auth update succeeded, update the email in Firestore
+        try {
+            user.setEmail(newEmail); // Update the user object
+            DocumentReference docRef = firestore.collection(COLLECTION_NAME).document(userId);
+            // Use update instead of set to only change the email field
+            ApiFuture<WriteResult> result = docRef.update("email", newEmail); 
+            result.get(); // Wait for the write to complete
+            logger.info("Successfully updated email in Firestore for user ID: {}", userId);
+        } catch (ExecutionException | InterruptedException e) {
+             logger.error("Failed to update email in Firestore for user ID {}: {}", userId, e.getMessage(), e);
+             // Potentially try to revert the Firebase Auth email change here (complex)
+             // For now, just rethrow
+             throw e;
+        }
         
-        user.setEmail(email);
-        
-        // Update in Firestore
-        DocumentReference docRef = firestore.collection(COLLECTION_NAME).document(userId);
-        ApiFuture<WriteResult> result = docRef.set(user);
-        
-        // Wait for the write to complete
-        result.get();
-        
-        return user;
+        return user; // Return the user object with the updated email
     }
 } 
