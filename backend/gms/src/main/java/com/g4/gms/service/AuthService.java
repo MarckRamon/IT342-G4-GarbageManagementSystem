@@ -171,4 +171,29 @@ public class AuthService {
              return new AuthResponse("An unexpected error occurred during login.");
         }
     }
+
+    public void requestPasswordReset(String email) {
+        try {
+            // Firebase Admin SDK handles sending the email containing the reset link
+            String link = firebaseAuth.generatePasswordResetLink(email);
+            // Log success internally. The link variable is generated but typically not used directly here.
+            logger.info("Successfully requested password reset for email (email sent by Firebase): {}", email);
+            // NOTE: We intentionally do NOT indicate to the caller whether the email exists
+            // in Firebase to prevent user enumeration attacks.
+
+        } catch (FirebaseAuthException e) {
+            // Log the error for backend visibility, especially if the email doesn't exist.
+            if (e.getAuthErrorCode() == AuthErrorCode.USER_NOT_FOUND) {
+                logger.info("Password reset requested for non-existent email: {}", email);
+            } else {
+                logger.warn("Firebase error during password reset request for email {}: {}", email, e.getMessage());
+            }
+            // IMPORTANT: Swallow the exception. Do not throw or return an error.
+            // The controller should return a generic success response regardless.
+        } catch (Exception e) {
+            // Catch any other unexpected errors
+            logger.error("Unexpected error during password reset request for email {}: {}", email, e.getMessage(), e);
+            // Also swallow this exception.
+        }
+    }
 } 
