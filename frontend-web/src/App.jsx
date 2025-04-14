@@ -9,6 +9,8 @@ import ForgotPassword from './forgotpw.jsx';
 import VermigoDashboard from './page/dashboard.jsx';
 import VermigoSchedule from './page/Schedule.jsx';
 import VermigoComplaints from './page/complaints.jsx';
+import MapPage from './page/MapPage.jsx';
+
 function App() {
   return (
     <BrowserRouter>
@@ -19,6 +21,7 @@ function App() {
         <Route path="/dashboard" element={<VermigoDashboard />} />
         <Route path="/schedule" element={<VermigoSchedule />} />
         <Route path="/complaints" element={<VermigoComplaints />} />
+        <Route path="/map" element={<MapPage />} />
         <Route path="/" element={<Navigate to="/login" />} />
 
       </Routes>
