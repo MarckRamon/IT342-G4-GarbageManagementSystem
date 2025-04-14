@@ -8,22 +8,33 @@ import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.example.GarbageMS.databinding.ActivityLoginBinding
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
+import com.example.GarbageMS.models.LoginRequest
+import com.example.GarbageMS.utils.ApiService
+import com.example.GarbageMS.utils.SessionManager
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class LoginActivity : AppCompatActivity() {
     private lateinit var binding: ActivityLoginBinding
-    private lateinit var auth: FirebaseAuth
-    private lateinit var db: FirebaseFirestore
     private var passwordVisible = false
+    private val apiService = ApiService.create()
+    private lateinit var sessionManager: SessionManager
+    private val TAG = "LoginActivity"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityLoginBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        auth = FirebaseAuth.getInstance()
-        db = FirebaseFirestore.getInstance()
+        sessionManager = SessionManager.getInstance(this)
+        
+        // Check if user is already logged in
+        if (sessionManager.isLoggedIn()) {
+            navigateToHome()
+            return
+        }
 
         setupListeners()
     }
@@ -61,7 +72,8 @@ class LoginActivity : AppCompatActivity() {
         }
 
         binding.tvForgotPassword.setOnClickListener {
-            Toast.makeText(this, "Forgot password functionality coming soon", Toast.LENGTH_SHORT).show()
+            // Navigate to Forgot Password screen
+            startActivity(Intent(this, ForgotPasswordActivity::class.java))
         }
 
         binding.googleButtonContainer.setOnClickListener {
@@ -73,58 +85,65 @@ class LoginActivity : AppCompatActivity() {
         // Show loading
         showLoading(true)
         
-        auth.signInWithEmailAndPassword(email, password)
-            .addOnCompleteListener { task ->
-                if (task.isSuccessful) {
-                    checkUserType()
-                } else {
-                    showLoading(false)
-                    Toast.makeText(this, "Login failed: ${task.exception?.message}", Toast.LENGTH_SHORT).show()
-                }
-            }
-    }
-
-    private fun checkUserType() {
-        val currentUser = auth.currentUser
-        if (currentUser != null) {
-            Log.d("LoginActivity", "Checking user type for UID: ${currentUser.uid}")
-            db.collection("users")
-                .document(currentUser.uid)
-                .get()
-                .addOnSuccessListener { document ->
-                    showLoading(false)
-                    Log.d("LoginActivity", "Document exists: ${document.exists()}")
-                    if (document.exists()) {
-                        // Check for 'role' field instead of 'userType'
-                        val userRole = document.getString("role")
-                        Log.d("LoginActivity", "User role found: $userRole")
-                        
-                        // For now, just authenticate any user with a role
-                        if (!userRole.isNullOrEmpty()) {
-                            startActivity(Intent(this, HomeActivity::class.java))
-                            finish()
+        val loginRequest = LoginRequest(email, password)
+        
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val response = apiService.login(loginRequest)
+                
+                withContext(Dispatchers.Main) {
+                    if (response.isSuccessful) {
+                        val loginResponse = response.body()
+                        if (loginResponse != null) {
+                            // Check if login was successful based on the success flag
+                            if (loginResponse.success) {
+                                // Verify user role is USER
+                                if (loginResponse.role == "USER") {
+                                    // Save authentication data
+                                    sessionManager.saveToken(loginResponse.token)
+                                    sessionManager.saveUserId(loginResponse.userId)
+                                    sessionManager.saveUserType(loginResponse.role)
+                                    
+                                    Log.d(TAG, "Login successful: userId=${loginResponse.userId}, role=${loginResponse.role}")
+                                    
+                                    // Navigate to home screen
+                                    navigateToHome()
+                                } else {
+                                    showLoading(false)
+                                    Toast.makeText(this@LoginActivity, 
+                                        "Access denied: Only USER accounts are allowed", 
+                                        Toast.LENGTH_LONG).show()
+                                }
+                            } else {
+                                showLoading(false)
+                                val errorMessage = loginResponse.message ?: "Authentication failed"
+                                Toast.makeText(this@LoginActivity, errorMessage, Toast.LENGTH_SHORT).show()
+                            }
                         } else {
-                            Log.d("LoginActivity", "Invalid user role: $userRole")
-                            Toast.makeText(this, "Invalid user role", Toast.LENGTH_SHORT).show()
-                            auth.signOut()
+                            showLoading(false)
+                            Toast.makeText(this@LoginActivity, "Login failed: Empty response", Toast.LENGTH_SHORT).show()
                         }
                     } else {
-                        Log.d("LoginActivity", "User document not found")
-                        Toast.makeText(this, "User document not found", Toast.LENGTH_SHORT).show()
-                        auth.signOut()
+                        showLoading(false)
+                        val errorMessage = response.errorBody()?.string() ?: "Unknown error"
+                        Log.e(TAG, "Login failed: $errorMessage")
+                        Toast.makeText(this@LoginActivity, "Login failed: $errorMessage", Toast.LENGTH_SHORT).show()
                     }
                 }
-                .addOnFailureListener { exception ->
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
                     showLoading(false)
-                    Log.e("LoginActivity", "Error checking user type: ${exception.message}")
-                    Toast.makeText(this, "Failed to check user type: ${exception.message}", Toast.LENGTH_SHORT).show()
-                    auth.signOut()
+                    Log.e(TAG, "Login exception: ${e.message}", e)
+                    Toast.makeText(this@LoginActivity, "Login failed: ${e.message}", Toast.LENGTH_SHORT).show()
                 }
-        } else {
-            showLoading(false)
-            Log.d("LoginActivity", "Current user is null")
-            Toast.makeText(this, "No authenticated user found", Toast.LENGTH_SHORT).show()
+            }
         }
+    }
+    
+    private fun navigateToHome() {
+        val intent = Intent(this, HomeActivity::class.java)
+        startActivity(intent)
+        finish()
     }
     
     private fun showLoading(show: Boolean) {

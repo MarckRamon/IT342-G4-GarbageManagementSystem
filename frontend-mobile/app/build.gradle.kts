@@ -86,6 +86,9 @@ dependencies {
     // BCrypt
     implementation("at.favre.lib:bcrypt:0.10.2")
     
+    // OpenStreetMap with osmdroid
+    implementation("org.osmdroid:osmdroid-android:6.1.16")
+    
     // Testing
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")

@@ -41,4 +41,7 @@
     <color name="green">#5FBC63</color>
 
     <color name="grey">#757575</color>
+
+    <!-- Custom Colors -->
+    <color name="schedule_card_purple">#8A2BE2</color> <!-- Color for the schedule card background -->
 </resources>
