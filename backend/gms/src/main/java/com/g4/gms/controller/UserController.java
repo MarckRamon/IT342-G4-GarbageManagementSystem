@@ -4,6 +4,7 @@ import com.g4.gms.dto.EmailRequest;
 import com.g4.gms.dto.EmailResponse;
 import com.g4.gms.dto.ProfileRequest;
 import com.g4.gms.dto.ProfileResponse;
+import com.g4.gms.dto.UpdateNotificationSettingsDto;
 import com.g4.gms.model.User;
 import com.g4.gms.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -133,6 +134,54 @@ public class UserController {
         } catch (Exception e) {
             EmailResponse response = new EmailResponse(false, "Error updating email: " + e.getMessage());
             return ResponseEntity.badRequest().body(response);
+        }
+    }
+
+    /**
+     * Update user notification settings
+     * @param userId User ID
+     * @param request UpdateNotificationSettingsDto containing the new setting
+     * @return ResponseEntity indicating success or failure
+     */
+    @PutMapping("/{userId}/profile/notifications")
+    public ResponseEntity<?> updateNotificationSettings(
+            @PathVariable String userId,
+            @RequestBody UpdateNotificationSettingsDto request) {
+        try {
+            userService.updateNotificationSettings(userId, request.isNotificationsEnabled());
+            return ResponseEntity.ok().body(Map.of("message", "Notification settings updated successfully"));
+        } catch (IllegalArgumentException e) {
+            // User not found
+            return ResponseEntity.status(404).body(Map.of("message", e.getMessage()));
+        } catch (ExecutionException | InterruptedException e) {
+            // Firestore operation failed
+            return ResponseEntity.status(500).body(Map.of("message", "Error updating notification settings: " + e.getMessage()));
+        } catch (Exception e) {
+            // Catch any other unexpected exceptions
+            return ResponseEntity.status(500).body(Map.of("message", "An unexpected error occurred: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Get user notification settings
+     * @param userId User ID
+     * @return ResponseEntity containing the notification setting (boolean) or an error message
+     */
+    @GetMapping("/{userId}/profile/notifications")
+    public ResponseEntity<?> getNotificationSettings(@PathVariable String userId) {
+        try {
+            boolean isEnabled = userService.getNotificationSettings(userId);
+            // Return the boolean value directly in the body, Spring will handle JSON conversion
+            return ResponseEntity.ok().body(Map.of("notificationsEnabled", isEnabled));
+        } catch (IllegalArgumentException e) {
+            // User not found
+            return ResponseEntity.status(404).body(Map.of("message", e.getMessage()));
+        } catch (ExecutionException | InterruptedException e) {
+            // Firestore operation failed
+            return ResponseEntity.status(500).body(Map.of("message", "Error retrieving notification settings: " + e.getMessage()));
+        } catch (Exception e) {
+            // Catch any other unexpected exceptions
+            return ResponseEntity.status(500).body(Map.of("message", "An unexpected error occurred: " + e.getMessage()));
         }
     }
 } 

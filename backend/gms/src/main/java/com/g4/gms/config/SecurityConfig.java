@@ -46,8 +46,8 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.POST, "/api/auth/register", "/api/auth/login", "/api/auth/request-password-reset").permitAll() // Allow public access to register, login, and password reset request
                 // Example: Secure user profile endpoints - requires authentication
-                .requestMatchers(HttpMethod.GET, "/api/users/{userId}/profile", "/api/users/{userId}/profile/email").authenticated()
-                .requestMatchers(HttpMethod.PUT, "/api/users/{userId}/profile", "/api/users/{userId}/profile/email").authenticated()
+                .requestMatchers(HttpMethod.GET, "/api/users/{userId}/profile", "/api/users/{userId}/profile/email", "/api/users/{userId}/profile/notifications").authenticated()
+                .requestMatchers(HttpMethod.PUT, "/api/users/{userId}/profile", "/api/users/{userId}/profile/email", "/api/users/{userId}/profile/notifications").authenticated()
                 // Example: Secure a hypothetical admin endpoint - requires ADMIN role
                 // .requestMatchers("/api/admin/**").hasRole("ADMIN") 
                 // Add more specific rules as needed

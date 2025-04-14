@@ -14,6 +14,7 @@ public class User {
     private Timestamp createdAt;  // Using com.google.cloud.Timestamp
     private String location;
     private String phoneNumber;
+    private boolean notificationsEnabled = true; // Added field, default to true
 
     // Default constructor
     public User() {}
@@ -117,6 +118,16 @@ public class User {
     @PropertyName("phoneNumber")
     public void setPhoneNumber(String phoneNumber) {
         this.phoneNumber = phoneNumber;
+    }
+
+    @PropertyName("notificationsEnabled")
+    public boolean isNotificationsEnabled() {
+        return notificationsEnabled;
+    }
+
+    @PropertyName("notificationsEnabled")
+    public void setNotificationsEnabled(boolean notificationsEnabled) {
+        this.notificationsEnabled = notificationsEnabled;
     }
 
     @Override
