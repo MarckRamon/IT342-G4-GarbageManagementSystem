@@ -27,6 +27,7 @@ class RegisterActivity : AppCompatActivity() {
     private var email = ""
     private var phoneNumber = ""
     private var password = ""
+    private var username = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -56,10 +57,18 @@ class RegisterActivity : AppCompatActivity() {
         val phoneNumber = binding.etPhone.text.toString().trim()
         val password = binding.etPassword.text.toString()
         val confirmPassword = binding.etConfirmPassword.text.toString()
+        val username = binding.etUsername.text.toString().trim()
 
         if (firstName.isEmpty() || lastName.isEmpty() || email.isEmpty() || 
-            phoneNumber.isEmpty() || password.isEmpty() || confirmPassword.isEmpty()) {
+            phoneNumber.isEmpty() || password.isEmpty() || confirmPassword.isEmpty() || username.isEmpty()) {
             Toast.makeText(this, "Please fill all fields", Toast.LENGTH_SHORT).show()
+            return false
+        }
+
+        // Check if email contains uppercase letters and reject them
+        if (email != email.lowercase()) {
+            binding.etEmail.error = "Email must contain only lowercase letters"
+            binding.etEmail.requestFocus()
             return false
         }
 
@@ -95,63 +104,63 @@ class RegisterActivity : AppCompatActivity() {
         // Save input data
         firstName = binding.etFirstName.text.toString().trim()
         lastName = binding.etLastName.text.toString().trim()
-        email = binding.etEmail.text.toString().trim()
+        email = binding.etEmail.text.toString().trim().lowercase()
         phoneNumber = binding.etPhone.text.toString().trim()
         password = binding.etPassword.text.toString()
+        username = binding.etUsername.text.toString().trim()
         
-        Log.d(TAG, "Creating Firebase Auth account for: $email")
-        // Create Firebase Auth account directly (skip API call for now)
-        FirebaseAuth.getInstance().createUserWithEmailAndPassword(email, password)
-            .addOnCompleteListener { task ->
-                if (task.isSuccessful) {
-                    Log.d(TAG, "Firebase Auth account created successfully")
-                    // Create Firestore document for the user
-                    val user = task.result?.user
-                    if (user != null) {
-                        val userData = hashMapOf(
-                            "firstName" to firstName,
-                            "lastName" to lastName,
-                            "email" to email,
-                            "phoneNumber" to phoneNumber,
-                            "role" to "USER"
-                        )
-                        
-                        Log.d(TAG, "Creating Firestore document for user: ${user.uid}")
-                        FirebaseFirestore.getInstance()
-                            .collection("users")
-                            .document(user.uid)
-                            .set(userData)
-                            .addOnSuccessListener {
-                                Log.d(TAG, "Firestore document created successfully")
-                                showLoading(false)
-                                Toast.makeText(
-                                    this@RegisterActivity,
-                                    "Registration successful!",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                                startActivity(Intent(this@RegisterActivity, LoginActivity::class.java))
-                                finish()
-                            }
-                            .addOnFailureListener { e ->
-                                showLoading(false)
-                                Log.e(TAG, "Error creating Firestore document", e)
-                                Toast.makeText(
-                                    this@RegisterActivity,
-                                    "Error creating user profile. Please try again.",
-                                    Toast.LENGTH_SHORT
-                                ).show()
-                            }
+        // Create registration request matching database structure
+        val registrationRequest = RegistrationRequest(
+            firstName = firstName,
+            lastName = lastName,
+            email = email,
+            phoneNumber = phoneNumber,
+            password = password,
+            username = username,
+            role = "USER"
+        )
+
+        // Use Retrofit API service instead of direct Firebase calls
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                Log.d(TAG, "Sending registration request to backend API")
+                val response = apiService.register(registrationRequest)
+                
+                withContext(Dispatchers.Main) {
+                    if (response.isSuccessful) {
+                        Log.d(TAG, "Registration successful")
+                        showLoading(false)
+                        Toast.makeText(
+                            this@RegisterActivity,
+                            "Registration successful! Please log in.",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        // Navigate to login screen
+                        startActivity(Intent(this@RegisterActivity, LoginActivity::class.java))
+                        finish()
+                    } else {
+                        Log.e(TAG, "Registration failed: ${response.code()} - ${response.message()}")
+                        showLoading(false)
+                        val errorBody = response.errorBody()?.string() ?: "Unknown error"
+                        Toast.makeText(
+                            this@RegisterActivity,
+                            "Registration failed: $errorBody",
+                            Toast.LENGTH_SHORT
+                        ).show()
                     }
-                } else {
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Registration exception", e)
+                withContext(Dispatchers.Main) {
                     showLoading(false)
-                    Log.e(TAG, "Firebase Auth registration failed", task.exception)
                     Toast.makeText(
                         this@RegisterActivity,
-                        "Registration failed: ${task.exception?.message}",
+                        "Registration failed: ${e.message}",
                         Toast.LENGTH_SHORT
                     ).show()
                 }
             }
+        }
     }
 
     private fun showLoading(show: Boolean) {

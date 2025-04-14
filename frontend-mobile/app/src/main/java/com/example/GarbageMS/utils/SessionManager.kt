@@ -113,7 +113,13 @@ class SessionManager private constructor(context: Context) {
     
     fun isLoggedIn(): Boolean {
         val token = getToken()
-        return token != null
+        if (token == null) {
+            return false
+        }
+        
+        // Do a basic format check on the JWT token
+        val parts = token.split(".")
+        return parts.size == 3
     }
     
     fun logout() {
@@ -404,5 +410,31 @@ class SessionManager private constructor(context: Context) {
     fun getUserEmail(): String? {
         val token = getToken() ?: return null
         return extractEmailFromToken(token)
+    }
+
+    /**
+     * Verifies the token with the backend server
+     * This should be used when online connectivity is available
+     * Returns true if offline or if the token is valid
+     * @return true if the token is valid or if offline, false if online and token is invalid
+     */
+    suspend fun verifyTokenWithBackend(): Boolean {
+        val token = getToken() ?: return false
+        
+        try {
+            val apiService = ApiService.create()
+            val response = apiService.verifyToken("Bearer $token")
+            return response.isSuccessful && response.body() == true
+        } catch (e: Exception) {
+            Log.e(TAG, "Error verifying token with backend: ${e.message}", e)
+            if (e is java.net.UnknownHostException || 
+                e is java.net.ConnectException || 
+                e is java.net.SocketTimeoutException) {
+                // Network error, we're likely offline - consider token valid
+                Log.d(TAG, "Network error during token verification, assuming offline and valid")
+                return true
+            }
+            return false
+        }
     }
 } 

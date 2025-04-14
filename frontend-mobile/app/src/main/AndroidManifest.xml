@@ -48,10 +48,26 @@
             android:name="com.example.GarbageMS.EditProfileActivity"
             android:exported="false"
             android:theme="@style/Theme.Vermigo"/>
+        <activity
+            android:name="com.example.GarbageMS.ScheduleActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Vermigo"/>
+        <activity
+            android:name=".ForgotPasswordActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Vermigo"/>
+        <activity
+            android:name="com.example.GarbageMS.MapActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Vermigo"/>
         <activity android:name="com.example.GarbageMS.NotificationsActivity" />
         <activity android:name="com.example.GarbageMS.SecurityQuestionsActivity" />
     </application>
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29" />
 
 </manifest>

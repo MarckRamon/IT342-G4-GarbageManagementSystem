@@ -91,11 +91,11 @@
             android:id="@+id/truckImage"
             android:layout_width="match_parent"
             android:layout_height="200dp"
-            android:src="@drawable/ic_recycling"
-            android:scaleType="fitCenter"
+            android:src="@drawable/raph"
+            android:scaleType="centerCrop"
             android:layout_marginHorizontal="24dp"
             android:layout_marginTop="24dp"
-            android:tint="#4CAF50"/>
+            android:layout_gravity="center" />
 
     </FrameLayout>
 

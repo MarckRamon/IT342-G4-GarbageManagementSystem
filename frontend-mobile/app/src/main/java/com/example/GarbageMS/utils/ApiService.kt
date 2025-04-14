@@ -12,6 +12,7 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.*
 import java.util.concurrent.TimeUnit
+import com.example.GarbageMS.models.PickupLocationResponse
 
 interface ApiService {
     @POST("/api/auth/login")
@@ -20,11 +21,23 @@ interface ApiService {
     @POST("/api/auth/register")
     suspend fun register(@Body registrationRequest: RegistrationRequest): Response<Map<String, Any>>
 
-    @GET("/api/auth/profile/{userId}")
+    @POST("/api/auth/request-password-reset")
+    suspend fun requestPasswordReset(@Body email: Map<String, String>): Response<Map<String, Any>>
+
+    @POST("/api/auth/verify")
+    suspend fun verifyToken(@Header("Authorization") token: String): Response<Boolean>
+
+    @GET("/api/users/{userId}/profile")
     suspend fun getProfile(
         @Path("userId") userId: String,
         @Header("Authorization") authToken: String
-    ): Response<UserProfile>
+    ): Response<ProfileResponse>
+
+    @GET("/api/users/{userId}/profile/email")
+    suspend fun getUserEmail(
+        @Path("userId") userId: String,
+        @Header("Authorization") authToken: String
+    ): Response<EmailResponse>
 
     @PUT("/api/auth/profile/{userId}")
     suspend fun updateProfile(
@@ -40,25 +53,35 @@ interface ApiService {
         @Body passwordUpdateRequest: PasswordUpdateRequest
     ): Response<Map<String, String>>
 
-    @GET("/api/auth/security-questions")
-    suspend fun getSecurityQuestions(): Response<SecurityQuestionsResponse>
+    @PUT("/api/users/{userId}/profile/email")
+    suspend fun updateUserEmail(
+        @Path("userId") userId: String,
+        @Header("Authorization") authToken: String,
+        @Body emailRequest: EmailRequest
+    ): Response<EmailResponse>
 
-    @GET("users/{userId}/security-questions")
-    suspend fun getUserSecurityQuestions(@Header("Authorization") token: String, @Path("userId") userId: String): Response<UserSecurityQuestionsResponse>
+    @PUT("/api/users/{userId}/profile")
+    suspend fun updateUserProfile(
+        @Path("userId") userId: String,
+        @Header("Authorization") authToken: String,
+        @Body profileRequest: ProfileRequest
+    ): Response<ProfileResponse>
 
-    @GET("api/users/profile/security-question")
-    suspend fun getUserProfileSecurityQuestions(
-        @Header("Authorization") token: String
-    ): Response<UserSecurityQuestionsResponse>
-
-    @GET("/api/auth/profile/security-questions")
-    suspend fun getUserProfileSecurityQuestionsAlternative(
-        @Header("Authorization") token: String
-    ): Response<UserSecurityQuestionsResponse>
+    // Pickup Location endpoints
+    @GET("api/pickup-locations")
+    suspend fun getPickupLocations(): Response<PickupLocationResponse>
+    
+    @GET("api/pickup-locations/{id}")
+    suspend fun getPickupLocationById(@Path("id") id: String): Response<PickupLocationResponse>
 
     companion object {
         private const val TAG = "ApiService"
+        
+        // For Android Emulator use 10.0.2.2 (special alias to your host loopback interface)
+        // For real device testing on same WiFi network, use your computer's actual IP address
+        // Change this to your backend server's address
         private const val BASE_URL = "http://10.0.2.2:8080/" // Android emulator localhost
+        // private const val BASE_URL = "http://192.168.1.100:8080/" // Example for real device testing
 
         fun create(): ApiService {
             val loggingInterceptor = HttpLoggingInterceptor { message ->
@@ -69,8 +92,6 @@ interface ApiService {
 
             val client = OkHttpClient.Builder()
                 .addInterceptor(loggingInterceptor)
-                // Add our custom interceptor to handle chunked transfer issues
-                .addInterceptor(ChunkedTransferFixInterceptor())
                 .connectTimeout(30, TimeUnit.SECONDS)
                 .readTimeout(30, TimeUnit.SECONDS)
                 .writeTimeout(30, TimeUnit.SECONDS)
