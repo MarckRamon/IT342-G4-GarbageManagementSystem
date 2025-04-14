@@ -261,4 +261,51 @@ public class UserService {
         
         return user; // Return the user object with the updated email
     }
+
+    /**
+     * Updates the notification preference for a user.
+     * @param userId The ID of the user to update.
+     * @param enabled The new notification setting.
+     * @return The updated User object.
+     * @throws ExecutionException If Firestore operation fails.
+     * @throws InterruptedException If Firestore operation is interrupted.
+     * @throws IllegalArgumentException If the user is not found.
+     */
+    public User updateNotificationSettings(String userId, boolean enabled) 
+            throws ExecutionException, InterruptedException, IllegalArgumentException {
+        User user = getUserById(userId);
+        if (user == null) {
+            logger.warn("Notification settings update failed: User not found with ID: {}", userId);
+            throw new IllegalArgumentException("User not found with ID: " + userId);
+        }
+
+        user.setNotificationsEnabled(enabled);
+
+        // Update in Firestore
+        DocumentReference docRef = firestore.collection(COLLECTION_NAME).document(userId);
+        ApiFuture<WriteResult> result = docRef.set(user, com.google.cloud.firestore.SetOptions.merge()); // Use merge to only update the specified field
+        result.get(); // Wait for completion
+
+        logger.info("Successfully updated notification settings for user ID: {} to {}", userId, enabled);
+        return user;
+    }
+
+    /**
+     * Gets the notification preference for a user.
+     * @param userId The ID of the user.
+     * @return The boolean value of the notification setting.
+     * @throws ExecutionException If Firestore operation fails.
+     * @throws InterruptedException If Firestore operation is interrupted.
+     * @throws IllegalArgumentException If the user is not found.
+     */
+    public boolean getNotificationSettings(String userId) 
+            throws ExecutionException, InterruptedException, IllegalArgumentException {
+        User user = getUserById(userId);
+        if (user == null) {
+            logger.warn("Get notification settings failed: User not found with ID: {}", userId);
+            throw new IllegalArgumentException("User not found with ID: " + userId);
+        }
+        logger.info("Retrieved notification settings for user ID: {}: {}", userId, user.isNotificationsEnabled());
+        return user.isNotificationsEnabled();
+    }
 } 

@@ -44,14 +44,24 @@ public class SecurityConfig {
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             // Define authorization rules for different endpoints
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers(HttpMethod.POST, "/api/auth/register", "/api/auth/login", "/api/auth/request-password-reset").permitAll() // Allow public access to register, login, and password reset request
-                // Example: Secure user profile endpoints - requires authentication
-                .requestMatchers(HttpMethod.GET, "/api/users/{userId}/profile", "/api/users/{userId}/profile/email").authenticated()
-                .requestMatchers(HttpMethod.PUT, "/api/users/{userId}/profile", "/api/users/{userId}/profile/email").authenticated()
+                // Auth endpoints
+                .requestMatchers(HttpMethod.POST, "/api/auth/register", "/api/auth/login", "/api/auth/request-password-reset").permitAll()
+                
+                // Pickup location endpoints - GET is public, others need authentication
+                .requestMatchers(HttpMethod.GET, "/api/pickup-locations", "/api/pickup-locations/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/pickup-locations").authenticated()
+                .requestMatchers(HttpMethod.PUT, "/api/pickup-locations/**").authenticated()
+                .requestMatchers(HttpMethod.DELETE, "/api/pickup-locations/**").authenticated()
+                
+                // User profile endpoints
+                .requestMatchers(HttpMethod.GET, "/api/users/{userId}/profile", "/api/users/{userId}/profile/email", "/api/users/{userId}/profile/notifications").authenticated()
+                .requestMatchers(HttpMethod.PUT, "/api/users/{userId}/profile", "/api/users/{userId}/profile/email", "/api/users/{userId}/profile/notifications").authenticated()
+                
                 // Example: Secure a hypothetical admin endpoint - requires ADMIN role
                 // .requestMatchers("/api/admin/**").hasRole("ADMIN") 
-                // Add more specific rules as needed
-                .anyRequest().authenticated() // Require authentication for any other request
+                
+                // Any other request needs authentication
+                .anyRequest().authenticated()
             )
             // Add the JWT filter before the standard username/password filter
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
