@@ -144,6 +144,12 @@ export default function VermigoSchedule() {
               Collection Schedule
             </li>
             </Link>
+            <Link to="/map" className="flex items-center no-underline text-inherit">
+            <li className="flex items-center px-5 py-3 text-gray-500 font-medium cursor-pointer hover:bg-green-50 transition-colors">
+              <MapPin className="mr-3 w-5 h-5" />
+              Collection Sites Map
+            </li>
+            </Link>
           </ul>
         </div>
         
