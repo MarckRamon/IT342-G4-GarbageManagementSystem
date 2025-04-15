@@ -50,7 +50,14 @@ function VermigoDashboard() {
 
     // Handler functions
     const handleLogout = () => {
-        // Here you would normally clear authentication tokens, etc.
+        // Clear localStorage, sessionStorage, and any authentication tokens
+        localStorage.clear();
+        sessionStorage.clear();
+    
+        // Optional: show alert or toast for better UX
+        // alert('You have been logged out'); // or use toast library
+    
+        // Redirect to login
         navigate('/login');
     };
 
@@ -155,8 +162,8 @@ function VermigoDashboard() {
                 </div>
                 <div className="py-5">
                     <ul className="list-none">
-                        <li className="flex items-center px-5 py-3 text-gray-500 font-medium cursor-pointer transition duration-300 bg-[rgba(93,166,70,0.08)] text-[#5da646]">
-                            <Link to="/dashboard" className="flex items-center no-underline text-inherit">
+                    <li className="flex items-center px-5 py-3 text-green-600 font-medium cursor-pointer transition-all duration-300 bg-green-50/30">
+                    <Link to="/dashboard" className="flex items-center no-underline text-inherit">
                                 <span className="mr-3">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                         <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
@@ -168,12 +175,11 @@ function VermigoDashboard() {
                         </li>
                         <li className="flex items-center px-5 py-3 text-gray-500 font-medium cursor-pointer transition duration-300 hover:bg-[rgba(93,166,70,0.05)]">
                             <Link to="/complaints" className="flex items-center no-underline text-inherit">
-                                <span className="mr-3">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-                                        <circle cx="12" cy="10" r="3"></circle>
-                                    </svg>
-                                </span>
+                            <span className="mr-3">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                  </svg>
+                </span>
                                 Complaints
                             </Link>
                         </li>

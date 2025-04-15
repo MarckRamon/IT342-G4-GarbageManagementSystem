@@ -315,13 +315,21 @@ const MapPage = () => {
   };
   
   const handleLogout = () => {
-    // Clear token on logout
-    localStorage.removeItem('token');
+    // Clear localStorage, sessionStorage, and any authentication tokens
+    localStorage.clear();
+    sessionStorage.clear();
+
+    // Optional: show alert or toast for better UX
+    // alert('You have been logged out'); // or use toast library
+
+    // Redirect to login
     navigate('/login');
-  };
+};
   
   return (
+
     <div className="flex min-h-screen">
+  
       {/* Sidebar */}
       <div className="fixed w-60 h-screen bg-white border-r border-gray-200 shadow-sm z-10 left-0 top-0">
         <div className="p-5 border-b border-gray-200">
@@ -342,7 +350,7 @@ const MapPage = () => {
             </li>
             <li className="flex items-center px-5 py-3 text-gray-500 font-medium cursor-pointer transition duration-300 hover:bg-[rgba(93,166,70,0.05)]">
               <Link to="/complaints" className="flex items-center no-underline text-inherit">
-                <span className="mr-3">
+              <span className="mr-3">
                   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
                   </svg>
@@ -384,30 +392,32 @@ const MapPage = () => {
           </div>
           
           {/* Profile Popup */}
-          {showProfilePopup && (
-            <div className="absolute bottom-16 left-2.5 w-56 bg-white shadow-md rounded-lg z-30 border border-gray-200 overflow-hidden">
-              <div className="p-3 flex items-center cursor-pointer hover:bg-[rgba(93,166,70,0.05)] transition duration-200" onClick={openProfileModal}>
-                <div className="mr-3 text-gray-500">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                    <circle cx="12" cy="7" r="4"></circle>
-                  </svg>
-                </div>
-                <div className="text-sm text-gray-800">View Profile</div>
-              </div>
-              <div className="h-px bg-gray-200"></div>
-              <div className="p-3 flex items-center cursor-pointer hover:bg-[rgba(93,166,70,0.05)] transition duration-200" onClick={handleLogout}>
-                <div className="mr-3 text-gray-500">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                    <polyline points="16 17 21 12 16 7"></polyline>
-                    <line x1="21" y1="12" x2="9" y2="12"></line>
-                  </svg>
-                </div>
-                <div className="text-sm text-gray-800">Logout</div>
-              </div>
-            </div>
-          )}
+ 
+
+{showProfilePopup && (
+  <div className="absolute bottom-16 left-2.5 w-56 bg-white shadow-md rounded-lg z-50 border border-gray-200 overflow-hidden">
+    <div className="p-3 flex items-center cursor-pointer hover:bg-[rgba(93,166,70,0.05)] transition duration-200" onClick={openProfileModal}>
+      <div className="mr-3 text-gray-500">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+          <circle cx="12" cy="7" r="4"></circle>
+        </svg>
+      </div>
+      <div className="text-sm text-gray-800">View Profile</div>
+    </div>
+    <div className="h-px bg-gray-200"></div>
+    <div className="p-3 flex items-center cursor-pointer hover:bg-[rgba(93,166,70,0.05)] transition duration-200" onClick={handleLogout}>
+      <div className="mr-3 text-gray-500">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+          <polyline points="16 17 21 12 16 7"></polyline>
+          <line x1="21" y1="12" x2="9" y2="12"></line>
+        </svg>
+      </div>
+      <div className="text-sm text-gray-800">Logout</div>
+    </div>
+  </div>
+)}
         </div>
       </div>
 
@@ -415,6 +425,7 @@ const MapPage = () => {
       <div className="flex-1 ml-60">
         <div className="map-page">
           <div className="map-header">
+            
             <h1>Garbage Collection Sites</h1>
             {(!isAdding && !isEditing) ? (
               <button className="add-pin-btn" onClick={handleAddPin}>Add Collection Site</button>
@@ -475,7 +486,8 @@ const MapPage = () => {
             </div>
           )}
           
-          <div className="map-container">
+          <div className="map-container z-10">
+            
             {loading && !isAdding && !isEditing && (
               <div className="loading-overlay">
                 <span>Loading...</span>
@@ -547,11 +559,10 @@ const MapPage = () => {
           )}
         </div>
       </div>
-      
       {/* Profile Modal */}
       {showProfileModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50" onClick={() => setShowProfileModal(false)}>
-          <div className="bg-white rounded-lg shadow-lg w-full max-w-md overflow-hidden" onClick={e => e.stopPropagation()}>
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50" onClick={() => setShowProfileModal(false)}>
+    <div className="bg-white rounded-lg shadow-lg w-full max-w-md overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-center p-4 border-b border-gray-200">
               <h3 className="text-lg font-semibold">Profile Information</h3>
               <button className="text-gray-400 hover:text-gray-600" onClick={() => setShowProfileModal(false)}>
@@ -615,10 +626,24 @@ const MapPage = () => {
                   </div>
                 </div>
               </div>
+              <div className="p-5 border-t border-gray-200 flex justify-end">
+                            <button 
+                                className="px-4 py-2 rounded-md text-sm font-medium border border-gray-200 bg-transparent text-gray-800 mr-3 cursor-pointer transition-all duration-200 hover:bg-gray-100" 
+                                onClick={() => setShowProfileModal(false)}
+                            >
+                                Close
+                            </button>
+                            <button 
+                                className="px-4 py-2 rounded-md text-sm font-medium bg-[#5da646] text-white border-none cursor-pointer transition-all duration-200 hover:bg-[#40752f]"
+                            >
+                                Edit Profile
+                            </button>
+                        </div>
             </div>
           </div>
         </div>
       )}
+      
     </div>
   );
 };

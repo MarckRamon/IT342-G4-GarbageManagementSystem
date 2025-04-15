@@ -11,9 +11,16 @@ function VermigoComplaints() {
   const [responseText, setResponseText] = useState('');
 
   const handleLogout = () => {
-    // Here you would normally clear authentication tokens, etc.
+    // Clear localStorage, sessionStorage, and any authentication tokens
+    localStorage.clear();
+    sessionStorage.clear();
+
+    // Optional: show alert or toast for better UX
+    // alert('You have been logged out'); // or use toast library
+
+    // Redirect to login
     navigate('/login');
-  };
+};
 
   const toggleProfilePopup = () => {
     setShowProfilePopup(!showProfilePopup);

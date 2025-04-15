@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 import { Calendar, Clock, Home, MapPin, User, Mail, Phone, Briefcase, LogOut, ChevronLeft, ChevronRight, Plus, X, Trash2, Edit } from 'lucide-react';
+
 import { Link, useNavigate } from 'react-router-dom';
 export default function VermigoSchedule() {
+  const navigate = useNavigate();
+
   const [showProfilePopup, setShowProfilePopup] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showAddScheduleModal, setShowAddScheduleModal] = useState(false);
@@ -14,7 +17,10 @@ export default function VermigoSchedule() {
     { id: 4, date: '2025-04-25', area: 'West District', type: 'General Waste', time: '08:30 AM', truck: 'Truck-04' },
     { id: 5, date: '2025-04-29', area: 'Central District', type: 'Hazardous Waste', time: '10:00 AM', truck: 'Truck-05' }
   ]);
-  
+  const openProfileModal = () => {
+    setShowProfilePopup(false);
+    setShowProfileModal(true);
+  };
   const [newSchedule, setNewSchedule] = useState({
     date: '',
     area: '',
@@ -97,7 +103,17 @@ export default function VermigoSchedule() {
       [name]: value
     });
   };
+  const handleLogout = () => {
+    // Clear localStorage, sessionStorage, and any authentication tokens
+    localStorage.clear();
+    sessionStorage.clear();
 
+    // Optional: show alert or toast for better UX
+    // alert('You have been logged out'); // or use toast library
+
+    // Redirect to login
+    navigate('/login');
+};
   const handleAddSchedule = () => {
     const newId = schedules.length > 0 ? Math.max(...schedules.map(s => s.id)) + 1 : 1;
     const updatedSchedules = [...schedules, { ...newSchedule, id: newId }];
@@ -135,7 +151,11 @@ export default function VermigoSchedule() {
             </li>    </Link>
             <Link to="/complaints" className="flex items-center no-underline text-inherit">
             <li className="flex items-center px-5 py-3 text-gray-500 font-medium cursor-pointer hover:bg-green-50 transition-colors">
-              <MapPin className="mr-3 w-5 h-5" />
+            <span className="mr-3">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                  </svg>
+                </span>
               Complaints
             </li></Link>
             <Link to="/schedule" className="flex items-center no-underline text-inherit">
@@ -163,23 +183,29 @@ export default function VermigoSchedule() {
         
         {/* Profile Popup */}
         {showProfilePopup && (
-          <div className="absolute bottom-16 left-4 w-52 bg-white shadow-lg rounded-lg border border-gray-200 z-30 overflow-hidden">
-            <div className="p-3 flex items-center cursor-pointer hover:bg-green-50" onClick={() => {
-              setShowProfilePopup(false);
-              setShowProfileModal(true);
-            }}>
-              <User className="w-4.5 h-4.5 text-gray-500 mr-3" />
-              <div className="text-sm text-gray-700">View Profile</div>
-            </div>
-            <div className="h-px bg-gray-200"></div>
-            <div className="p-3 flex items-center cursor-pointer hover:bg-green-50">
-            <Link to="/login" className="flex items-center no-underline text-inherit">
-              <LogOut className="w-4.5 h-4.5 text-gray-500 mr-3" />
-              <div className="text-sm text-gray-700">Logout</div>
-              </Link>
-            </div>
-          </div>
-        )}
+                    <div className="profile-popup absolute bottom-[70px] left-[10px] w-[220px] bg-white shadow-md rounded-lg z-30 border border-gray-200 overflow-hidden">
+                        <div className="py-3 px-4 flex items-center cursor-pointer hover:bg-[rgba(93,166,70,0.05)]" onClick={openProfileModal}>
+                            <div className="mr-3 text-gray-500">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                    <circle cx="12" cy="7" r="4"></circle>
+                                </svg>
+                            </div>
+                            <div className="text-sm text-gray-800">View Profile</div>
+                        </div>
+                        <div className="h-px bg-gray-200"></div>
+                        <div className="py-3 px-4 flex items-center cursor-pointer hover:bg-[rgba(93,166,70,0.05)]" onClick={handleLogout}>
+                            <div className="mr-3 text-gray-500">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                                    <polyline points="16 17 21 12 16 7"></polyline>
+                                    <line x1="21" y1="12" x2="9" y2="12"></line>
+                                </svg>
+                            </div>
+                            <div className="text-sm text-gray-800">Logout</div>
+                        </div>
+                    </div>
+                )}
       </div>
 
       {/* Main Content */}

@@ -15,84 +15,65 @@ function Login() {
   const [alertSeverity, setAlertSeverity] = useState('error');
 
   // Basic password validation - can be expanded further
-  const isPasswordValid = () => {
-    return password.length >= 8; // Changed from 11 to 8 characters minimum
-  };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    
-    // Check if form fields are filled
+
     if (!email || !password) {
-      setError('Email and password are required');
+      showSnackbar('Email and password are required', 'error');
       return;
     }
-    
-    // Clear any previous errors and set loading state
-    setError('');
+
+    if (password.length < 8) {
+      showSnackbar('Password must be at least 8 characters', 'error');
+      return;
+    }
+
     setIsLoading(true);
-  
-    // Attempt login with backend
+
     try {
-      const response = await axios.post('http://localhost:8080/api/auth/login', { 
-        email, 
-        password 
+      const response = await axios.post('http://localhost:8080/api/auth/login', {
+        email,
+        password
       });
-      console.log('Login response:', response.data);
-      console.log('Login attempt:', { email, password });
-  
-      // If login succeeds
+
       if (response.data && response.data.success) {
-        // Store authentication token or user data
         const token = response.data.token || '';
         const userData = response.data.user || {};
-        
-        // Handle "Remember me" functionality
-        if (rememberMe) {
-          localStorage.setItem('authToken', token);
-          localStorage.setItem('userData', JSON.stringify(userData));
-        } else {
-          sessionStorage.setItem('authToken', token);
-          sessionStorage.setItem('userData', JSON.stringify(userData));
-        }
-        
-        // Show success message
-        setAlertMessage('Login successful! Redirecting to dashboard...');
-        setAlertSeverity('success');
-        setShowAlert(true);
-        
-        // Redirect to dashboard
+
+        const storage = rememberMe ? localStorage : sessionStorage;
+        storage.setItem('authToken', token);
+        storage.setItem('userData', JSON.stringify(userData));
+
+        showSnackbar('Login successful! Redirecting...', 'success');
+
         setTimeout(() => {
           window.location.href = '/dashboard';
-        }, 5000); // Changed to 5000ms for a more reasonable delay
+        }, 3000);
       } else {
-        // Handle unusual success response without expected data
-        throw new Error('Invalid response format');
+        showSnackbar('Invalid login response', 'error');
       }
     } catch (err) {
-      console.error('Login error:', err);
-      
-      // Handle specific error responses from server
-      if (err.response && err.response.data) {
-        // Use server's error message if available
-        setError(err.response.data.message || 'Invalid credentials');
-      } else {
-        // Generic error message
-        setError('Unable to log in. Please check your credentials and try again.');
-      }
-      
-      setAlertMessage(error || 'Login failed'); 
-      setAlertSeverity('error');
-      setShowAlert(true);
+      const message = err.response?.data?.message || 'Login failed. Please try again.';
+      showSnackbar(message, 'error');
     } finally {
       setIsLoading(false);
     }
   };
-  
-  // Animation effect on component mount
+
+  const showSnackbar = (message, severity) => {
+    setAlertMessage(message);
+    setAlertSeverity(severity);
+    setShowAlert(true);
+  };
+
   useEffect(() => {
-    document.querySelector('.login-card').classList.add('animate-in');
+    const loginCard = document.querySelector('.login-card');
+    if (loginCard) {
+      loginCard.classList.add('animate-in');
+    }
   }, []);
+
 
   const handleClickShowPassword = () => setShowPassword((show) => !show);
   
@@ -234,7 +215,7 @@ function Login() {
               </div>
             </button>
           </form>
-
+{/*
           <p className="animate-fade-up-4 text-center my-6 text-sm text-slate-500">
             Don't have an account? <a href="/signup" className="text-green-700 font-medium hover:text-green-800 hover:underline">Sign up</a>
           </p>
@@ -244,7 +225,10 @@ function Login() {
             <span className="px-4 text-xs text-slate-500">or continue with</span>
             <div className="flex-1 h-px bg-slate-200"></div>
           </div>
+*/}
 
+
+{/*
           <button 
             className="animate-fade-up-6 flex justify-center items-center w-full py-3 bg-white border border-slate-200 rounded-md cursor-pointer text-black hover:bg-slate-100 hover:transform hover:-translate-y-1 hover:shadow-md transition-all duration-300"
             onClick={handleGoogleLogin} 
@@ -252,7 +236,7 @@ function Login() {
           >
             <img src="/google-icon.png" alt="Google" className="h-6 mr-2" />
             Sign in with Google
-          </button>
+          </button>*/}
         </div>
 
         <div className="flex-1 bg-gradient-to-br from-indigo-100/40 to-indigo-200/40 flex justify-center items-center p-8 relative overflow-hidden">
