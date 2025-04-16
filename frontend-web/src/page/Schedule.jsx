@@ -1,15 +1,73 @@
-import React, { useState } from 'react';
+import React, { useState,useEffect } from 'react';
 import { Calendar, Clock, Home, MapPin, User, Mail, Phone, Briefcase, LogOut, ChevronLeft, ChevronRight, Plus, X, Trash2, Edit } from 'lucide-react';
 
 import { Link, useNavigate } from 'react-router-dom';
+const API_BASE_URL = 'http://localhost:8080/api';
+import axios from 'axios';
+
+// Create axios instance with default config
+const api = axios.create({
+  baseURL: API_BASE_URL
+});
+
+const fetchUserProfile = async (userId, authToken) => {
+  try {
+    const response = await api.get(`/users/${userId}/profile`, {
+      headers: {
+        'Authorization': `Bearer ${authToken}`
+      }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching profile:', error);
+    throw error;
+  }
+};
+
+const updateUserProfile = async (userId, authToken, profileData) => {
+  try {
+    const response = await api.put(`/users/${userId}/profile`, profileData, {
+      headers: {
+        'Authorization': `Bearer ${authToken}`
+      }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error updating profile:', error);
+    throw error;
+  }
+};
+const fetchUserEmail = async (userId, authToken) => {
+  try {
+    const response = await api.get(`/users/${userId}/profile/email`, {
+      headers: {
+        'Authorization': `Bearer ${authToken}`
+      }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching profile:', error);
+    throw error;
+  }
+};
 export default function VermigoSchedule() {
   const navigate = useNavigate();
-
+  
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    phoneNumber: ''
+});
+const [isLoading, setIsLoading] = useState(true);
+const [error, setError] = useState(null);
+const [editMode, setEditMode] = useState(false);
   const [showProfilePopup, setShowProfilePopup] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showAddScheduleModal, setShowAddScheduleModal] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [pageLoaded, setPageLoaded] = useState(false);
+
   const [schedules, setSchedules] = useState([
     { id: 1, date: '2025-04-15', area: 'North District', type: 'General Waste', time: '08:00 AM', truck: 'Truck-01' },
     { id: 2, date: '2025-04-18', area: 'East District', type: 'Recyclables', time: '09:30 AM', truck: 'Truck-03' },
@@ -17,6 +75,105 @@ export default function VermigoSchedule() {
     { id: 4, date: '2025-04-25', area: 'West District', type: 'General Waste', time: '08:30 AM', truck: 'Truck-04' },
     { id: 5, date: '2025-04-29', area: 'Central District', type: 'Hazardous Waste', time: '10:00 AM', truck: 'Truck-05' }
   ]);
+  useEffect(() => {
+    setTimeout(() => {
+      setPageLoaded(true);
+    }, 100);
+    // Retrieve authToken and userId from localStorage
+    const authToken = localStorage.getItem('authToken');
+    const userId = localStorage.getItem('userId');
+
+    // Log the values to the console
+    console.log('Auth Token:', authToken);
+    console.log('User ID:', userId);
+
+    // Check if both values are present
+    if (!authToken || !userId) {
+        console.log('Authentication information missing');
+        // For development purposes, we'll still load the dashboard
+        setIsLoading(false);
+        return;
+        // In production, you would redirect to login:
+        // setError('Authentication information missing. Please log in again.');
+        // navigate('/login');
+        // return;
+    }
+
+    // Setup axios interceptor to add auth token to all requests
+    const interceptor = api.interceptors.request.use(
+        config => {
+            config.headers.Authorization = `Bearer ${authToken}`;
+            return config;
+        },
+        error => {
+            return Promise.reject(error);
+        }
+    );
+    const loadUserEmail = async () =>{
+      const profileEmailResponse = await fetchUserEmail(userId, authToken);
+      console.log('Profile email received:', profileEmailResponse);
+
+      if (profileEmailResponse && profileEmailResponse.success) {
+          setProfileEmail({
+              email: profileEmailResponse.email
+          })
+      }
+  }
+    // Fetch user profile data
+    const loadUserProfile = async () => {
+        try {
+            setIsLoading(true);
+            const profileResponse = await fetchUserProfile(userId, authToken);
+            
+            console.log('Profile data received:', profileResponse);
+            
+            if (profileResponse && profileResponse.success) {
+                // Update the profileData state
+                setProfileData({
+                    ...profileData,
+                    name: `${profileResponse.firstName} ${profileResponse.lastName}`,
+                    phone: profileResponse.phoneNumber,
+                    firstName: profileResponse.firstName,
+                    lastName: profileResponse.lastName
+                });
+            } else {
+                setError('Failed to load profile data');
+            }
+            
+            setIsLoading(false);
+        } catch (err) {
+            // Handle axios specific errors
+            if (err.response) {
+                // The request was made and the server responded with a status code
+                // that falls out of the range of 2xx
+                console.error("Server error:", err.response.status, err.response.data);
+                setError(`Server error: ${err.response.status}`);
+            } else if (err.request) {
+                // The request was made but no response was received
+                console.error("Network error:", err.request);
+                setError('Network error. Please check your connection.');
+            } else {
+                // Something happened in setting up the request
+                console.error("Request configuration error:", err.message);
+                setError('Error setting up request');
+            }
+            setIsLoading(false);
+        }
+    };
+
+    // Load profile data if auth token and user ID are available
+    if (authToken && userId) {
+        loadUserProfile();
+        loadUserEmail();
+    } else {
+        setIsLoading(false);
+    }
+
+    // Clean up interceptor when component unmounts
+    return () => {
+        api.interceptors.request.eject(interceptor);
+    };
+}, []);
   const openProfileModal = () => {
     setShowProfilePopup(false);
     setShowProfileModal(true);
@@ -28,16 +185,20 @@ export default function VermigoSchedule() {
     time: '',
     truck: ''
   });
-
-  const profileData = {
-    name: "Primo Christian",
-    email: "primoMontejo@gmail.com",
-    role: "Waste Collection Manager",
-    phone: "+1 (555) 123-4567",
+  const [profileEmail, setProfileEmail]= useState({
+    email: ""
+});
+  const [profileData, setProfileData] = useState({
+    name: "Loading...",
+    email: "loading@example.com",
+    role: "Admin",
+    phone: "Loading...",
     address: "123 Green Street, Eco City, EC 12345",
     joinDate: "January 15, 2021",
-    department: "Field Operations"
-  };
+    department: "Field Operations",
+    firstName: "",
+    lastName: ""
+});
 
   const monthNames = ["January", "February", "March", "April", "May", "June",
     "July", "August", "September", "October", "November", "December"];
@@ -104,14 +265,9 @@ export default function VermigoSchedule() {
     });
   };
   const handleLogout = () => {
-    // Clear localStorage, sessionStorage, and any authentication tokens
-    localStorage.clear();
-    sessionStorage.clear();
-
-    // Optional: show alert or toast for better UX
-    // alert('You have been logged out'); // or use toast library
-
-    // Redirect to login
+    // Here you would normally clear authentication tokens, etc.
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('userId');
     navigate('/login');
 };
   const handleAddSchedule = () => {
@@ -132,7 +288,10 @@ export default function VermigoSchedule() {
     const updatedSchedules = schedules.filter(schedule => schedule.id !== id);
     setSchedules(updatedSchedules);
   };
-
+  const mainContentAnimationClass = pageLoaded 
+  ? 'opacity-100 translate-y-0' 
+  : 'opacity-0 translate-y-6';
+  
   return (
     <div className="flex min-h-screen bg-gray-50">
       {/* Sidebar */}
@@ -150,13 +309,15 @@ export default function VermigoSchedule() {
           
             </li>    </Link>
             <Link to="/complaints" className="flex items-center no-underline text-inherit">
-            <li className="flex items-center px-5 py-3 text-gray-500 font-medium cursor-pointer hover:bg-green-50 transition-colors">
-            <span className="mr-3">
+            <li className="flex items-center px-5 py-3 text-gray-500 font-medium cursor-pointer transition duration-300 hover:bg-[rgba(93,166,70,0.05)]">
+              <Link to="/complaints" className="flex items-center no-underline text-inherit">
+              <span className="mr-3">
                   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
                   </svg>
                 </span>
-              Complaints
+                Complaints
+              </Link>
             </li></Link>
             <Link to="/schedule" className="flex items-center no-underline text-inherit">
             <li className="flex items-center px-5 py-3 text-green-600 font-medium cursor-pointer bg-green-50 hover:bg-green-50 transition-colors">
@@ -166,7 +327,12 @@ export default function VermigoSchedule() {
             </Link>
             <Link to="/map" className="flex items-center no-underline text-inherit">
             <li className="flex items-center px-5 py-3 text-gray-500 font-medium cursor-pointer hover:bg-green-50 transition-colors">
-              <MapPin className="mr-3 w-5 h-5" />
+            <span className="mr-3">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                    <circle cx="12" cy="10" r="3"></circle>
+                  </svg>
+                </span>
               Collection Sites Map
             </li>
             </Link>
@@ -174,11 +340,10 @@ export default function VermigoSchedule() {
         </div>
         
         <div className="absolute bottom-0 left-0 w-full p-4 flex items-center border-t border-gray-200 bg-white cursor-pointer" onClick={() => setShowProfilePopup(!showProfilePopup)}>
-          <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-700 font-medium">P</div>
-          <div className="ml-3">
-            <div className="text-sm font-medium">Primo Christian</div>
-            <div className="text-xs text-gray-500">primoMontejo@gmail.com</div>
-          </div>
+        <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-800 font-medium text-sm">{profileData.lastName.charAt(0).toUpperCase()}</div>          <div className="ml-3">
+                        <div className="text-sm font-medium">{profileData.name}</div>
+                        <div className="text-xs text-gray-500">{profileEmail.email}</div>
+                    </div>
         </div>
         
         {/* Profile Popup */}
@@ -209,7 +374,7 @@ export default function VermigoSchedule() {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 ml-60 p-6">
+      <div className={`flex-1 p-3 ml-60 transition-all duration-700 ease-out ${mainContentAnimationClass}`}>
         {/* Header */}
         <div className="flex justify-between items-center mb-6 pb-4 border-b border-gray-200">
           <h1 className="text-2xl font-semibold text-gray-800">Collection Schedule</h1>
@@ -302,65 +467,65 @@ export default function VermigoSchedule() {
         </div>
       </div>
       
-      {/* Profile Modal */}
-      {showProfileModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50" onClick={() => setShowProfileModal(false)}>
-          <div className="bg-white rounded-lg shadow-lg w-full max-w-md max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-            <div className="flex justify-between items-center p-5 border-b border-gray-200">
-              <h3 className="text-lg font-semibold">Profile Information</h3>
-              <button className="text-gray-500 hover:text-gray-700" onClick={() => setShowProfileModal(false)}>
-                <X className="w-5 h-5" />
+        {/* Profile Modal */}
+        {showProfileModal && (
+        <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-50">
+          <div className="bg-white rounded-lg shadow-lg w-11/12 max-w-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center p-5 border-b border-slate-200">
+              <h3 className="text-xl font-semibold">Profile</h3>
+              <button 
+                className="bg-transparent border-none cursor-pointer flex items-center justify-center p-2 rounded text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+                onClick={() => setShowProfileModal(false)}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
               </button>
             </div>
             
             <div className="p-5">
               <div className="flex items-center mb-6">
-                <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center text-gray-700 font-medium text-2xl">P</div>
-                <div className="ml-4">
-                  <div className="text-lg font-semibold">{profileData.name}</div>
-                  <div className="text-sm text-gray-500">{profileData.role}</div>
+                <div className="w-20 h-20 rounded-full bg-slate-100 flex items-center justify-center text-slate-800 font-medium text-2xl mr-5">
+                {profileData.lastName.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <div className="text-xl font-semibold">{profileData.name}</div>
+                  <div className="text-sm text-slate-500">{profileData.role}</div>
+                  <div className="text-xs text-slate-400 mt-1">Member since {profileData.joinDate}</div>
                 </div>
               </div>
               
-              <div className="mb-6">
-                <div className="text-sm text-gray-500 mb-2">Contact Information</div>
-                <div className="flex items-center mb-3">
-                  <Phone className="w-4 h-4 text-gray-500 mr-3 flex-shrink-0" />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div>
+                  <div className="text-xs text-slate-500 mb-1">Email</div>
+                  <div className="text-sm">{profileEmail.email}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-slate-500 mb-1">Phone</div>
                   <div className="text-sm">{profileData.phone}</div>
                 </div>
-                <div className="flex items-center mb-3">
-                  <Mail className="w-4 h-4 text-gray-500 mr-3 flex-shrink-0" />
-                  <div className="text-sm">{profileData.email}</div>
+                <div>
+                  <div className="text-xs text-slate-500 mb-1">Department</div>
+                  <div className="text-sm">{profileData.department}</div>
                 </div>
-                <div className="flex items-center">
-                  <MapPin className="w-4 h-4 text-gray-500 mr-3 flex-shrink-0" />
+                <div>
+                  <div className="text-xs text-slate-500 mb-1">Address</div>
                   <div className="text-sm">{profileData.address}</div>
                 </div>
               </div>
               
-              <div>
-                <div className="text-sm text-gray-500 mb-2">Work Information</div>
-                <div className="flex items-center mb-3">
-                  <Briefcase className="w-4 h-4 text-gray-500 mr-3 flex-shrink-0" />
-                  <div className="text-sm">{profileData.department}</div>
-                </div>
-                <div className="flex items-center">
-                  <Calendar className="w-4 h-4 text-gray-500 mr-3 flex-shrink-0" />
-                  <div className="text-sm">Joined on {profileData.joinDate}</div>
-                </div>
+              <div className="flex justify-end space-x-3 pt-4 border-t border-slate-200">
+                <button 
+                  className="px-4 py-2 bg-white border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50"
+                  onClick={() => setShowProfileModal(false)}
+                >
+                  Close
+                </button>
+                <button className="px-4 py-2 bg-green-600 rounded-md text-sm font-medium text-white hover:bg-green-700">
+                  Edit Profile
+                </button>
               </div>
-            </div>
-            
-            <div className="flex justify-end p-5 border-t border-gray-200">
-              <button 
-                className="px-4 py-2 border border-gray-200 rounded-lg mr-3 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                onClick={() => setShowProfileModal(false)}
-              >
-                Close
-              </button>
-              <button className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700">
-                Edit Profile
-              </button>
             </div>
           </div>
         </div>

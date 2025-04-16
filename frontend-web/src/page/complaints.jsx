@@ -1,27 +1,181 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { Link, useNavigate } from 'react-router-dom';
+const API_BASE_URL = 'http://localhost:8080/api';
+import axios from 'axios';
+
+// Create axios instance with default config
+const api = axios.create({
+  baseURL: API_BASE_URL
+});
+
+const fetchUserProfile = async (userId, authToken) => {
+  try {
+    const response = await api.get(`/users/${userId}/profile`, {
+      headers: {
+        'Authorization': `Bearer ${authToken}`
+      }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching profile:', error);
+    throw error;
+  }
+};
+const fetchUserEmail = async (userId, authToken) => {
+  try {
+    const response = await api.get(`/users/${userId}/profile/email`, {
+      headers: {
+        'Authorization': `Bearer ${authToken}`
+      }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching profile:', error);
+    throw error;
+  }
+};
+const updateUserProfile = async (userId, authToken, profileData) => {
+  try {
+    const response = await api.put(`/users/${userId}/profile`, profileData, {
+      headers: {
+        'Authorization': `Bearer ${authToken}`
+      }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error updating profile:', error);
+    throw error;
+  }
+};
 
 function VermigoComplaints() {
+  const [editMode, setEditMode] = useState(false);
+  const [error, setError] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [showProfilePopup, setShowProfilePopup] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('all');
   const [selectedComplaint, setSelectedComplaint] = useState(null);
   const [responseText, setResponseText] = useState('');
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    phoneNumber: ''
+  });
+  const [pageLoaded, setPageLoaded] = useState(false);
 
+  useEffect(() => {
+    // Set page as loaded after a small delay to trigger animations
+    setTimeout(() => {
+      setPageLoaded(true);
+    }, 100);
+    
+    // Retrieve authToken and userId from localStorage
+    const authToken = localStorage.getItem('authToken');
+    const userId = localStorage.getItem('userId');
+
+    // Log the values to the console
+    console.log('Auth Token:', authToken);
+    console.log('User ID:', userId);
+
+    // Check if both values are present
+    if (!authToken || !userId) {
+      console.log('Authentication information missing');
+      // For development purposes, we'll still load the dashboard
+      setIsLoading(false);
+      return;
+      // In production, you would redirect to login:
+      // setError('Authentication information missing. Please log in again.');
+      // navigate('/login');
+      // return;
+    }
+
+    // Setup axios interceptor to add auth token to all requests
+    const interceptor = api.interceptors.request.use(
+      config => {
+        config.headers.Authorization = `Bearer ${authToken}`;
+        return config;
+      },
+      error => {
+        return Promise.reject(error);
+      }
+    );
+
+    const loadUserEmail = async () =>{
+      const profileEmailResponse = await fetchUserEmail(userId, authToken);
+      console.log('Profile email received:', profileEmailResponse);
+  
+      if (profileEmailResponse && profileEmailResponse.success) {
+          setProfileEmail({
+              email: profileEmailResponse.email
+          })
+      }
+  }
+    // Fetch user profile data
+    const loadUserProfile = async () => {
+      try {
+        setIsLoading(true);
+        const profileResponse = await fetchUserProfile(userId, authToken);
+        
+        console.log('Profile data received:', profileResponse);
+        
+        if (profileResponse && profileResponse.success) {
+          // Update the profileData state
+          setProfileData({
+            ...profileData,
+            name: `${profileResponse.firstName} ${profileResponse.lastName}`,
+            phone: profileResponse.phoneNumber,
+            firstName: profileResponse.firstName,
+            lastName: profileResponse.lastName
+          });
+        } else {
+          setError('Failed to load profile data');
+        }
+        
+        setIsLoading(false);
+      } catch (err) {
+        // Handle axios specific errors
+        if (err.response) {
+          // The request was made and the server responded with a status code
+          // that falls out of the range of 2xx
+          console.error("Server error:", err.response.status, err.response.data);
+          setError(`Server error: ${err.response.status}`);
+        } else if (err.request) {
+          // The request was made but no response was received
+          console.error("Network error:", err.request);
+          setError('Network error. Please check your connection.');
+        } else {
+          // Something happened in setting up the request
+          console.error("Request configuration error:", err.message);
+          setError('Error setting up request');
+        }
+        setIsLoading(false);
+      }
+    };
+
+    // Load profile data if auth token and user ID are available
+    if (authToken && userId) {
+      loadUserProfile();
+      loadUserEmail();
+    } else {
+      setIsLoading(false);
+    }
+
+    // Clean up interceptor when component unmounts
+    return () => {
+      api.interceptors.request.eject(interceptor);
+    };
+  }, []);
+  
   const handleLogout = () => {
-    // Clear localStorage, sessionStorage, and any authentication tokens
-    localStorage.clear();
-    sessionStorage.clear();
-
-    // Optional: show alert or toast for better UX
-    // alert('You have been logged out'); // or use toast library
-
-    // Redirect to login
+    // Here you would normally clear authentication tokens, etc.
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('userId');
     navigate('/login');
-};
-
+  };
+  
   const toggleProfilePopup = () => {
     setShowProfilePopup(!showProfilePopup);
   };
@@ -29,17 +183,32 @@ function VermigoComplaints() {
   const openProfileModal = () => {
     setShowProfilePopup(false);
     setShowProfileModal(true);
+    
+    // Reset form data based on current profile
+    setFormData({
+      firstName: profileData.firstName,
+      lastName: profileData.lastName,
+      phoneNumber: profileData.phone
+    });
+    
+    // Reset edit mode
+    setEditMode(false);
   };
-
-  const profileData = {
-    name: "Primo Christian",
-    email: "primoMontejo@gmail.com",
-    role: "Waste Collection Manager",
-    phone: "+1 (555) 123-4567",
+  const [profileEmail, setProfileEmail]= useState({
+    email: ""
+});
+  const [profileData, setProfileData] = useState({
+    name: "Loading...",
+    email: "loading@example.com",
+    role: "Admin",
+    phone: "Loading...",
     address: "123 Green Street, Eco City, EC 12345",
     joinDate: "January 15, 2021",
-    department: "Field Operations"
-  };
+    department: "Field Operations",
+    firstName: "",
+    lastName: ""
+  });
+  
   const complaintsData = [
     {
       id: 1,
@@ -222,10 +391,18 @@ function VermigoComplaints() {
     setResponseText(template.text);
   };
 
+  // CSS for animations
+ 
+  const mainContentAnimationClass = pageLoaded 
+    ? 'opacity-100 translate-y-0' 
+    : 'opacity-0 translate-y-6';
+
   return (
-    <div className="flex min-h-screen">
-      {/* Sidebar */}
-      <div className="fixed w-60 h-screen bg-white border-r border-slate-200 shadow-sm z-10 left-0 top-0">
+    <div className="flex min-h-screen bg-gray-50">
+      {/* Sidebar with animation USELESS NI PERO WALA NAKO KAIHBAO ASA ANG CLOSING TAG ANI HAHAH */}
+      <div 
+        className={`fixed w-60 h-screen bg-white border-r border-slate-200 shadow-sm z-10 left-0 top-0 transition-all duration-700 ease-out`}
+      >
         <div className="px-5 py-5 border-b border-slate-200">
           <div className="text-2xl font-bold text-green-600">Vermigo Admin</div>
         </div>
@@ -279,10 +456,13 @@ function VermigoComplaints() {
           </ul>
         </div>
         <div className="fixed bottom-0 left-0 w-60 p-4 flex items-center border-t border-slate-200 bg-white cursor-pointer" onClick={toggleProfilePopup}>
-          <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-800 font-medium text-sm">P</div>
-          <div className="ml-3">
-            <div className="text-sm font-medium">Primo Christian</div>
-            <div className="text-xs text-slate-500">primoMontejo@gmail.com</div>
+          {/* User Info with Clickable Profile */}
+          <div className="fixed bottom-0 left-0 w-60 p-4 flex items-center border-t border-gray-200 bg-white cursor-pointer" onClick={toggleProfilePopup}>
+            <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-800 font-medium text-sm">{profileData.lastName.charAt(0).toUpperCase()}</div>
+            <div className="ml-3">
+              <div className="text-sm font-medium">{profileData.name}</div>
+              <div className="text-xs text-gray-500">{profileEmail.email}</div>
+            </div>
           </div>
           
           {/* Profile Popup */}
@@ -313,8 +493,8 @@ function VermigoComplaints() {
         </div>
       </div>
   
-      {/* Main Content */}
-      <div className="flex-1 p-6 ml-60">
+      {/* Main Content with animation */}
+      <div className={`flex-1 p-3 ml-60 transition-all duration-700 ease-out ${mainContentAnimationClass}`}>
         {/* Header */}
         <div className="flex justify-between items-center mb-6 pb-4 border-b border-slate-200">
           <h1 className="text-2xl font-semibold">Complaints Management</h1>
@@ -450,6 +630,7 @@ function VermigoComplaints() {
               </div>
             </div>
   
+
             {/* Complaints List */}
             <div className="overflow-hidden bg-white rounded-lg shadow-sm border border-slate-200">
               {filterComplaints().map((complaint) => (
@@ -647,7 +828,7 @@ function VermigoComplaints() {
             <div className="p-5">
               <div className="flex items-center mb-6">
                 <div className="w-20 h-20 rounded-full bg-slate-100 flex items-center justify-center text-slate-800 font-medium text-2xl mr-5">
-                  P
+                {profileData.lastName.charAt(0).toUpperCase()}
                 </div>
                 <div>
                   <div className="text-xl font-semibold">{profileData.name}</div>
@@ -659,7 +840,7 @@ function VermigoComplaints() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 <div>
                   <div className="text-xs text-slate-500 mb-1">Email</div>
-                  <div className="text-sm">{profileData.email}</div>
+                  <div className="text-sm">{profileEmail.email}</div>
                 </div>
                 <div>
                   <div className="text-xs text-slate-500 mb-1">Phone</div>
