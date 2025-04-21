@@ -59,6 +59,12 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.PUT, "/api/feedback/**").authenticated()
                 .requestMatchers(HttpMethod.DELETE, "/api/feedback/**").authenticated()
                 
+                // Schedule endpoints - GET is public, others need authentication
+                .requestMatchers(HttpMethod.GET, "/api/schedule", "/api/schedule/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/schedule").authenticated()
+                .requestMatchers(HttpMethod.PUT, "/api/schedule/**").authenticated()
+                .requestMatchers(HttpMethod.DELETE, "/api/schedule/**").authenticated()
+                
                 // User profile endpoints
                 .requestMatchers(HttpMethod.GET, "/api/users/{userId}/profile", "/api/users/{userId}/profile/email", "/api/users/{userId}/profile/notifications").authenticated()
                 .requestMatchers(HttpMethod.PUT, "/api/users/{userId}/profile", "/api/users/{userId}/profile/email", "/api/users/{userId}/profile/notifications").authenticated()
