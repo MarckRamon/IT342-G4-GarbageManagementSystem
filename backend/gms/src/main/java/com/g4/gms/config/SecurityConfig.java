@@ -53,6 +53,12 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.PUT, "/api/pickup-locations/**").authenticated()
                 .requestMatchers(HttpMethod.DELETE, "/api/pickup-locations/**").authenticated()
                 
+                // Feedback endpoints - GET is public, others need authentication
+                .requestMatchers(HttpMethod.GET, "/api/feedback", "/api/feedback/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/feedback").authenticated()
+                .requestMatchers(HttpMethod.PUT, "/api/feedback/**").authenticated()
+                .requestMatchers(HttpMethod.DELETE, "/api/feedback/**").authenticated()
+                
                 // User profile endpoints
                 .requestMatchers(HttpMethod.GET, "/api/users/{userId}/profile", "/api/users/{userId}/profile/email", "/api/users/{userId}/profile/notifications").authenticated()
                 .requestMatchers(HttpMethod.PUT, "/api/users/{userId}/profile", "/api/users/{userId}/profile/email", "/api/users/{userId}/profile/notifications").authenticated()
