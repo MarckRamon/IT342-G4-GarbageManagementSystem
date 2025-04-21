@@ -3,7 +3,7 @@ package com.g4.gms.model;
 import com.google.cloud.firestore.annotation.PropertyName;
 
 public class PickupLocation {
-    private String id;
+    private String locationId;
     private String siteName;
     private String wasteType;
     private String address;
@@ -14,8 +14,8 @@ public class PickupLocation {
     public PickupLocation() {}
 
     // Constructor with all fields
-    public PickupLocation(String id, String siteName, String wasteType, String address, Double latitude, Double longitude) {
-        this.id = id;
+    public PickupLocation(String locationId, String siteName, String wasteType, String address, Double latitude, Double longitude) {
+        this.locationId = locationId;
         this.siteName = siteName;
         this.wasteType = wasteType;
         this.address = address;
@@ -23,14 +23,14 @@ public class PickupLocation {
         this.longitude = longitude;
     }
 
-    @PropertyName("id")
-    public String getId() {
-        return id;
+    @PropertyName("locationId")
+    public String getLocationId() {
+        return locationId;
     }
 
-    @PropertyName("id")
-    public void setId(String id) {
-        this.id = id;
+    @PropertyName("locationId")
+    public void setLocationId(String locationId) {
+        this.locationId = locationId;
     }
 
     @PropertyName("siteName")

@@ -7,7 +7,7 @@ import java.util.List;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class PickupLocationResponse {
-    private String id;
+    private String locationId;
     private String siteName;
     private String wasteType;
     private String address;
@@ -21,8 +21,8 @@ public class PickupLocationResponse {
     public PickupLocationResponse() {}
 
     // Success response for a single location
-    public PickupLocationResponse(String id, String siteName, String wasteType, String address, Double latitude, Double longitude, boolean success, String message) {
-        this.id = id;
+    public PickupLocationResponse(String locationId, String siteName, String wasteType, String address, Double latitude, Double longitude, boolean success, String message) {
+        this.locationId = locationId;
         this.siteName = siteName;
         this.wasteType = wasteType;
         this.address = address;
@@ -34,7 +34,7 @@ public class PickupLocationResponse {
 
     // Constructor from PickupLocation model
     public PickupLocationResponse(PickupLocation location, boolean success, String message) {
-        this.id = location.getId();
+        this.locationId = location.getLocationId();
         this.siteName = location.getSiteName();
         this.wasteType = location.getWasteType();
         this.address = location.getAddress();
@@ -47,7 +47,7 @@ public class PickupLocationResponse {
     // Success response for multiple locations
     public PickupLocationResponse(List<PickupLocation> locations, boolean success, String message) {
         // Explicitly set single location fields to null
-        this.id = null;
+        this.locationId = null;
         this.siteName = null;
         this.wasteType = null;
         this.address = null;
@@ -66,12 +66,12 @@ public class PickupLocationResponse {
         this.message = message;
     }
 
-    public String getId() {
-        return id;
+    public String getLocationId() {
+        return locationId;
     }
 
-    public void setId(String id) {
-        this.id = id;
+    public void setLocationId(String locationId) {
+        this.locationId = locationId;
     }
 
     public String getSiteName() {
