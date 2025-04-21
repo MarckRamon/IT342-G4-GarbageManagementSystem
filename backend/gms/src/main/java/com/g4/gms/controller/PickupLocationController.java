@@ -46,18 +46,18 @@ public class PickupLocationController {
     /**
      * Get a pickup location by ID
      * This endpoint is publicly accessible (no JWT required)
-     * @param id The ID of the pickup location to retrieve
+     * @param locationId The ID of the pickup location to retrieve
      * @return The pickup location with the specified ID
      */
-    @GetMapping("/{id}")
-    public ResponseEntity<PickupLocationResponse> getPickupLocationById(@PathVariable String id) {
+    @GetMapping("/{locationId}")
+    public ResponseEntity<PickupLocationResponse> getPickupLocationById(@PathVariable String locationId) {
         try {
-            PickupLocation location = pickupLocationService.getPickupLocationById(id);
+            PickupLocation location = pickupLocationService.getPickupLocationById(locationId);
             
             if (location == null) {
                 PickupLocationResponse response = new PickupLocationResponse(
                         false,
-                        "Pickup location not found with ID: " + id
+                        "Pickup location not found with ID: " + locationId
                 );
                 return ResponseEntity.notFound().build();
             }
@@ -90,8 +90,10 @@ public class PickupLocationController {
             newLocation.setSiteName(request.getSiteName());
             newLocation.setWasteType(request.getWasteType());
             newLocation.setAddress(request.getAddress());
-            newLocation.setLatitude(request.getLatitude());
-            newLocation.setLongitude(request.getLongitude());
+            if (request.getLatitude() != null && request.getLongitude() != null) {
+                newLocation.setLatitude(request.getLatitude());
+                newLocation.setLongitude(request.getLongitude());
+            }
             
             PickupLocation createdLocation = pickupLocationService.createPickupLocation(newLocation);
             
@@ -113,23 +115,25 @@ public class PickupLocationController {
     /**
      * Update an existing pickup location
      * This endpoint requires JWT authentication
-     * @param id The ID of the pickup location to update
+     * @param locationId The ID of the pickup location to update
      * @param request The updated pickup location data
      * @return The updated pickup location
      */
-    @PutMapping("/{id}")
+    @PutMapping("/{locationId}")
     public ResponseEntity<PickupLocationResponse> updatePickupLocation(
-            @PathVariable String id,
+            @PathVariable String locationId,
             @Valid @RequestBody PickupLocationRequest request) {
         try {
             PickupLocation updatedLocation = new PickupLocation();
             updatedLocation.setSiteName(request.getSiteName());
             updatedLocation.setWasteType(request.getWasteType());
             updatedLocation.setAddress(request.getAddress());
-            updatedLocation.setLatitude(request.getLatitude());
-            updatedLocation.setLongitude(request.getLongitude());
+            if (request.getLatitude() != null && request.getLongitude() != null) {
+                updatedLocation.setLatitude(request.getLatitude());
+                updatedLocation.setLongitude(request.getLongitude());
+            }
             
-            PickupLocation result = pickupLocationService.updatePickupLocation(id, updatedLocation);
+            PickupLocation result = pickupLocationService.updatePickupLocation(locationId, updatedLocation);
             
             PickupLocationResponse response = new PickupLocationResponse(
                     result,
@@ -155,13 +159,13 @@ public class PickupLocationController {
     /**
      * Delete a pickup location
      * This endpoint requires JWT authentication
-     * @param id The ID of the pickup location to delete
+     * @param locationId The ID of the pickup location to delete
      * @return Success or error message
      */
-    @DeleteMapping("/{id}")
-    public ResponseEntity<PickupLocationResponse> deletePickupLocation(@PathVariable String id) {
+    @DeleteMapping("/{locationId}")
+    public ResponseEntity<PickupLocationResponse> deletePickupLocation(@PathVariable String locationId) {
         try {
-            boolean deleted = pickupLocationService.deletePickupLocation(id);
+            boolean deleted = pickupLocationService.deletePickupLocation(locationId);
             
             if (deleted) {
                 PickupLocationResponse response = new PickupLocationResponse(

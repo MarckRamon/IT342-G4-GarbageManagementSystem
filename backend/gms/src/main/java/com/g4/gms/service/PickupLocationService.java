@@ -30,7 +30,7 @@ public class PickupLocationService {
         for (DocumentSnapshot document : documents) {
             PickupLocation location = document.toObject(PickupLocation.class);
             if (location != null) {
-                location.setId(document.getId());
+                location.setLocationId(document.getId());
                 locations.add(location);
             }
         }
@@ -50,7 +50,7 @@ public class PickupLocationService {
         if (document.exists()) {
             PickupLocation location = document.toObject(PickupLocation.class);
             if (location != null) {
-                location.setId(document.getId());
+                location.setLocationId(document.getId());
                 return location;
             }
         }
@@ -66,7 +66,7 @@ public class PickupLocationService {
     public PickupLocation createPickupLocation(PickupLocation location) throws ExecutionException, InterruptedException {
         // Create a new document with auto-generated ID
         DocumentReference docRef = firestore.collection(COLLECTION_NAME).document();
-        location.setId(docRef.getId());
+        location.setLocationId(docRef.getId());
         
         // Save the document
         ApiFuture<WriteResult> result = docRef.set(location);
@@ -93,7 +93,7 @@ public class PickupLocationService {
         }
         
         // Set the ID
-        location.setId(locationId);
+        location.setLocationId(locationId);
         
         // Update the document
         ApiFuture<WriteResult> result = docRef.set(location);
