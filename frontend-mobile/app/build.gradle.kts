@@ -43,6 +43,15 @@ android {
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.8"
     }
+    
+    // Handle AndroidX and Support Library conflicts
+    configurations.all {
+        resolutionStrategy {
+            force("androidx.core:core:1.12.0")
+            // Force using AndroidX versions and exclude Support Library
+            exclude(group = "com.android.support")
+        }
+    }
 }
 
 dependencies {
@@ -51,6 +60,10 @@ dependencies {
     implementation("androidx.appcompat:appcompat:1.6.1")
     implementation("com.google.android.material:material:1.11.0")
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")
+    
+    // Calendar View for schedule calendar (AndroidX compatible)
+    implementation("com.kizitonwose.calendar:view:2.3.0")
+    // Note: We're using java.time directly since our minSdk is 24+ (Java 8)
     
     // Jetpack Compose
     implementation(platform("androidx.compose:compose-bom:2024.02.00"))
@@ -82,6 +95,9 @@ dependencies {
     
     // CircleImageView
     implementation("de.hdodenhof:circleimageview:3.1.0")
+    
+    // SwipeRefreshLayout
+    implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
     
     // BCrypt
     implementation("at.favre.lib:bcrypt:0.10.2")
