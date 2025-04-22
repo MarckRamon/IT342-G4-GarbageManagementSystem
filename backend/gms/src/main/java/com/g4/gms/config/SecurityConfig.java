@@ -65,6 +65,12 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.PUT, "/api/schedule/**").authenticated()
                 .requestMatchers(HttpMethod.DELETE, "/api/schedule/**").authenticated()
                 
+                // Tip endpoints - GET is public, others need authentication
+                .requestMatchers(HttpMethod.GET, "/api/tip", "/api/tip/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/tip").authenticated()
+                .requestMatchers(HttpMethod.PUT, "/api/tip/**").authenticated()
+                .requestMatchers(HttpMethod.DELETE, "/api/tip/**").authenticated()
+                
                 // User profile endpoints
                 .requestMatchers(HttpMethod.GET, "/api/users/{userId}/profile", "/api/users/{userId}/profile/email", "/api/users/{userId}/profile/notifications").authenticated()
                 .requestMatchers(HttpMethod.PUT, "/api/users/{userId}/profile", "/api/users/{userId}/profile/email", "/api/users/{userId}/profile/notifications").authenticated()
