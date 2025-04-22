@@ -6,6 +6,53 @@ import axios from 'axios';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import '../styles/MapPage.css';
+const API_BASE_URL = 'http://localhost:8080/api';
+
+
+// Create axios instance with default config
+const api = axios.create({
+  baseURL: API_BASE_URL
+});
+
+const fetchUserProfile = async (userId, authToken) => {
+  try {
+    const response = await api.get(`/users/${userId}/profile`, {
+      headers: {
+        'Authorization': `Bearer ${authToken}`
+      }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching profile:', error);
+    throw error;
+  }
+};
+const fetchUserEmail = async (userId, authToken) => {
+  try {
+    const response = await api.get(`/users/${userId}/profile/email`, {
+      headers: {
+        'Authorization': `Bearer ${authToken}`
+      }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching profile:', error);
+    throw error;
+  }
+};
+const updateUserProfile = async (userId, authToken, profileData) => {
+  try {
+    const response = await api.put(`/users/${userId}/profile`, profileData, {
+      headers: {
+        'Authorization': `Bearer ${authToken}`
+      }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error updating profile:', error);
+    throw error;
+  }
+};
 
 // Fix for default marker icons in react-leaflet
 delete L.Icon.Default.prototype._getIconUrl;
@@ -66,20 +113,125 @@ const MapPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const mapRef = useRef(null);
-  
+  const [isLoading, setIsLoading] = useState(true);
+  const [editMode, setEditMode] = useState(false);
+  const [pageLoaded, setPageLoaded] = useState(false);
+  const [profileEmail, setProfileEmail]= useState({
+    email: ""
+});
   // Profile data object
-  const profileData = {
-    name: "Primo Christian",
-    email: "primoMontejo@gmail.com",
-    role: "Waste Collection Manager",
-    phone: "+1 (555) 123-4567",
+  const [profileData, setProfileData] = useState({
+    name: "Loading...",
+    email: "loading@example.com",
+    role: "Admin",
+    phone: "Loading...",
     address: "123 Green Street, Eco City, EC 12345",
     joinDate: "January 15, 2021",
-    department: "Field Operations"
-  };
-  
+    department: "Field Operations",
+    firstName: "",
+    lastName: ""
+});
+  useEffect(() => {
+    // Retrieve authToken and userId from localStorage
+    const authToken = localStorage.getItem('authToken');
+    const userId = localStorage.getItem('userId');
+
+    // Log the values to the console
+    console.log('Auth Token:', authToken);
+    console.log('User ID:', userId);
+
+    // Check if both values are present
+    if (!authToken || !userId) {
+        console.log('Authentication information missing');
+        // For development purposes, we'll still load the dashboard
+        setIsLoading(false);
+        return;
+        // In production, you would redirect to login:
+        // setError('Authentication information missing. Please log in again.');
+        // navigate('/login');
+        // return;
+    }
+
+    // Setup axios interceptor to add auth token to all requests
+    const interceptor = api.interceptors.request.use(
+        config => {
+            config.headers.Authorization = `Bearer ${authToken}`;
+            return config;
+        },
+        error => {
+            return Promise.reject(error);
+        }
+    );
+    const loadUserEmail = async () =>{
+      const profileEmailResponse = await fetchUserEmail(userId, authToken);
+      console.log('Profile email received:', profileEmailResponse);
+
+      if (profileEmailResponse && profileEmailResponse.success) {
+          setProfileEmail({
+              email: profileEmailResponse.email
+          })
+      }
+  }
+    // Fetch user profile data
+    const loadUserProfile = async () => {
+        try {
+            setIsLoading(true);
+            const profileResponse = await fetchUserProfile(userId, authToken);
+            
+            console.log('Profile data received:', profileResponse);
+            
+            if (profileResponse && profileResponse.success) {
+                // Update the profileData state
+                setProfileData({
+                    ...profileData,
+                    name: `${profileResponse.firstName} ${profileResponse.lastName}`,
+                    phone: profileResponse.phoneNumber,
+                    firstName: profileResponse.firstName,
+                    lastName: profileResponse.lastName
+                });
+            } else {
+                setError('Failed to load profile data');
+            }
+            
+            setIsLoading(false);
+        } catch (err) {
+            // Handle axios specific errors
+            if (err.response) {
+                // The request was made and the server responded with a status code
+                // that falls out of the range of 2xx
+                console.error("Server error:", err.response.status, err.response.data);
+                setError(`Server error: ${err.response.status}`);
+            } else if (err.request) {
+                // The request was made but no response was received
+                console.error("Network error:", err.request);
+                setError('Network error. Please check your connection.');
+            } else {
+                // Something happened in setting up the request
+                console.error("Request configuration error:", err.message);
+                setError('Error setting up request');
+            }
+            setIsLoading(false);
+        }
+    };
+
+    // Load profile data if auth token and user ID are available
+    if (authToken && userId) {
+        loadUserProfile();
+        loadUserEmail();
+    } else {
+        setIsLoading(false);
+    }
+
+    // Clean up interceptor when component unmounts
+    return () => {
+        api.interceptors.request.eject(interceptor);
+    };
+}, []);
   // Fetch all pickup locations from API
   useEffect(() => {
+    setTimeout(() => {
+      setPageLoaded(true);
+    }, 100);
     const fetchPickupLocations = async () => {
       setLoading(true);
       setError(null);
@@ -315,13 +467,19 @@ const MapPage = () => {
   };
   
   const handleLogout = () => {
-    // Clear token on logout
-    localStorage.removeItem('token');
+    // Here you would normally clear authentication tokens, etc.
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('userId');
     navigate('/login');
-  };
-  
+};
+const mainContentAnimationClass = pageLoaded 
+? 'opacity-100 translate-y-0' 
+: 'opacity-0 translate-y-6';
+
   return (
-    <div className="flex min-h-screen">
+
+    <div className="flex min-h-screen bg-gray-50">
+  
       {/* Sidebar */}
       <div className="fixed w-60 h-screen bg-white border-r border-gray-200 shadow-sm z-10 left-0 top-0">
         <div className="p-5 border-b border-gray-200">
@@ -342,7 +500,7 @@ const MapPage = () => {
             </li>
             <li className="flex items-center px-5 py-3 text-gray-500 font-medium cursor-pointer transition duration-300 hover:bg-[rgba(93,166,70,0.05)]">
               <Link to="/complaints" className="flex items-center no-underline text-inherit">
-                <span className="mr-3">
+              <span className="mr-3">
                   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
                   </svg>
@@ -377,45 +535,51 @@ const MapPage = () => {
           </ul>
         </div>
         <div className="fixed bottom-0 left-0 w-60 p-4 flex items-center border-t border-gray-200 bg-white cursor-pointer" onClick={toggleProfilePopup}>
-          <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-800 font-medium text-sm">P</div>
-          <div className="ml-3">
-            <div className="text-sm font-medium">Primo Christian</div>
-            <div className="text-xs text-gray-500">primoMontejo@gmail.com</div>
-          </div>
+        {/* User Info with Clickable Profile */}
+        <div className="fixed bottom-0 left-0 w-60 p-4 flex items-center border-t border-gray-200 bg-white cursor-pointer" onClick={toggleProfilePopup}>
+                    <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-800 font-medium text-sm">{profileData.lastName.charAt(0).toUpperCase()}</div>
+                    <div className="ml-3">
+                        <div className="text-sm font-medium">{profileData.name}</div>
+                        <div className="text-xs text-gray-500">{profileEmail.email}</div>
+                    </div>
+                </div>
           
           {/* Profile Popup */}
-          {showProfilePopup && (
-            <div className="absolute bottom-16 left-2.5 w-56 bg-white shadow-md rounded-lg z-30 border border-gray-200 overflow-hidden">
-              <div className="p-3 flex items-center cursor-pointer hover:bg-[rgba(93,166,70,0.05)] transition duration-200" onClick={openProfileModal}>
-                <div className="mr-3 text-gray-500">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                    <circle cx="12" cy="7" r="4"></circle>
-                  </svg>
-                </div>
-                <div className="text-sm text-gray-800">View Profile</div>
-              </div>
-              <div className="h-px bg-gray-200"></div>
-              <div className="p-3 flex items-center cursor-pointer hover:bg-[rgba(93,166,70,0.05)] transition duration-200" onClick={handleLogout}>
-                <div className="mr-3 text-gray-500">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                    <polyline points="16 17 21 12 16 7"></polyline>
-                    <line x1="21" y1="12" x2="9" y2="12"></line>
-                  </svg>
-                </div>
-                <div className="text-sm text-gray-800">Logout</div>
-              </div>
-            </div>
-          )}
+ 
+
+{showProfilePopup && (
+  <div className="absolute bottom-16 left-2.5 w-56 bg-white shadow-md rounded-lg z-50 border border-gray-200 overflow-hidden">
+    <div className="p-3 flex items-center cursor-pointer hover:bg-[rgba(93,166,70,0.05)] transition duration-200" onClick={openProfileModal}>
+      <div className="mr-3 text-gray-500">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+          <circle cx="12" cy="7" r="4"></circle>
+        </svg>
+      </div>
+      <div className="text-sm text-gray-800">View Profile</div>
+    </div>
+    <div className="h-px bg-gray-200"></div>
+    <div className="p-3 flex items-center cursor-pointer hover:bg-[rgba(93,166,70,0.05)] transition duration-200" onClick={handleLogout}>
+      <div className="mr-3 text-gray-500">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+          <polyline points="16 17 21 12 16 7"></polyline>
+          <line x1="21" y1="12" x2="9" y2="12"></line>
+        </svg>
+      </div>
+      <div className="text-sm text-gray-800">Logout</div>
+    </div>
+  </div>
+)}
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 ml-60">
+      <div className={`flex-1 p-3 ml-60 transition-all duration-700 ease-out ${mainContentAnimationClass}`}>
         <div className="map-page">
           <div className="map-header">
-            <h1>Garbage Collection Sites</h1>
+          <h1 className="text-2xl font-semibold text-gray-800">Garbage Collection Sites</h1>
+
             {(!isAdding && !isEditing) ? (
               <button className="add-pin-btn" onClick={handleAddPin}>Add Collection Site</button>
             ) : (
@@ -475,7 +639,8 @@ const MapPage = () => {
             </div>
           )}
           
-          <div className="map-container">
+          <div className="map-container z-10">
+            
             {loading && !isAdding && !isEditing && (
               <div className="loading-overlay">
                 <span>Loading...</span>
@@ -547,78 +712,71 @@ const MapPage = () => {
           )}
         </div>
       </div>
-      
+
       {/* Profile Modal */}
       {showProfileModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50" onClick={() => setShowProfileModal(false)}>
-          <div className="bg-white rounded-lg shadow-lg w-full max-w-md overflow-hidden" onClick={e => e.stopPropagation()}>
-            <div className="flex justify-between items-center p-4 border-b border-gray-200">
-              <h3 className="text-lg font-semibold">Profile Information</h3>
-              <button className="text-gray-400 hover:text-gray-600" onClick={() => setShowProfileModal(false)}>
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-50">
+          <div className="bg-white rounded-lg shadow-lg w-11/12 max-w-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center p-5 border-b border-slate-200">
+              <h3 className="text-xl font-semibold">Profile</h3>
+              <button 
+                className="bg-transparent border-none cursor-pointer flex items-center justify-center p-2 rounded text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+                onClick={() => setShowProfileModal(false)}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="18" y1="6" x2="6" y2="18"></line>
                   <line x1="6" y1="6" x2="18" y2="18"></line>
                 </svg>
               </button>
             </div>
-            <div className="p-4">
+            
+            <div className="p-5">
               <div className="flex items-center mb-6">
-                <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center text-gray-700 font-medium text-xl">P</div>
-                <div className="ml-4">
+                <div className="w-20 h-20 rounded-full bg-slate-100 flex items-center justify-center text-slate-800 font-medium text-2xl mr-5">
+                {profileData.lastName.charAt(0).toUpperCase()}
+                </div>
+                <div>
                   <div className="text-xl font-semibold">{profileData.name}</div>
-                  <div className="text-sm text-gray-500">{profileData.role}</div>
+                  <div className="text-sm text-slate-500">{profileData.role}</div>
+                  <div className="text-xs text-slate-400 mt-1">Member since {profileData.joinDate}</div>
                 </div>
               </div>
-              <div className="mb-4">
-                <h4 className="text-sm font-medium text-gray-500 mb-2">Contact Information</h4>
-                <div className="space-y-2">
-                  <div className="flex items-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 text-gray-500">
-                      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
-                    </svg>
-                    <span>{profileData.phone}</span>
-                  </div>
-                  <div className="flex items-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 text-gray-500">
-                      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
-                      <polyline points="22,6 12,13 2,6"></polyline>
-                    </svg>
-                    <span>{profileData.email}</span>
-                  </div>
-                  <div className="flex items-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 text-gray-500">
-                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-                      <circle cx="12" cy="10" r="3"></circle>
-                    </svg>
-                    <span>{profileData.address}</span>
-                  </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div>
+                  <div className="text-xs text-slate-500 mb-1">Email</div>
+                  <div className="text-sm">{profileEmail.email}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-slate-500 mb-1">Phone</div>
+                  <div className="text-sm">{profileData.phone}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-slate-500 mb-1">Department</div>
+                  <div className="text-sm">{profileData.department}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-slate-500 mb-1">Address</div>
+                  <div className="text-sm">{profileData.address}</div>
                 </div>
               </div>
-              <div>
-                <h4 className="text-sm font-medium text-gray-500 mb-2">Work Information</h4>
-                <div className="space-y-2">
-                  <div className="flex items-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 text-gray-500">
-                      <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
-                      <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
-                    </svg>
-                    <span>{profileData.department}</span>
-                  </div>
-                  <div className="flex items-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 text-gray-500">
-                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                      <line x1="16" y1="2" x2="16" y2="6"></line>
-                      <line x1="8" y1="2" x2="8" y2="6"></line>
-                      <line x1="3" y1="10" x2="21" y2="10"></line>
-                    </svg>
-                    <span>Joined on {profileData.joinDate}</span>
-                  </div>
-                </div>
+              
+              <div className="flex justify-end space-x-3 pt-4 border-t border-slate-200">
+                <button 
+                  className="px-4 py-2 bg-white border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50"
+                  onClick={() => setShowProfileModal(false)}
+                >
+                  Close
+                </button>
+                <button className="px-4 py-2 bg-green-600 rounded-md text-sm font-medium text-white hover:bg-green-700">
+                  Edit Profile
+                </button>
               </div>
             </div>
           </div>
         </div>
       )}
+      
     </div>
   );
 };
