@@ -1,5 +1,7 @@
-import React, { useState,useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { Calendar, Clock, Home, MapPin, User, Mail, Phone, Briefcase, LogOut, ChevronLeft, ChevronRight, Plus, X, Trash2, Edit } from 'lucide-react';
+
 import { Link, useNavigate } from 'react-router-dom';
 const API_BASE_URL = 'http://localhost:8080/api';
 import axios from 'axios';
@@ -22,19 +24,21 @@ const fetchUserProfile = async (userId, authToken) => {
     throw error;
   }
 };
+
 const fetchUserEmail = async (userId, authToken) => {
-    try {
-      const response = await api.get(`/users/${userId}/profile/email`, {
-        headers: {
-          'Authorization': `Bearer ${authToken}`
-        }
-      });
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching profile:', error);
-      throw error;
-    }
-  };
+  try {
+    const response = await api.get(`/users/${userId}/profile/email`, {
+      headers: {
+        'Authorization': `Bearer ${authToken}`
+      }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching profile:', error);
+    throw error;
+  }
+};
+
 const updateUserProfile = async (userId, authToken, profileData) => {
   try {
     const response = await api.put(`/users/${userId}/profile`, profileData, {
@@ -49,256 +53,570 @@ const updateUserProfile = async (userId, authToken, profileData) => {
   }
 };
 
+// New API functions for schedules
+const fetchSchedules = async () => {
+  try {
+    const response = await api.get('/schedule');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching schedules:', error);
+    throw error;
+  }
+};
+
+// New API functions for tips
+const fetchTips = async () => {
+  try {
+    const response = await api.get('/tip');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching tips:', error);
+    throw error;
+  }
+};
+
+const createTip = async (tipData) => {
+  try {
+    const response = await api.post('/tip', tipData);
+    return response.data;
+  } catch (error) {
+    console.error('Error creating tip:', error);
+    throw error;
+  }
+};
+
+const updateTip = async (tipId, tipData) => {
+  try {
+    const response = await api.put(`/tip/${tipId}`, tipData);
+    return response.data;
+  } catch (error) {
+    console.error('Error updating tip:', error);
+    throw error;
+  }
+};
+
+const deleteTip = async (tipId) => {
+  try {
+    const response = await api.delete(`/tip/${tipId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error deleting tip:', error);
+    throw error;
+  }
+};
+
 function VermigoDashboard() {
-    // Navigation hook
+  // Navigation hook
+  const authToken = localStorage.getItem('authToken');
+  const userId = localStorage.getItem('userId');
+  const navigate = useNavigate();
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    phoneNumber: ''
+  });
+  // State for profile popup and modal
+  const [showProfilePopup, setShowProfilePopup] = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
+  const [schedules, setSchedules] = useState([]);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [editMode, setEditMode] = useState(false);
+  const [pageLoaded, setPageLoaded] = useState(false);
+
+  // Tips management state
+  const [tips, setTips] = useState([]);
+  const [showAddTipModal, setShowAddTipModal] = useState(false);
+  const [showEditTipModal, setShowEditTipModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [currentTip, setCurrentTip] = useState(null);
+  const [tipFormData, setTipFormData] = useState({
+    title: '',
+    description: '',
+    status: 'active'
+  });
+  const [tipLoadingState, setTipLoadingState] = useState({
+    loading: false,
+    error: null
+  });
+
+  useEffect(() => {
+    setTimeout(() => {
+      setPageLoaded(true);
+    }, 100);
+    // Retrieve authToken and userId from localStorage
     const authToken = localStorage.getItem('authToken');
-        const userId = localStorage.getItem('userId');
-    const navigate = useNavigate();
-    const [formData, setFormData] = useState({
-        firstName: '',
-        lastName: '',
-        phoneNumber: ''
-    });
-    // State for profile popup and modal
-    const [showProfilePopup, setShowProfilePopup] = useState(false);
-    const [showProfileModal, setShowProfileModal] = useState(false);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [editMode, setEditMode] = useState(false);
-    const [pageLoaded, setPageLoaded] = useState(false);
+    const userId = localStorage.getItem('userId');
 
- 
-    
-    useEffect(() => {
-        setTimeout(() => {
-            setPageLoaded(true);
-          }, 100);
-        // Retrieve authToken and userId from localStorage
-        const authToken = localStorage.getItem('authToken');
-        const userId = localStorage.getItem('userId');
+    // Log the values to the console
+    console.log('Auth Token:', authToken);
+    console.log('User ID:', userId);
 
-        // Log the values to the console
-        console.log('Auth Token:', authToken);
-        console.log('User ID:', userId);
+    // Check if both values are present
+    if (!authToken || !userId) {
+      console.log('Authentication information missing');
+      // For development purposes, we'll still load the dashboard
+      setIsLoading(false);
+      return;
+      // In production, you would redirect to login:
+      // setError('Authentication information missing. Please log in again.');
+      // navigate('/login');
+      // return;
+    }
 
-        // Check if both values are present
-        if (!authToken || !userId) {
-            console.log('Authentication information missing');
-            // For development purposes, we'll still load the dashboard
-            setIsLoading(false);
-            return;
-            // In production, you would redirect to login:
-            // setError('Authentication information missing. Please log in again.');
-            // navigate('/login');
-            // return;
+    const loadAllData = async () => {
+      try {
+        setIsLoading(true);
+        
+        // Fetch user profile and email
+        const profilePromise = fetchUserProfile(userId, authToken);
+        const emailPromise = fetchUserEmail(userId, authToken);
+        const schedulesPromise = fetchSchedules(authToken);
+        const tipsPromise = fetchTips();
+        
+        const [profileResponse, emailResponse, schedulesResponse, tipsResponse] = await Promise.all([
+          profilePromise,
+          emailPromise,
+          schedulesPromise,
+          tipsPromise
+        ]);
+        
+        console.log('Profile data received:', profileResponse);
+        console.log('Email data received:', emailResponse);
+        console.log('Schedules data received:', schedulesResponse);
+        console.log('Tips data received:', tipsResponse);
+        
+        // Update profile data
+        if (profileResponse && profileResponse.success) {
+          setProfileData({
+            ...profileData,
+            name: `${profileResponse.firstName} ${profileResponse.lastName}`,
+            phone: profileResponse.phoneNumber,
+            firstName: profileResponse.firstName,
+            lastName: profileResponse.lastName
+          });
         }
-
-        // Setup axios interceptor to add auth token to all requests
-        const interceptor = api.interceptors.request.use(
-            config => {
-                config.headers.Authorization = `Bearer ${authToken}`;
-                return config;
-            },
-            error => {
-                return Promise.reject(error);
-            }
-        );
-        const loadUserEmail = async () =>{
-            const profileEmailResponse = await fetchUserEmail(userId, authToken);
-            console.log('Profile email received:', profileEmailResponse);
-
-            if (profileEmailResponse && profileEmailResponse.success) {
-                setProfileEmail({
-                    email: profileEmailResponse.email
-                })
-            }
+        
+        // Update email data
+        if (emailResponse && emailResponse.success) {
+          setProfileEmail({
+            email: emailResponse.email
+          });
         }
-        // Fetch user profile data
-        const loadUserProfile = async () => {
-            try {
-                setIsLoading(true);
-                const profileResponse = await fetchUserProfile(userId, authToken);
-                
-                console.log('Profile data received:', profileResponse);
-                
-                if (profileResponse && profileResponse.success) {
-                    // Update the profileData state
-                    setProfileData({
-                        ...profileData,
-                        name: `${profileResponse.firstName} ${profileResponse.lastName}`,
-                        phone: profileResponse.phoneNumber,
-                        firstName: profileResponse.firstName,
-                        lastName: profileResponse.lastName
-                    });
-                } else {
-                    setError('Failed to load profile data');
-                }
-                
-                setIsLoading(false);
-            } catch (err) {
-                // Handle axios specific errors
-                if (err.response) {
-                    // The request was made and the server responded with a status code
-                    // that falls out of the range of 2xx
-                    console.error("Server error:", err.response.status, err.response.data);
-                    setError(`Server error: ${err.response.status}`);
-                } else if (err.request) {
-                    // The request was made but no response was received
-                    console.error("Network error:", err.request);
-                    setError('Network error. Please check your connection.');
-                } else {
-                    // Something happened in setting up the request
-                    console.error("Request configuration error:", err.message);
-                    setError('Error setting up request');
-                }
-                setIsLoading(false);
-            }
-        };
-
-        // Load profile data if auth token and user ID are available
-        if (authToken && userId) {
-            loadUserProfile();
-            loadUserEmail();
-        } else {
-            setIsLoading(false);
+        
+        // Update schedules
+        if (schedulesResponse) {
+          setSchedules(schedulesResponse);
         }
+        
+        // Update tips
+        if (tipsResponse) {
+          setTips(tipsResponse);
+        }
+        
+        setIsLoading(false);
+      } catch (err) {
+        handleApiError(err);
+        setIsLoading(false);
+      }
+    };
 
-        // Clean up interceptor when component unmounts
-        return () => {
-            api.interceptors.request.eject(interceptor);
-        };
-    }, []);
-
-
-    // Static chart data based on the image
-    const chartData = [
-        { name: 'Jan', value: 3200 },
-        { name: 'Feb', value: 4100 },
-        { name: 'Mar', value: 3800 },
-        { name: 'Apr', value: 2900 },
-        { name: 'May', value: 5200 },
-        { name: 'Jun', value: 3600 },
-        { name: 'Jul', value: 4300 },
-        { name: 'Aug', value: 3100 },
-        { name: 'Sep', value: 5100 },
-        { name: 'Oct', value: 4000 },
-        { name: 'Nov', value: 4800 },
-        { name: 'Dec', value: 5400 },
-    ];
-
-    // Top waste collection locations data
-    const topLocationsData = [
-        { name: 'Barrangu Lighting', value: 6239, color: '#FF6B6B' },
-        { name: 'Therona', value: 4975, color: '#FF9E7A' },
-        { name: 'Lineast B', value: 2385, color: '#FFBB94' },
-    ];
-
-    // Current month and year
-    const [currentMonth, setCurrentMonth] = useState('March');
-    const [currentYear, setCurrentYear] = useState('2021');
-
-    const [profileEmail, setProfileEmail]= useState({
-        email: ""
-    });
-    // Profile data object;
-    const [profileData, setProfileData] = useState({
-        name: "Loading...",
-        email: "loading@example.com",
-        role: "Admin",
-        phone: "Loading...",
-        address: "123 Green Street, Eco City, EC 12345",
-        joinDate: "January 15, 2021",
-        department: "Field Operations",
-        firstName: "",
-        lastName: ""
-    });
+    loadAllData();
+    // Setup axios interceptor to add auth token to all requests
     const interceptor = api.interceptors.request.use(
-        config => {
-            config.headers.Authorization = `Bearer ${authToken}`;
-            return config;
-        },
-        error => {
-            return Promise.reject(error);
-        }
+      config => {
+        config.headers.Authorization = `Bearer ${authToken}`;
+        return config;
+      },
+      error => {
+        return Promise.reject(error);
+      }
     );
-    // Handler functions
-    const handleLogout = () => {
-        // Here you would normally clear authentication tokens, etc.
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('userId');
-        navigate('/login');
+    const loadUserEmail = async () => {
+      const profileEmailResponse = await fetchUserEmail(userId, authToken);
+      console.log('Profile email received:', profileEmailResponse);
+
+      if (profileEmailResponse && profileEmailResponse.success) {
+        setProfileEmail({
+          email: profileEmailResponse.email
+        })
+      }
+    }
+    // Fetch user profile data
+    const loadUserProfile = async () => {
+      try {
+        setIsLoading(true);
+        const profileResponse = await fetchUserProfile(userId, authToken);
+        
+        console.log('Profile data received:', profileResponse);
+        
+        if (profileResponse && profileResponse.success) {
+          // Update the profileData state
+          setProfileData({
+            ...profileData,
+            name: `${profileResponse.firstName} ${profileResponse.lastName}`,
+            phone: profileResponse.phoneNumber,
+            firstName: profileResponse.firstName,
+            lastName: profileResponse.lastName
+          });
+        } else {
+          setError('Failed to load profile data');
+        }
+        
+        setIsLoading(false);
+      } catch (err) {
+        // Handle axios specific errors
+        if (err.response) {
+          // The request was made and the server responded with a status code
+          // that falls out of the range of 2xx
+          console.error("Server error:", err.response.status, err.response.data);
+          setError(`Server error: ${err.response.status}`);
+        } else if (err.request) {
+          // The request was made but no response was received
+          console.error("Network error:", err.request);
+          setError('Network error. Please check your connection.');
+        } else {
+          // Something happened in setting up the request
+          console.error("Request configuration error:", err.message);
+          setError('Error setting up request');
+        }
+        setIsLoading(false);
+      }
     };
 
-    const toggleProfilePopup = () => {
-        setShowProfilePopup(!showProfilePopup);
+    // Load tips data
+    const loadTips = async () => {
+      try {
+        setTipLoadingState({ loading: true, error: null });
+        const tipsData = await fetchTips();
+        setTips(tipsData);
+        setTipLoadingState({ loading: false, error: null });
+      } catch (err) {
+        console.error('Error loading tips:', err);
+        setTipLoadingState({ loading: false, error: 'Failed to load tips' });
+      }
     };
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        
-        const authToken = localStorage.getItem('authToken');
-        const userId = localStorage.getItem('userId');
-        
-        if (!authToken || !userId) {
-            setError('Authentication information missing');
-            return;
-        }
-        
-        try {
-            const updatedProfile = await updateUserProfile(userId, authToken, formData);
-            
-            if (updatedProfile && updatedProfile.success) {
-                // Update local state with new data
-                setProfileData({
-                    ...profileData,
-                    name: `${updatedProfile.firstName} ${updatedProfile.lastName}`,
-                    phone: updatedProfile.phoneNumber,
-                    firstName: updatedProfile.firstName,
-                    lastName: updatedProfile.lastName
-                });
-                
-                setEditMode(false);
-            } else {
-                setError('Failed to update profile');
-            }
-        } catch (err) {
-            // Handle axios specific errors
-            if (err.response) {
-                console.error("Server update error:", err.response.status, err.response.data);
-                setError(`Server error: ${err.response.data.message || err.response.status}`);
-            } else if (err.request) {
-                console.error("Network update error:", err.request);
-                setError('Network error. Please check your connection.');
-            } else {
-                console.error("Update config error:", err.message);
-                setError('Error updating profile');
-            }
-        }
+
+    // Load profile data if auth token and user ID are available
+    if (authToken && userId) {
+      loadUserProfile();
+      loadUserEmail();
+      loadTips();
+    } else {
+      setIsLoading(false);
+    }
+
+    // Clean up interceptor when component unmounts
+    return () => {
+      api.interceptors.request.eject(interceptor);
     };
-    const openProfileModal = () => {
-        setShowProfilePopup(false);
-        setShowProfileModal(true);
-        
-        // Reset form data based on current profile
-        setFormData({
-            firstName: profileData.firstName,
-            lastName: profileData.lastName,
-            phoneNumber: profileData.phone
+  }, []);
+
+  // Handle API errors
+  const handleApiError = (err) => {
+    if (err.response) {
+      console.error("Server error:", err.response.status, err.response.data);
+      setError(`Server error: ${err.response.status}`);
+    } else if (err.request) {
+      console.error("Network error:", err.request);
+      setError('Network error. Please check your connection.');
+    } else {
+      console.error("Request configuration error:", err.message);
+      setError('Error setting up request');
+    }
+  };
+
+  // Static chart data based on the image
+  const chartData = [
+    { name: 'Jan', value: 3200 },
+    { name: 'Feb', value: 4100 },
+    { name: 'Mar', value: 3800 },
+    { name: 'Apr', value: 2900 },
+    { name: 'May', value: 5200 },
+    { name: 'Jun', value: 3600 },
+    { name: 'Jul', value: 4300 },
+    { name: 'Aug', value: 3100 },
+    { name: 'Sep', value: 5100 },
+    { name: 'Oct', value: 4000 },
+    { name: 'Nov', value: 4800 },
+    { name: 'Dec', value: 5400 },
+  ];
+
+  // Top waste collection locations data
+  const topLocationsData = [
+    { name: 'Barrangu Lighting', value: 6239, color: '#FF6B6B' },
+    { name: 'Therona', value: 4975, color: '#FF9E7A' },
+    { name: 'Lineast B', value: 2385, color: '#FFBB94' },
+  ];
+
+  // Current month and year
+  const [currentMonth, setCurrentMonth] = useState('March');
+  const [currentYear, setCurrentYear] = useState('2021');
+
+  const [profileEmail, setProfileEmail] = useState({
+    email: ""
+  });
+  // Profile data object;
+  const [profileData, setProfileData] = useState({
+    name: "Loading...",
+    email: "loading@example.com",
+    role: "Admin",
+    phone: "Loading...",
+    address: "123 Green Street, Eco City, EC 12345",
+    joinDate: "January 15, 2021",
+    department: "Field Operations",
+    firstName: "",
+    lastName: ""
+  });
+  const interceptor = api.interceptors.request.use(
+    config => {
+      config.headers.Authorization = `Bearer ${authToken}`;
+      return config;
+    },
+    error => {
+      return Promise.reject(error);
+    }
+  );
+  // Handler functions
+  const handleLogout = () => {
+    // Here you would normally clear authentication tokens, etc.
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('userId');
+    navigate('/login');
+  };
+
+  const toggleProfilePopup = () => {
+    setShowProfilePopup(!showProfilePopup);
+  };
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    const authToken = localStorage.getItem('authToken');
+    const userId = localStorage.getItem('userId');
+    
+    if (!authToken || !userId) {
+      setError('Authentication information missing');
+      return;
+    }
+    
+    try {
+      const updatedProfile = await updateUserProfile(userId, authToken, formData);
+      
+      if (updatedProfile && updatedProfile.success) {
+        // Update local state with new data
+        setProfileData({
+          ...profileData,
+          name: `${updatedProfile.firstName} ${updatedProfile.lastName}`,
+          phone: updatedProfile.phoneNumber,
+          firstName: updatedProfile.firstName,
+          lastName: updatedProfile.lastName
         });
         
-        // Reset edit mode
         setEditMode(false);
-    };
+      } else {
+        setError('Failed to update profile');
+      }
+    } catch (err) {
+      // Handle axios specific errors
+      if (err.response) {
+        console.error("Server update error:", err.response.status, err.response.data);
+        setError(`Server error: ${err.response.data.message || err.response.status}`);
+      } else if (err.request) {
+        console.error("Network update error:", err.request);
+        setError('Network error. Please check your connection.');
+      } else {
+        console.error("Update config error:", err.message);
+        setError('Error updating profile');
+      }
+    }
+  };
+  const openProfileModal = () => {
+    setShowProfilePopup(false);
+    setShowProfileModal(true);
+    
+    // Reset form data based on current profile
+    setFormData({
+      firstName: profileData.firstName,
+      lastName: profileData.lastName,
+      phoneNumber: profileData.phone
+    });
+    
+    // Reset edit mode
+    setEditMode(false);
+  };
 
-    // Calendar data for March 2021
-    const calendarDays = Array.from({ length: 31 }, (_, i) => i + 1);
+  // Calendar data for March 2021
+  const calendarDays = Array.from({ length: 31 }, (_, i) => i + 1);
 
-    // Collection schedule data (for the calendar)
-    const pickupDays = [2, 8, 12, 16, 19, 23, 26, 30];
- 
+  // Collection schedule data (for the calendar)
+  const pickupDays = [2, 8, 12, 16, 19, 23, 26, 30];
+
   const mainContentAnimationClass = pageLoaded 
     ? 'opacity-100 translate-y-0' 
     : 'opacity-0 translate-y-6';
+  const monthNames = ["January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"];
+    
+  const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  
+  const getDaysInMonth = (month, year) => {
+    return new Date(year, month + 1, 0).getDate();
+  };
+  
+  const getFirstDayOfMonth = (month, year) => {
+    return new Date(year, month, 1).getDay();
+  };
+  
+  const generateCalendarDays = () => {
+    const daysInMonth = getDaysInMonth(selectedMonth, selectedYear);
+    const firstDayOfMonth = getFirstDayOfMonth(selectedMonth, selectedYear);
+    const calendarDays = [];
+    
+    // Add empty cells for days before the first day of the month
+    for (let i = 0; i < firstDayOfMonth; i++) {
+      calendarDays.push(<div key={`empty-${i}`} className="h-10 md:h-12"></div>);
+    }
+    
+    // Add cells for each day of the month
+    for (let day = 1; day <= daysInMonth; day++) {
+      const currentDate = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const hasSchedule = schedules.some(schedule => schedule.pickupDate === currentDate);
+      
+      calendarDays.push(
+        <div key={day} className={`h-10 md:h-12 flex flex-col items-center justify-center rounded ${hasSchedule ? 'bg-green-100 text-green-700 font-medium relative' : ''}`}>
+          <span>{day}</span>
+          {hasSchedule && <span className="text-s text-green-700 absolute -bottom-1">Pickup</span>}
+        </div>
+      );
+    }
+    
+    return calendarDays;
+  };
+  
+  const handlePrevMonth = () => {
+    if (selectedMonth === 0) {
+      setSelectedMonth(11);
+      setSelectedYear(selectedYear - 1);
+    } else {
+      setSelectedMonth(selectedMonth - 1);
+    }
+  };
+  
+  const handleNextMonth = () => {
+    if (selectedMonth === 11) {
+      setSelectedMonth(0);
+      setSelectedYear(selectedYear + 1);
+    } else {
+      setSelectedMonth(selectedMonth + 1);
+    }
+  };
 
+  // Tips CRUD Functions
+  const handleAddTip = () => {
+    setTipFormData({
+      title: '',
+      description: '',
+      status: 'active'
+    });
+    setShowAddTipModal(true);
+  };
+
+  const handleEditTip = (tip) => {
+    setCurrentTip(tip);
+    setTipFormData({
+      title: tip.title,
+      description: tip.description,
+      status: tip.status
+    });
+    setShowEditTipModal(true);
+  };
+
+  const handleDeleteTipClick = (tip) => {
+    setCurrentTip(tip);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleTipFormChange = (e) => {
+    const { name, value } = e.target;
+    setTipFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleCreateTip = async (e) => {
+    e.preventDefault();
+    setTipLoadingState({ loading: true, error: null });
+    
+    try {
+      const newTipData = {
+        ...tipFormData,
+        userId: userId,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      
+      const result = await createTip(newTipData);
+      setTips(prev => [...prev, result]);
+      setShowAddTipModal(false);
+      setTipLoadingState({ loading: false, error: null });
+    } catch (err) {
+      console.error('Error creating tip:', err);
+      setTipLoadingState({ loading: false, error: 'Failed to create tip' });
+    }
+  };
+
+  const handleUpdateTip = async (e) => {
+    e.preventDefault();
+    setTipLoadingState({ loading: true, error: null });
+    
+    try {
+      const updatedTipData = {
+        ...tipFormData,
+        updatedAt: new Date().toISOString()
+      };
+      
+      const result = await updateTip(currentTip.tipId, updatedTipData);
+      
+      setTips(prev => prev.map(tip => 
+        tip.tipId === currentTip.tipId ? { ...tip, ...updatedTipData } : tip
+      ));
+      
+      setShowEditTipModal(false);
+      setTipLoadingState({ loading: false, error: null });
+    } catch (err) {
+      console.error('Error updating tip:', err);
+      setTipLoadingState({ loading: false, error: 'Failed to update tip' });
+    }
+  };
+
+  const handleDeleteTip = async () => {
+    setTipLoadingState({ loading: true, error: null });
+    
+    try {
+      await deleteTip(currentTip.tipId);
+      setTips(prev => prev.filter(tip => tip.tipId !== currentTip.tipId));
+      setShowDeleteConfirm(false);
+      setTipLoadingState({ loading: false, error: null });
+    } catch (err) {
+      console.error('Error deleting tip:', err);
+      setTipLoadingState({ loading: false, error: 'Failed to delete tip' });
+    }
+  };
+
+  // Format date for display
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
     return (
         <div className="flex min-h-screen bg-gray-50">
          
@@ -471,8 +789,7 @@ function VermigoDashboard() {
 
 
             {/* Main Content */}
-            <div className={`flex-1 p-3 ml-60 transition-all duration-700 ease-out ${mainContentAnimationClass}`}>
-
+            <div className="flex-1 p-6 ml-60 bg-[#f8fafc]">
                 {/* Header */}
                 <div className="flex justify-between items-center mb-6 pb-4 border-b border-gray-200">
                     <h1 className="text-2xl font-semibold text-gray-800">Reports</h1>
@@ -550,51 +867,279 @@ function VermigoDashboard() {
                     </div>
                 </div>
 
-                {/* Calendar Section */}
-                <div className="bg-white p-6 rounded-lg shadow-sm">
-                    <div className="flex justify-between items-center mb-4">
-                        <div className="flex items-center">
-                            <span className="text-xl font-semibold mr-2">{currentMonth}</span>
-                            <span className="text-xl text-gray-500">{currentYear}</span>
-                        </div>
-                        <div className="flex">
-                            <button className="bg-transparent border-none text-gray-500 cursor-pointer p-1 rounded hover:bg-gray-100 hover:text-gray-800 flex items-center justify-center">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <polyline points="15 18 9 12 15 6"></polyline>
-                                </svg>
-                            </button>
-                            <button className="bg-transparent border-none text-gray-500 cursor-pointer p-1 rounded hover:bg-gray-100 hover:text-gray-800 flex items-center justify-center">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <polyline points="9 18 15 12 9 6"></polyline>
-                                </svg>
-                            </button>
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-7 gap-1">
-                        {/* Day headers */}
-                        {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((day, index) => (
-                            <div key={`header-${index}`} className="text-xs text-gray-500 text-center py-2">
-                                {day}
-                            </div>
-                        ))}
-
-                        {/* Empty days before first day of month (Monday) */}
-                        <div></div>
-
-                        {/* Days of month */}
-                        {calendarDays.map((day) => (
-                            <div
-                                key={`day-${day}`}
-                                className={`h-10 flex items-center justify-center text-sm rounded ${pickupDays.includes(day) ? 'calendar-day pickup' : ''}`}
-                            >
-                                {day}
-                            </div>
-                        ))}
-                    </div>
-                </div>
+                {/* Calendar View */}
+        <div className="bg-white p-6 rounded-lg shadow-sm">
+          <div className="flex justify-between items-center mb-4">
+            <div className="flex items-center">
+              <div className="text-xl font-semibold mr-2">{monthNames[selectedMonth]}</div>
+              <div className="text-xl text-gray-500">{selectedYear}</div>
             </div>
+            <div className="flex">
+              <button 
+                onClick={handlePrevMonth}
+                className="p-1 hover:bg-gray-100 rounded-md text-gray-500 hover:text-gray-700"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+              <button 
+                onClick={handleNextMonth}
+                className="p-1 hover:bg-gray-100 rounded-md text-gray-500 hover:text-gray-700 ml-1"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-7 gap-1">
+            {dayNames.map(day => (
+              <div key={day} className="text-xs text-gray-500 text-center py-2">{day}</div>
+            ))}
+            {generateCalendarDays()}
+          </div>
+        </div>
+      </div>
+      
+{/* Tips Management Section - Added below calendar */}
+<div className="bg-white rounded-lg shadow-sm p-6 mt-6">
+  <div className="flex justify-between items-center mb-6">
+    <div>
+      <h2 className="text-xl font-semibold">Tips</h2>
+    </div>
+    <button 
+      onClick={handleAddTip}
+      className="flex items-center px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+    >
+      <Plus size={18} className="mr-1" /> Add New Tip
+    </button>
+  </div>
 
+  {/* Tips List */}
+  {tipLoadingState.loading ? (
+    <div className="flex justify-center py-8">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"></div>
+    </div>
+  ) : tips.length === 0 ? (
+    <div className="text-center py-8 text-gray-500">
+      <p>No tips available. Add your first tip!</p>
+    </div>
+  ) : (
+    <div className="space-y-4">
+      {tips.map((tip) => (
+        <div key={tip.tipId} className="border rounded-lg p-4 hover:bg-gray-50">
+          <div className="flex justify-between">
+            <div>
+              <h3 className="font-medium">{tip.title}</h3>
+              <p className="text-sm text-gray-600 mt-1">{tip.description}</p>
+              <div className="flex items-center mt-2">
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                  tip.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                }`}>
+                  {tip.status}
+                </span>
+                <span className="text-xs text-gray-500 ml-2">
+                  Updated: {formatDate(tip.updatedAt)}
+                </span>
+              </div>
+            </div>
+            <div className="flex items-start space-x-2">
+              <button 
+                onClick={() => handleEditTip(tip)}
+                className="p-1.5 rounded-md hover:bg-gray-200 text-gray-600"
+                title="Edit tip"
+              >
+                <Edit size={16} />
+              </button>
+              <button 
+                onClick={() => handleDeleteTipClick(tip)}
+                className="p-1.5 rounded-md hover:bg-gray-200 text-gray-600"
+                title="Delete tip"
+              >
+                <Trash2 size={16} />
+              </button>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  )}
+
+  {/* Error display */}
+  {tipLoadingState.error && (
+    <div className="bg-red-50 text-red-700 p-3 rounded-md mt-4">
+      {tipLoadingState.error}
+    </div>
+  )}
+{/* 
+  {/* Add Tip Modal */}
+  {showAddTipModal && (
+    <div className="fixed inset-0 bg-black bg-opacity-30 z-50 flex items-center justify-center">
+      <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md mx-4 modal-container">
+        <h2 className="text-xl font-semibold mb-4">Add New Tip</h2>
+        <form onSubmit={handleCreateTip}>
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+            <input
+              type="text"
+              name="title"
+              value={tipFormData.title}
+              onChange={handleTipFormChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              required
+            />
+          </div>
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+            <textarea
+              name="description"
+              value={tipFormData.description}
+              onChange={handleTipFormChange}
+              rows={3}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              required
+            ></textarea>
+          </div>
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+            <select
+              name="status"
+              value={tipFormData.status}
+              onChange={handleTipFormChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+            >
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+              <option value="draft">Draft</option>
+            </select>
+          </div>
+          <div className="flex justify-end space-x-3">
+            <button
+              type="button"
+              onClick={() => setShowAddTipModal(false)}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={tipLoadingState.loading}
+              className="flex items-center px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+            >
+              {tipLoadingState.loading ? (
+                <>
+                  <span className="animate-spin h-4 w-4 mr-2 border-2 border-white border-t-transparent rounded-full"></span>
+                  Saving...
+                </>
+              ) : (
+                'Save Tip'
+              )}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )}
+
+  {/* Edit Tip Modal */}
+  {showEditTipModal && (
+    <div className="fixed inset-0 bg-black bg-opacity-30 z-50 flex items-center justify-center">
+      <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md mx-4 modal-container">
+        <h2 className="text-xl font-semibold mb-4">Edit Tip</h2>
+        <form onSubmit={handleUpdateTip}>
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+            <input
+              type="text"
+              name="title"
+              value={tipFormData.title}
+              onChange={handleTipFormChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              required
+            />
+          </div>
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+            <textarea
+              name="description"
+              value={tipFormData.description}
+              onChange={handleTipFormChange}
+              rows={3}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              required
+            ></textarea>
+          </div>
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+            <select
+              name="status"
+              value={tipFormData.status}
+              onChange={handleTipFormChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+            >
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+              <option value="draft">Draft</option>
+            </select>
+          </div>
+          <div className="flex justify-end space-x-3">
+            <button
+              type="button"
+              onClick={() => setShowEditTipModal(false)}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={tipLoadingState.loading}
+              className="flex items-center px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+            >
+              {tipLoadingState.loading ? (
+                <>
+                  <span className="animate-spin h-4 w-4 mr-2 border-2 border-white border-t-transparent rounded-full"></span>
+                  Updating...
+                </>
+              ) : (
+                'Update Tip'
+              )}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )}
+
+  {/* Delete Confirmation Modal */}
+  {showDeleteConfirm && (
+    <div className="fixed inset-0 bg-black bg-opacity-30 z-50 flex items-center justify-center">
+      <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md mx-4 modal-container">
+        <h2 className="text-xl font-semibold mb-2">Delete Tip</h2>
+        <p className="text-gray-600 mb-6">Are you sure you want to delete this tip? This action cannot be undone.</p>
+        <div className="flex justify-end space-x-3">
+          <button
+            onClick={() => setShowDeleteConfirm(false)}
+            className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleDeleteTip}
+            disabled={tipLoadingState.loading}
+            className="flex items-center px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
+          >
+            {tipLoadingState.loading ? (
+              <>
+                <span className="animate-spin h-4 w-4 mr-2 border-2 border-white border-t-transparent rounded-full"></span>
+                Deleting...
+              </>
+            ) : (
+              'Delete'
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  )}
+</div>
             {/* Profile Modal */}
       {showProfileModal && (
         <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-50">
