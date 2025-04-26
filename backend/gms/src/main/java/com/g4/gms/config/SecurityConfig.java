@@ -75,6 +75,12 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/history", "/api/history/**").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/history").authenticated()
                 
+                // Reminder endpoints - GET is public, others need authentication
+                .requestMatchers(HttpMethod.GET, "/api/reminder", "/api/reminder/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/reminder").authenticated()
+                .requestMatchers(HttpMethod.PUT, "/api/reminder/**").authenticated()
+                .requestMatchers(HttpMethod.DELETE, "/api/reminder/**").authenticated()
+                
                 // User profile endpoints
                 .requestMatchers(HttpMethod.GET, "/api/users/{userId}/profile", "/api/users/{userId}/profile/email", "/api/users/{userId}/profile/notifications").authenticated()
                 .requestMatchers(HttpMethod.PUT, "/api/users/{userId}/profile", "/api/users/{userId}/profile/email", "/api/users/{userId}/profile/notifications").authenticated()
