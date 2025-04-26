@@ -87,6 +87,13 @@ export default function VermigoSchedule() {
     phoneNumber: ''
   });
   const [isLoading, setIsLoading] = useState(true);
+  const [multipleSchedules, setMultipleSchedules] = useState([]);
+const [showMultipleSchedulesModal, setShowMultipleSchedulesModal] = useState(false);
+  const [selectedDay, setSelectedDay] = useState(null);
+  const [weekSchedules, setWeekSchedules] = useState([]);
+const [selectedWeekStart, setSelectedWeekStart] = useState(null);
+const [showTimeModal, setShowTimeModal] = useState(false);
+const [daySchedules, setDaySchedules] = useState([]);
   const [error, setError] = useState(null);
   const [showProfilePopup, setShowProfilePopup] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
@@ -234,7 +241,24 @@ export default function VermigoSchedule() {
     "July", "August", "September", "October", "November", "December"];
     
   const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-  
+  const getDayStatusClass = (daySchedules) => {
+    if (!daySchedules || daySchedules.length === 0) return '';
+    
+    // If any schedule is cancelled, show as red
+    if (daySchedules.some(s => s.status === 'CANCELLED')) {
+      return 'bg-red-100 text-red-700';
+    }
+    // If any schedule is pending, show as yellow
+    else if (daySchedules.some(s => s.status === 'PENDING')) {
+      return 'bg-yellow-100 text-yellow-700';
+    }
+    // If all are completed, show as green
+    else if (daySchedules.every(s => s.status === 'COMPLETED')) {
+      return 'bg-green-100 text-green-700';
+    }
+    
+    return 'bg-green-100 text-green-700'; // Default
+  };
   const getDaysInMonth = (month, year) => {
     return new Date(year, month + 1, 0).getDate();
   };
@@ -242,7 +266,84 @@ export default function VermigoSchedule() {
   const getFirstDayOfMonth = (month, year) => {
     return new Date(year, month, 1).getDay();
   };
+  const getWeekDates = (year, month, day) => {
+    const selectedDate = new Date(year, month, day);
+    const weekDates = [];
+    
+    // Start from current day and include the next 6 days (full week view)
+    for (let i = 0; i < 7; i++) {
+      const currentDate = new Date(selectedDate);
+      currentDate.setDate(selectedDate.getDate() + i);
+      weekDates.push({
+        date: currentDate,
+        dayName: dayNames[currentDate.getDay()],
+        dayNumber: currentDate.getDate(),
+        month: currentDate.getMonth(),
+        year: currentDate.getFullYear(),
+        dateString: `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`
+      });
+    }
+    
+    return weekDates;
+  };
   
+  // Get schedules for the week
+  const getWeekSchedules = (weekDates) => {
+    const weekSchedules = [];
+    
+    weekDates.forEach(dayInfo => {
+      const daySchedules = schedules.filter(schedule => schedule.pickupDate === dayInfo.dateString);
+      weekSchedules.push({
+        ...dayInfo,
+        schedules: daySchedules
+      });
+    });
+    
+    return weekSchedules;
+  };
+  const generateTimeSlots = () => {
+    const timeSlots = [];
+    
+    // Generate slots from 5:00 to 22:00 (5AM to 10PM)
+    for (let hour = 5; hour <= 22; hour++) {
+      const formattedHour = hour > 12 ? hour - 12 : hour;
+      const period = hour >= 12 ? 'PM' : 'AM';
+      
+      timeSlots.push({
+        hour: hour,
+        displayTime: `${formattedHour}:00 ${period}`
+      });
+    }
+    
+    return timeSlots;
+  };
+  
+  // Handle day click to show scheduler
+  const handleDayClick = (day) => {
+    const weekDates = getWeekDates(selectedYear, selectedMonth, day);
+    const scheduleData = getWeekSchedules(weekDates);
+    
+    setSelectedDay(day);
+    setSelectedWeekStart(weekDates[0].date);
+    setWeekSchedules(scheduleData);
+    setShowTimeModal(true);
+  };
+  
+  // Find if there's a schedule for a specific day and hour
+  const findSchedulesForTimeSlot = (dateInfo, hour) => {
+    if (!dateInfo.schedules || dateInfo.schedules.length === 0) return [];
+    
+    return dateInfo.schedules.filter(schedule => {
+      const scheduleParts = schedule.pickupTime.split(':');
+      const scheduleHour = parseInt(scheduleParts[0], 10);
+      return scheduleHour === hour;
+    });
+  };
+
+  const handleMultipleSchedulesView = (schedules) => {
+    setMultipleSchedules(schedules);
+    setShowMultipleSchedulesModal(true);
+  };
   const generateCalendarDays = () => {
     const daysInMonth = getDaysInMonth(selectedMonth, selectedYear);
     const firstDayOfMonth = getFirstDayOfMonth(selectedMonth, selectedYear);
@@ -250,18 +351,36 @@ export default function VermigoSchedule() {
     
     // Add empty cells for days before the first day of the month
     for (let i = 0; i < firstDayOfMonth; i++) {
-      calendarDays.push(<div key={`empty-${i}`} className="h-10 md:h-12"></div>);
+      calendarDays.push(<div key={`empty-${i}`} className="h-12 md:h-14"></div>);
     }
     
     // Add cells for each day of the month
     for (let day = 1; day <= daysInMonth; day++) {
       const currentDate = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-      const hasSchedule = schedules.some(schedule => schedule.pickupDate === currentDate);
+      const daySchedules = schedules.filter(schedule => schedule.pickupDate === currentDate);
+      const hasSchedule = daySchedules.length > 0;
+      const statusClass = hasSchedule ? getDayStatusClass(daySchedules) : '';
       
       calendarDays.push(
-        <div key={day} className={`h-10 md:h-12 flex flex-col items-center justify-center rounded ${hasSchedule ? 'bg-green-100 text-green-700 font-medium relative' : ''}`}>
+        <div 
+          key={day} 
+          className={`h-12 md:h-14 flex flex-col items-center justify-center rounded ${
+            hasSchedule 
+              ? `${statusClass} relative cursor-pointer hover:opacity-80 transition-opacity` 
+              : ''
+          }`}
+          onClick={() => {
+            // Always allow clicking to show the scheduler, even if no schedules
+            handleDayClick(day);
+          }}
+        >
           <span>{day}</span>
-          {hasSchedule && <span className="text-s text-green-700 absolute -bottom-1">Pickup</span>}
+          {hasSchedule && (
+            <span className="text-xs absolute" style={{ bottom: '0.2rem' }}>
+              {daySchedules.length > 0 && daySchedules.some(s => s.status === 'CANCELLED') ? 'Cancelled' :
+              daySchedules.length > 0 && daySchedules.some(s => s.status === 'PENDING') ? 'Pending' : 'Completed'}
+            </span>
+          )}
         </div>
       );
     }
@@ -353,7 +472,34 @@ export default function VermigoSchedule() {
     }
   };
   
- 
+  const getScheduleColors = (status) => {
+    switch (status) {
+      case 'PENDING':
+        return {
+          bg: 'bg-yellow-100',
+          border: 'border-yellow-500',
+          text: 'text-yellow-700'
+        };
+      case 'COMPLETED':
+        return {
+          bg: 'bg-green-100',
+          border: 'border-green-500',
+          text: 'text-green-700'
+        };
+      case 'CANCELLED':
+        return {
+          bg: 'bg-red-100',
+          border: 'border-red-500',
+          text: 'text-red-700'
+        };
+      default:
+        return {
+          bg: 'bg-gray-100',
+          border: 'border-gray-500',
+          text: 'text-gray-700'
+        };
+    }
+  };
   
   const getStatusClass = (status) => {
     switch (status) {
@@ -511,9 +657,218 @@ export default function VermigoSchedule() {
             Add Schedule
           </button>
         </div>
+ 
+    {/* Scheduler Modal */}
+    {showTimeModal && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50" onClick={() => setShowTimeModal(false)}>
+        <div className="bg-white rounded-lg shadow-lg w-full max-w-5xl h-3/4 overflow-hidden" onClick={e => e.stopPropagation()}>
+          <div className="flex justify-between items-center p-4 border-b border-gray-200">
+            <h3 className="text-lg font-semibold">
+              Pickup Schedule for Week of {selectedWeekStart ? selectedWeekStart.toLocaleDateString() : ''}
+            </h3>
+            <button className="text-gray-500 hover:text-gray-700" onClick={() => setShowTimeModal(false)}>
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          
+          <div className="p-4 h-full overflow-auto">
+            {/* Scheduler Header - Days */}
+            <div className="flex border-b border-gray-200">
+              <div className="w-24 flex-shrink-0"></div> {/* Time column */}
+              {weekSchedules.map((dayInfo, index) => (
+                <div key={index} className="flex-1 text-center p-2 min-w-24">
+                  <div className="font-medium">{dayInfo.dayName}</div>
+                  <div className="text-sm text-gray-500">{dayInfo.dayNumber}</div>
+                </div>
+              ))}
+            </div>
+  
+{showMultipleSchedulesModal && (
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50" onClick={() => setShowMultipleSchedulesModal(false)}>
+    <div className="bg-white rounded-lg shadow-lg w-full max-w-md" onClick={e => e.stopPropagation()}>
+      <div className="flex justify-between items-center p-5 border-b border-gray-200">
+        <h3 className="text-lg font-semibold">Multiple Pickups</h3>
+        <button className="text-gray-500 hover:text-gray-700" onClick={() => setShowMultipleSchedulesModal(false)}>
+          <X className="w-5 h-5" />
+        </button>
+      </div>
+      <div className="p-5">
+        <div className="mb-4">
+          <h4 className="text-md font-medium mb-2">Scheduled Pickups</h4>
+          <div className="space-y-3">
+            {multipleSchedules.map((schedule, index) => (
+              <div key={index} className={`p-3 rounded border-l-4 ${getScheduleColors(schedule.status).border}`}>
+                <div className="flex justify-between">
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusClass(schedule.status)}`}>
+                    {schedule.status}
+                  </span>
+                  <div className="flex space-x-2">
+                    <button 
+                      className="text-gray-500 hover:text-gray-700" 
+                      onClick={() => {
+                        setShowMultipleSchedulesModal(false);
+                        handleEditSchedule(schedule);
+                      }}
+                    >
+                      <Edit className="w-4 h-4" />
+                    </button>
+                    <button 
+                      className="text-red-500 hover:text-red-700" 
+                      onClick={() => {
+                        handleDeleteSchedule(schedule.scheduleId);
+                        if (multipleSchedules.length <= 2) {
+                          setShowMultipleSchedulesModal(false);
+                        }
+                        setMultipleSchedules(multipleSchedules.filter(s => s.scheduleId !== schedule.scheduleId));
+                      }}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+                <div className="mt-2">
+                  <div className="text-sm">Time: {schedule.pickupTime}</div>
+                  <div className="text-sm">Location: {schedule.locationId}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="flex justify-end space-x-3 pt-4">
+          <button 
+            className="px-4 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+            onClick={() => setShowMultipleSchedulesModal(false)}
+          >
+            Close
+          </button>
+          <button 
+            className="px-4 py-2 bg-green-600 rounded-md text-sm font-medium text-white hover:bg-green-700"
+            onClick={() => {
+              setShowMultipleSchedulesModal(false);
+              setShowAddScheduleModal(true);
+            }}
+          >
+            Add Another
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+            {/* Scheduler Body - Time Slots */}
+            <div className="relative">
+              {generateTimeSlots().map((timeSlot, timeIndex) => (
+                <div key={timeIndex} className="flex border-b border-gray-100">
+                  <div className="w-24 p-2 text-right text-sm text-gray-500 border-r border-gray-200 flex-shrink-0">
+                    {timeSlot.displayTime}
+                  </div>
+                  
+                  {weekSchedules.map((dayInfo, dayIndex) => {
+  const schedulesForTimeSlot = findSchedulesForTimeSlot(dayInfo, timeSlot.hour);
+  const hasMultipleSchedules = schedulesForTimeSlot.length > 1;
+  const singleSchedule = schedulesForTimeSlot[0];
+  const colors = schedulesForTimeSlot.length > 0 ? 
+    (hasMultipleSchedules ? 
+      { bg: 'bg-purple-100', border: 'border-purple-500', text: 'text-purple-700' } : 
+      getScheduleColors(singleSchedule.status)) : 
+    null;
+  
+  return (
+    <div key={dayIndex} className="flex-1 p-1 min-h-16 min-w-24 relative border-r border-gray-100">
+      {schedulesForTimeSlot.length > 0 && (
+        <div 
+          className={`absolute inset-0 m-1 ${colors.bg} border-l-4 ${colors.border} rounded p-2 cursor-pointer hover:opacity-90 transition-opacity`}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (hasMultipleSchedules) {
+              handleMultipleSchedulesView(schedulesForTimeSlot);
+            } else {
+              handleEditSchedule(singleSchedule);
+            }
+          }}
+        >
+          <div className={`text-xs font-medium ${colors.text}`}>{timeSlot.displayTime}</div>
+          <div className="text-xs text-gray-600 truncate">
+            {hasMultipleSchedules ? 
+              `${schedulesForTimeSlot.length} Pickups` : 
+              `${singleSchedule.locationId.substring(0, 8)}...`}
+          </div>
+          <div className="mt-1">
+            <span className={`px-1.5 py-0.5 rounded-full text-xs font-medium ${
+              hasMultipleSchedules ? 
+              'bg-purple-100 text-purple-700' : 
+              getStatusClass(singleSchedule.status)
+            }`}>
+              {hasMultipleSchedules ? 'Multiple' : singleSchedule.status}
+            </span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+})}
+                </div>
+              ))}
+            </div>
+          </div>
+          
+          <div className="p-4 border-t border-gray-200">
+            <div className="flex justify-between">
+              <button 
+                className="px-4 py-2 bg-green-600 rounded-md text-sm font-medium text-white hover:bg-green-700 flex items-center"
+                onClick={() => {
+                  setShowTimeModal(false);
+                  setShowAddScheduleModal(true);
+                }}
+              >
+                <Plus className="w-4 h-4 mr-1" />
+                Add Pickup
+              </button>
+              <button 
+                className="px-4 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+                onClick={() => setShowTimeModal(false)}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+        {/* Calendar View */}
+        <div className="bg-white p-6 rounded-lg shadow-sm">
+    <div className="flex justify-between items-center mb-4">
+      <div className="flex items-center">
+        <div className="text-xl font-semibold mr-2">{monthNames[selectedMonth]}</div>
+        <div className="text-xl text-gray-500">{selectedYear}</div>
+      </div>
+      <div className="flex">
+        <button 
+          onClick={handlePrevMonth}
+          className="p-1 hover:bg-gray-100 rounded-md text-gray-500 hover:text-gray-700"
+        >
+          <ChevronLeft className="w-5 h-5" />
+        </button>
+        <button 
+          onClick={handleNextMonth}
+          className="p-1 hover:bg-gray-100 rounded-md text-gray-500 hover:text-gray-700 ml-1"
+        >
+          <ChevronRight className="w-5 h-5" />
+        </button>
+      </div>
+    </div>
+    
+    <div className="grid grid-cols-7 gap-1">
+      {dayNames.map(day => (
+        <div key={day} className="text-xs text-gray-500 text-center py-2 font-medium">{day}</div>
+      ))}
+      {generateCalendarDays()}
+    </div>
+        </div>
 
-        {/* Schedule List */}
-        <div className="bg-white p-6 rounded-lg shadow-sm mb-6">
+        <br></br>
+         {/* Schedule List */}
+         <div className="bg-white p-6 rounded-lg shadow-sm mb-6">
           <h2 className="text-lg font-semibold mb-4">Upcoming Collections</h2>
       
             <div className="overflow-x-auto">
@@ -560,39 +915,9 @@ export default function VermigoSchedule() {
             </div>
           
         </div>
-        
-        {/* Calendar View */}
-        <div className="bg-white p-6 rounded-lg shadow-sm">
-          <div className="flex justify-between items-center mb-4">
-            <div className="flex items-center">
-              <div className="text-xl font-semibold mr-2">{monthNames[selectedMonth]}</div>
-              <div className="text-xl text-gray-500">{selectedYear}</div>
-            </div>
-            <div className="flex">
-              <button 
-                onClick={handlePrevMonth}
-                className="p-1 hover:bg-gray-100 rounded-md text-gray-500 hover:text-gray-700"
-              >
-                <ChevronLeft className="w-5 h-5" />
-              </button>
-              <button 
-                onClick={handleNextMonth}
-                className="p-1 hover:bg-gray-100 rounded-md text-gray-500 hover:text-gray-700 ml-1"
-              >
-                <ChevronRight className="w-5 h-5" />
-              </button>
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-7 gap-1">
-            {dayNames.map(day => (
-              <div key={day} className="text-xs text-gray-500 text-center py-2">{day}</div>
-            ))}
-            {generateCalendarDays()}
-          </div>
-        </div>
+     
       </div>
-      
+       
  {/* Edit Schedule Modal */}
 {showEditScheduleModal && (
   <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50" onClick={() => setShowEditScheduleModal(false)}>
