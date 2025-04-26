@@ -126,6 +126,9 @@ function VermigoDashboard() {
   const [editMode, setEditMode] = useState(false);
   const [pageLoaded, setPageLoaded] = useState(false);
 
+  const [selectedDay, setSelectedDay] = useState(null);
+  const [showTimeModal, setShowTimeModal] = useState(false);
+  const [daySchedules, setDaySchedules] = useState([]);
   // Tips management state
   const [tips, setTips] = useState([]);
   const [showAddTipModal, setShowAddTipModal] = useState(false);
@@ -476,18 +479,33 @@ function VermigoDashboard() {
     
     // Add empty cells for days before the first day of the month
     for (let i = 0; i < firstDayOfMonth; i++) {
-      calendarDays.push(<div key={`empty-${i}`} className="h-10 md:h-12"></div>);
+      calendarDays.push(<div key={`empty-${i}`} className="h-12 md:h-14"></div>);
     }
     
     // Add cells for each day of the month
     for (let day = 1; day <= daysInMonth; day++) {
       const currentDate = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-      const hasSchedule = schedules.some(schedule => schedule.pickupDate === currentDate);
+      const daySchedules = schedules.filter(schedule => schedule.pickupDate === currentDate);
+      const hasSchedule = daySchedules.length > 0;
       
       calendarDays.push(
-        <div key={day} className={`h-10 md:h-12 flex flex-col items-center justify-center rounded ${hasSchedule ? 'bg-green-100 text-green-700 font-medium relative' : ''}`}>
+        <div 
+          key={day} 
+          className={`h-12 md:h-14 flex flex-col items-center justify-center rounded ${
+            hasSchedule 
+              ? 'bg-green-100 text-green-700 font-medium relative cursor-pointer hover:bg-green-200 transition-colors' 
+              : ''
+          }`}
+          onClick={() => {
+            if (hasSchedule) {
+              setSelectedDay(day);
+              setDaySchedules(daySchedules);
+              setShowTimeModal(true);
+            }
+          }}
+        >
           <span>{day}</span>
-          {hasSchedule && <span className="text-s text-green-700 absolute -bottom-1">Pickup</span>}
+          {hasSchedule && <span className="text-xs text-green-700 absolute -bottom-1">Pickup</span>}
         </div>
       );
     }
@@ -605,7 +623,18 @@ function VermigoDashboard() {
       setTipLoadingState({ loading: false, error: 'Failed to delete tip' });
     }
   };
-
+  const getStatusClass = (status) => {
+    switch (status) {
+      case 'PENDING':
+        return 'bg-yellow-100 text-yellow-700';
+      case 'COMPLETED':
+        return 'bg-green-100 text-green-700';
+      case 'CANCELLED':
+        return 'bg-red-100 text-red-700';
+      default:
+        return 'bg-gray-100 text-gray-700';
+    }
+  };
   // Format date for display
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -617,6 +646,46 @@ function VermigoDashboard() {
       minute: '2-digit'
     });
   };
+
+  const getWeekDates = (year, month, day) => {
+    const selectedDate = new Date(year, month, day);
+    const weekDates = [];
+    
+    // Start from current day and include the next 6 days (full week view)
+    for (let i = 0; i < 7; i++) {
+      const currentDate = new Date(selectedDate);
+      currentDate.setDate(selectedDate.getDate() + i);
+      weekDates.push({
+        date: currentDate,
+        dayName: dayNames[currentDate.getDay()],
+        dayNumber: currentDate.getDate(),
+        month: currentDate.getMonth(),
+        year: currentDate.getFullYear(),
+        dateString: `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`
+      });
+    }
+    
+    return weekDates;
+  };
+  const getDayStatusClass = (daySchedules) => {
+    if (!daySchedules || daySchedules.length === 0) return '';
+    
+    // If any schedule is cancelled, show as red
+    if (daySchedules.some(s => s.status === 'CANCELLED')) {
+      return 'bg-red-100 text-red-700';
+    }
+    // If any schedule is pending, show as yellow
+    else if (daySchedules.some(s => s.status === 'PENDING')) {
+      return 'bg-yellow-100 text-yellow-700';
+    }
+    // If all are completed, show as green
+    else if (daySchedules.every(s => s.status === 'COMPLETED')) {
+      return 'bg-green-100 text-green-700';
+    }
+    
+    return 'bg-green-100 text-green-700'; // Default
+  };
+  
     return (
         <div className="flex min-h-screen bg-gray-50">
          
@@ -867,35 +936,106 @@ function VermigoDashboard() {
                     </div>
                 </div>
 
-                {/* Calendar View */}
+                {showTimeModal && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50" onClick={() => setShowTimeModal(false)}>
+        <div className="bg-white rounded-lg shadow-lg w-full max-w-md" onClick={e => e.stopPropagation()}>
+          <div className="flex justify-between items-center p-5 border-b border-gray-200">
+            <h3 className="text-lg font-semibold">Pickup Schedule for {monthNames[selectedMonth]} {selectedDay}, {selectedYear}</h3>
+            <button className="text-gray-500 hover:text-gray-700" onClick={() => setShowTimeModal(false)}>
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          <div className="p-5">
+            <div className="max-h-64 overflow-y-auto">
+              {daySchedules.length > 0 ? (
+                <div>
+                  {daySchedules.map((schedule, index) => (
+                    <div key={index} className="mb-4 p-4 border border-gray-100 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center">
+                          <Clock className="w-5 h-5 mr-2 text-green-600" />
+                          <span className="font-medium">{schedule.pickupTime}</span>
+                        </div>
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusClass(schedule.status)}`}>
+                          {schedule.status}
+                        </span>
+                      </div>
+                      <div className="mt-2 flex items-center text-gray-500 text-sm">
+                        <MapPin className="w-4 h-4 mr-1" />
+                        <span>Location ID: {schedule.locationId}</span>
+                      </div>
+                      <div className="mt-3 flex justify-end space-x-2">
+                        <button 
+                          className="p-1 text-gray-500 hover:text-gray-700" 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEditSchedule(schedule);
+                            setShowTimeModal(false);
+                          }}
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button 
+                          className="p-1 text-red-500 hover:text-red-700" 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteSchedule(schedule.scheduleId);
+                            setShowTimeModal(false);
+                          }}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  No pickups scheduled for this day.
+                </div>
+              )}
+            </div>
+            <div className="mt-4 flex justify-end">
+              <button 
+                className="px-4 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+                onClick={() => setShowTimeModal(false)}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+        {/* Calendar View */}
         <div className="bg-white p-6 rounded-lg shadow-sm">
-          <div className="flex justify-between items-center mb-4">
-            <div className="flex items-center">
-              <div className="text-xl font-semibold mr-2">{monthNames[selectedMonth]}</div>
-              <div className="text-xl text-gray-500">{selectedYear}</div>
-            </div>
-            <div className="flex">
-              <button 
-                onClick={handlePrevMonth}
-                className="p-1 hover:bg-gray-100 rounded-md text-gray-500 hover:text-gray-700"
-              >
-                <ChevronLeft className="w-5 h-5" />
-              </button>
-              <button 
-                onClick={handleNextMonth}
-                className="p-1 hover:bg-gray-100 rounded-md text-gray-500 hover:text-gray-700 ml-1"
-              >
-                <ChevronRight className="w-5 h-5" />
-              </button>
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-7 gap-1">
-            {dayNames.map(day => (
-              <div key={day} className="text-xs text-gray-500 text-center py-2">{day}</div>
-            ))}
-            {generateCalendarDays()}
-          </div>
+    <div className="flex justify-between items-center mb-4">
+      <div className="flex items-center">
+        <div className="text-xl font-semibold mr-2">{monthNames[selectedMonth]}</div>
+        <div className="text-xl text-gray-500">{selectedYear}</div>
+      </div>
+      <div className="flex">
+        <button 
+          onClick={handlePrevMonth}
+          className="p-1 hover:bg-gray-100 rounded-md text-gray-500 hover:text-gray-700"
+        >
+          <ChevronLeft className="w-5 h-5" />
+        </button>
+        <button 
+          onClick={handleNextMonth}
+          className="p-1 hover:bg-gray-100 rounded-md text-gray-500 hover:text-gray-700 ml-1"
+        >
+          <ChevronRight className="w-5 h-5" />
+        </button>
+      </div>
+    </div>
+    
+    <div className="grid grid-cols-7 gap-1">
+      {dayNames.map(day => (
+        <div key={day} className="text-xs text-gray-500 text-center py-2 font-medium">{day}</div>
+      ))}
+      {generateCalendarDays()}
+    </div>
         </div>
       </div>
       
