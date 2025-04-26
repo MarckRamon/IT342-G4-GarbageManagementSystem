@@ -23,12 +23,12 @@ class GarbageMSApplication : Application() {
         // Initialize Firebase
         try {
             FirebaseApp.initializeApp(this)
-            Log.d("EcoTrackApplication", "Firebase initialized successfully")
+            Log.d("GarbageMSApplication", "Firebase initialized successfully")
         } catch (e: Exception) {
-            Log.e("EcoTrackApplication", "Failed to initialize Firebase: ${e.message}")
+            Log.e("GarbageMSApplication", "Failed to initialize Firebase: ${e.message}")
             e.printStackTrace()
         }
         
-        Log.d("EcoTrackApplication", "Application initialized")
+        Log.d("GarbageMSApplication", "Application initialized")
     }
 } 

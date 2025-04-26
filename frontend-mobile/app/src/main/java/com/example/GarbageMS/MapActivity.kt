@@ -1,19 +1,28 @@
 package com.example.GarbageMS
 
 import android.Manifest
+import android.app.AlertDialog
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.preference.PreferenceManager
 import android.util.Log
 import android.view.View
+import android.widget.Button
 import android.widget.Toast
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.example.GarbageMS.adapters.FeedbackAdapter
+import com.example.GarbageMS.models.Feedback
 import com.example.GarbageMS.models.PickupLocation
+import com.example.GarbageMS.services.FeedbackService
 import com.example.GarbageMS.utils.CustomInfoWindow
 import com.example.GarbageMS.utils.PickupLocationService
 import com.google.android.material.bottomnavigation.BottomNavigationView
+import com.google.android.material.floatingactionbutton.FloatingActionButton
+import com.google.android.material.textfield.TextInputEditText
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -33,6 +42,14 @@ class MapActivity : BaseActivity() {
     private lateinit var mapView: MapView
     private lateinit var myLocationOverlay: MyLocationNewOverlay
     private val pickupLocationService = PickupLocationService.getInstance()
+    private val feedbackService = FeedbackService.getInstance()
+    
+    private lateinit var feedbackRecyclerView: RecyclerView
+    private lateinit var feedbackAdapter: FeedbackAdapter
+    private lateinit var addFeedbackButton: FloatingActionButton
+    private lateinit var toggleViewButton: FloatingActionButton
+    
+    private var isMapViewVisible = true
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -49,6 +66,9 @@ class MapActivity : BaseActivity() {
         // BaseActivity already handles session checks
         supportActionBar?.hide()
         
+        // Initialize feedbackService with the session manager
+        feedbackService.initialize(sessionManager)
+        
         // Initialize map
         mapView = findViewById(R.id.mapView)
         mapView.setTileSource(TileSourceFactory.MAPNIK)
@@ -63,6 +83,18 @@ class MapActivity : BaseActivity() {
         val startPoint = GeoPoint(10.3157, 123.8854)
         mapController.setCenter(startPoint)
         
+        // Initialize feedback components
+        feedbackRecyclerView = findViewById(R.id.feedbackRecyclerView)
+        feedbackRecyclerView.layoutManager = LinearLayoutManager(this)
+        feedbackAdapter = FeedbackAdapter()
+        feedbackRecyclerView.adapter = feedbackAdapter
+        
+        addFeedbackButton = findViewById(R.id.addFeedbackButton)
+        toggleViewButton = findViewById(R.id.toggleViewButton)
+        
+        // Set up feedback button clicks
+        setupFeedbackButtons()
+        
         // Request location permissions
         requestLocationPermissions()
         
@@ -73,7 +105,11 @@ class MapActivity : BaseActivity() {
         
         // Set up refresh button
         findViewById<View>(R.id.refreshButton).setOnClickListener {
-            refreshMap()
+            if (isMapViewVisible) {
+                refreshMap()
+            } else {
+                loadFeedback()
+            }
         }
         
         // Set up bottom navigation
@@ -81,6 +117,149 @@ class MapActivity : BaseActivity() {
         
         // Load pickup locations
         loadPickupLocations()
+    }
+    
+    private fun setupFeedbackButtons() {
+        // Set up the add feedback button
+        addFeedbackButton.setOnClickListener {
+            showAddFeedbackDialog()
+        }
+        
+        // Set up the toggle view button
+        toggleViewButton.setOnClickListener {
+            toggleView()
+        }
+    }
+    
+    private fun toggleView() {
+        isMapViewVisible = !isMapViewVisible
+        
+        if (isMapViewVisible) {
+            mapView.visibility = View.VISIBLE
+            feedbackRecyclerView.visibility = View.GONE
+        } else {
+            mapView.visibility = View.GONE
+            feedbackRecyclerView.visibility = View.VISIBLE
+            loadFeedback()
+        }
+    }
+    
+    private fun loadFeedback() {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val feedbackResult = feedbackService.getAllFeedback()
+                
+                withContext(Dispatchers.Main) {
+                    if (feedbackResult.isSuccess) {
+                        val feedbackList = feedbackResult.getOrNull() ?: emptyList()
+                        
+                        if (feedbackList.isEmpty()) {
+                            Toast.makeText(
+                                this@MapActivity,
+                                "No feedback found",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                        
+                        feedbackAdapter.updateFeedback(feedbackList)
+                    } else {
+                        val exception = feedbackResult.exceptionOrNull()
+                        Toast.makeText(
+                            this@MapActivity,
+                            "Error loading feedback: ${exception?.message}",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(
+                        this@MapActivity,
+                        "Error: ${e.message}",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+        }
+    }
+    
+    private fun showAddFeedbackDialog() {
+        val dialogView = View.inflate(this, R.layout.dialog_add_feedback, null)
+        
+        val dialog = AlertDialog.Builder(this)
+            .setView(dialogView)
+            .setCancelable(true)
+            .create()
+        
+        val titleEditText = dialogView.findViewById<TextInputEditText>(R.id.titleEditText)
+        val descriptionEditText = dialogView.findViewById<TextInputEditText>(R.id.descriptionEditText)
+        val cancelButton = dialogView.findViewById<Button>(R.id.cancelButton)
+        val submitButton = dialogView.findViewById<Button>(R.id.submitButton)
+        
+        cancelButton.setOnClickListener {
+            dialog.dismiss()
+        }
+        
+        submitButton.setOnClickListener {
+            val title = titleEditText.text.toString().trim()
+            val description = descriptionEditText.text.toString().trim()
+            
+            if (title.isEmpty()) {
+                titleEditText.error = "Please enter a title"
+                return@setOnClickListener
+            }
+            
+            if (description.isEmpty()) {
+                descriptionEditText.error = "Please enter a description"
+                return@setOnClickListener
+            }
+            
+            // Submit feedback
+            submitFeedback(title, description)
+            
+            // Close the dialog
+            dialog.dismiss()
+        }
+        
+        dialog.show()
+    }
+    
+    private fun submitFeedback(title: String, description: String) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val result = feedbackService.createFeedback(title, description)
+                
+                withContext(Dispatchers.Main) {
+                    if (result.isSuccess) {
+                        Toast.makeText(
+                            this@MapActivity,
+                            "Feedback submitted successfully",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        
+                        // If in feedback view, refresh the list
+                        if (!isMapViewVisible) {
+                            loadFeedback()
+                        }
+                    } else {
+                        val exception = result.exceptionOrNull()
+                        Toast.makeText(
+                            this@MapActivity,
+                            "Failed to submit feedback: ${exception?.message ?: "Unknown error"}",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(
+                        this@MapActivity,
+                        "Error: ${e.message}",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+        }
     }
     
     private fun setupBottomNavigation() {

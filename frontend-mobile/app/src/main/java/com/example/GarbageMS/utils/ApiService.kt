@@ -74,6 +74,71 @@ interface ApiService {
     @GET("api/pickup-locations/{id}")
     suspend fun getPickupLocationById(@Path("id") id: String): Response<PickupLocationResponse>
 
+    // Feedback endpoints
+    @GET("/api/feedback")
+    suspend fun getAllFeedback(
+        @Header("Authorization") authToken: String
+    ): Response<List<Map<String, Any>>>
+    
+    @GET("/api/feedback/{feedbackId}")
+    suspend fun getFeedbackById(
+        @Path("feedbackId") feedbackId: String,
+        @Header("Authorization") authToken: String
+    ): Response<Map<String, Any>>
+    
+    @POST("/api/feedback")
+    suspend fun createFeedback(
+        @Header("Authorization") authToken: String,
+        @Body feedbackRequest: Map<String, String>
+    ): Response<Map<String, Any>>
+    
+    // Alternative version with userId like other endpoints
+    @GET("/api/feedback/user/{userId}")
+    suspend fun getUserFeedback(
+        @Path("userId") userId: String,
+        @Header("Authorization") authToken: String
+    ): Response<List<Map<String, Any>>>
+    
+    @POST("/api/feedback/user/{userId}")
+    suspend fun createUserFeedback(
+        @Path("userId") userId: String,
+        @Header("Authorization") authToken: String,
+        @Body feedbackRequest: Map<String, String>
+    ): Response<Map<String, Any>>
+
+    // Schedule endpoints
+    @GET("/api/schedule")
+    suspend fun getAllSchedules(): Response<List<ScheduleResponse>>
+    
+    @GET("/api/schedule/{scheduleId}")
+    suspend fun getScheduleById(
+        @Path("scheduleId") scheduleId: String
+    ): Response<ScheduleResponse>
+    
+    @GET("/api/schedule/user")
+    suspend fun getUserSchedules(
+        @Header("Authorization") authToken: String
+    ): Response<List<ScheduleResponse>>
+    
+    @POST("/api/schedule")
+    suspend fun createSchedule(
+        @Header("Authorization") authToken: String,
+        @Body scheduleRequest: ScheduleRequest
+    ): Response<ScheduleResponse>
+    
+    @PUT("/api/schedule/{scheduleId}")
+    suspend fun updateSchedule(
+        @Path("scheduleId") scheduleId: String,
+        @Header("Authorization") authToken: String,
+        @Body scheduleRequest: ScheduleRequest
+    ): Response<ScheduleResponse>
+    
+    @DELETE("/api/schedule/{scheduleId}")
+    suspend fun deleteSchedule(
+        @Path("scheduleId") scheduleId: String,
+        @Header("Authorization") authToken: String
+    ): Response<Map<String, Any>>
+
     companion object {
         private const val TAG = "ApiService"
         
