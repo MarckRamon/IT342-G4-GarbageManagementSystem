@@ -2,6 +2,7 @@ package com.g4.gms.dto;
 
 public class ScheduleResponse {
     private String scheduleId;
+    private String title;
     private String pickupDate;
     private String pickupTime;
     private String locationId;
@@ -15,10 +16,11 @@ public class ScheduleResponse {
     public ScheduleResponse() {}
 
     // Constructor for success responses with data
-    public ScheduleResponse(String scheduleId, String pickupDate, String pickupTime, 
+    public ScheduleResponse(String scheduleId, String title, String pickupDate, String pickupTime, 
                           String locationId, String status, String userId, String userEmail,
                           boolean success, String message) {
         this.scheduleId = scheduleId;
+        this.title = title;
         this.pickupDate = pickupDate;
         this.pickupTime = pickupTime;
         this.locationId = locationId;
@@ -41,6 +43,14 @@ public class ScheduleResponse {
 
     public void setScheduleId(String scheduleId) {
         this.scheduleId = scheduleId;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
     }
 
     public String getPickupDate() {
