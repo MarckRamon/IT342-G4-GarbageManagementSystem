@@ -3,6 +3,9 @@ FROM maven:3.9.8-eclipse-temurin-21 AS build
 WORKDIR /app
 COPY pom.xml .
 COPY src/ ./src
+
+# Create a dummy Firebase config for build-time to pass compilation
+RUN echo '{}' > /app/src/main/resources/serviceAccountKey.json
 RUN mvn clean package -DskipTests
 
 # Run stage
