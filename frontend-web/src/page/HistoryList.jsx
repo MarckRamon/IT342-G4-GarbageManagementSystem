@@ -8,7 +8,15 @@ const API_BASE_URL = 'http://localhost:8080/api';
 const api = axios.create({
   baseURL: API_BASE_URL
 });
-
+const fetchLocations = async () => {
+  try {
+    const response = await api.get('/pickup-locations');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching locations:', error);
+    throw error;
+  }
+};
 // API functions for history records
 const fetchHistoryRecords = async () => {
   try {
@@ -87,6 +95,11 @@ const fetchSchedules = async () => {
 };
 
 const HistoryPage = () => {
+  const [locations, setLocations] = useState([]);
+  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [scheduleFilter, setScheduleFilter] = useState('');
+  const [filteredSchedules, setFilteredSchedules] = useState([]);
   const navigate = useNavigate();
   const [showProfilePopup, setShowProfilePopup] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
@@ -117,7 +130,24 @@ const HistoryPage = () => {
   const [profileEmail, setProfileEmail] = useState({
     email: ""
   });
+  const handleScheduleSearch = (e) => {
+    const searchTerm = e.target.value.toLowerCase();
+    setScheduleFilter(searchTerm);
 
+    if (!searchTerm) {
+      setFilteredSchedules(schedules);
+      return;
+    }
+
+    const filtered = schedules.filter(schedule =>
+      (schedule.scheduleId && schedule.scheduleId.toLowerCase().includes(searchTerm)) ||
+      (schedule.pickupDate && schedule.pickupDate.toLowerCase().includes(searchTerm)) ||
+      (schedule.pickupTime && schedule.pickupTime.toLowerCase().includes(searchTerm)) ||
+      (schedule.locationId && schedule.locationId.toLowerCase().includes(searchTerm)) // If you want to include locationId
+    );
+
+    setFilteredSchedules(filtered);
+  };
   const fetchUserProfile = async (userId, authToken) => {
     try {
       const response = await api.get(`/users/${userId}/profile`, {
@@ -131,7 +161,7 @@ const HistoryPage = () => {
       throw error;
     }
   };
-  
+
   const fetchUserEmail = async (userId, authToken) => {
     try {
       const response = await api.get(`/users/${userId}/profile/email`, {
@@ -145,13 +175,30 @@ const HistoryPage = () => {
       throw error;
     }
   };
-  
+
   // Fetch data on component mount
   useEffect(() => {
     setTimeout(() => {
       setPageLoaded(true);
     }, 100);
+    const loadLocations = async () => {
+      try {
+        const locationsData = await fetchLocations();
+        console.log('Locations received:', locationsData);
 
+        // Check if the response contains the locations array
+        if (locationsData && locationsData.success) {
+          setLocations(locationsData.locations); // Set the locations state
+          console.log('Locations state set:', locationsData.locations); // Log the locations array
+        } else {
+          console.error('Failed to load locations:', locationsData.message);
+        }
+      } catch (err) {
+        console.error("Error loading locations:", err);
+      }
+    };
+
+    loadLocations();
     // Retrieve authToken and userId from localStorage
     const authToken = localStorage.getItem('authToken');
     const userId = localStorage.getItem('userId');
@@ -182,9 +229,9 @@ const HistoryPage = () => {
       try {
         setLoading(true);
         const profileResponse = await fetchUserProfile(userId, authToken);
-        
+
         console.log('Profile data received:', profileResponse);
-        
+
         if (profileResponse && profileResponse.success) {
           // Update the profileData state
           setProfileData({
@@ -197,7 +244,7 @@ const HistoryPage = () => {
         } else {
           setError('Failed to load profile data');
         }
-        
+
         setLoading(false);
       } catch (err) {
         console.error("Error loading profile:", err);
@@ -225,7 +272,7 @@ const HistoryPage = () => {
         setLoading(true);
         const historyResponse = await fetchHistoryRecords();
         console.log('History records received:', historyResponse);
-        
+
         // FIX: Check for both success property and if response is an array
         if (historyResponse && Array.isArray(historyResponse)) {
           // Directly use the array of records
@@ -249,9 +296,10 @@ const HistoryPage = () => {
       try {
         const schedulesResponse = await fetchSchedules();
         console.log('Schedules received:', schedulesResponse);
-        
+        setSchedules(schedulesResponse);
         if (schedulesResponse && schedulesResponse.success) {
           setSchedules(schedulesResponse.schedules || []);
+
         }
       } catch (err) {
         console.error("Error loading schedules:", err);
@@ -290,25 +338,30 @@ const HistoryPage = () => {
       notes: ''
     });
   };
+  const getSiteNameFromLocationId = (locationId) => {
+    if (!locationId) return null;
 
-  const handleEditRecord = (record) => {
-    setIsEditing(true);
-    setIsAdding(false);
-    setEditingRecordId(record.historyId);
-    setFormData({
-      collectionDate: record.collectionDate,
-      scheduleId: record.scheduleId,
-      notes: record.notes || ''
-    });
+    // Check if locations is an array
+    if (Array.isArray(locations)) {
+      const location = locations.find(loc => loc.locationId === locationId);
+      return location ? location.siteName : null;
+    } else {
+      console.error('locations is not an array', locations);
+      return null;
+    }
   };
-
   const handleDeleteRecord = async (historyId) => {
+    // Confirm deletion with user
+    if (!window.confirm("Are you sure you want to delete this record?")) {
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
-      
+
       const response = await deleteHistoryRecord(historyId);
-      
+
       if (response && response.success) {
         // Remove the record from the state
         const updatedRecords = historyRecords.filter(record => record.historyId !== historyId);
@@ -323,7 +376,16 @@ const HistoryPage = () => {
       setLoading(false);
     }
   };
-
+  const handleEditRecord = (record) => {
+    setIsEditing(true);
+    setIsAdding(false);
+    setEditingRecordId(record.historyId);
+    setFormData({
+      collectionDate: record.collectionDate ? record.collectionDate.split('T')[0] : '',
+      scheduleId: record.scheduleId,
+      notes: record.notes || ''
+    });
+  };
   const handleCancelAdd = () => {
     setIsAdding(false);
     setIsEditing(false);
@@ -340,21 +402,21 @@ const HistoryPage = () => {
       try {
         setLoading(true);
         setError(null);
-        
+
         let response;
-        
+
         if (isEditing && editingRecordId) {
           // Update existing record
           response = await updateHistoryRecord(editingRecordId, formData);
-          
+
           if (response && response.success) {
             // Update the record in the state
-            const updatedRecords = historyRecords.map(record => 
-              record.historyId === editingRecordId 
+            const updatedRecords = historyRecords.map(record =>
+              record.historyId === editingRecordId
                 ? { ...record, ...formData }
                 : record
             );
-            
+
             setHistoryRecords(updatedRecords);
           } else {
             setError(response?.message || 'Failed to update history record');
@@ -362,7 +424,7 @@ const HistoryPage = () => {
         } else {
           // Create new record
           response = await addHistoryRecord(formData);
-          
+
           if (response && response.success) {
             // Add the new record to the state
             const newRecord = response.record || { ...formData, historyId: Date.now().toString() };
@@ -371,7 +433,7 @@ const HistoryPage = () => {
             setError(response?.message || 'Failed to create history record');
           }
         }
-        
+
         // Reset form and state if no error
         if (!error) {
           setIsAdding(false);
@@ -391,26 +453,146 @@ const HistoryPage = () => {
       }
     }
   };
-
+  const selectSchedule = (schedule) => {
+    setFormData({
+      ...formData,
+      scheduleId: schedule.scheduleId
+    });
+    setShowScheduleModal(false);
+  };
   const toggleProfilePopup = () => {
     setShowProfilePopup(!showProfilePopup);
   };
-
+  const openScheduleModal = () => {
+    if (schedules.length > 0) {
+      setFilteredSchedules(schedules);
+    } else {
+      console.log('Schedules are not loaded yet.');
+    }
+    setScheduleFilter('');
+    setShowScheduleModal(true);
+  };
   const openProfileModal = () => {
     setShowProfilePopup(false);
     setShowProfileModal(true);
   };
-  
+
   const handleLogout = () => {
     localStorage.removeItem('authToken');
     localStorage.removeItem('userId');
     navigate('/login');
   };
+  const handleOpenScheduleModal = () => {
+    setIsScheduleModalOpen(true);
+  };
 
-  const mainContentAnimationClass = pageLoaded 
-    ? 'opacity-100 translate-y-0' 
+  const handleCloseScheduleModal = () => {
+    setIsScheduleModalOpen(false);
+  };
+
+  const handleSelectSchedule = (schedule) => {
+    setFormData({
+      ...formData,
+      scheduleId: schedule.scheduleId
+    });
+  };
+  const mainContentAnimationClass = pageLoaded
+    ? 'opacity-100 translate-y-0'
     : 'opacity-0 translate-y-6';
 
+  const ScheduleSelectModal = ({ isOpen, onClose, onSelectSchedule, schedules }) => {
+    const [searchTerm, setSearchTerm] = useState('');
+    const [filteredSchedules, setFilteredSchedules] = useState([]);
+
+    // When modal opens or schedules change, update filtered schedules
+    useEffect(() => {
+      if (isOpen && Array.isArray(schedules)) {
+        setFilteredSchedules(schedules);
+      }
+    }, [isOpen, schedules]);
+
+    // Filter schedules based on search term
+    useEffect(() => {
+      if (Array.isArray(schedules)) {
+        const filtered = schedules.filter(schedule =>
+          (getSiteNameFromLocationId(schedule.locationId)?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+          (schedule.siteName?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+          (schedule.pickupDate?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+          (schedule.pickupTime?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+          (schedule.status?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+          (schedule.scheduleId?.toLowerCase() || '').includes(searchTerm.toLowerCase())
+        );
+        setFilteredSchedules(filtered);
+      }
+    }, [searchTerm, schedules]);
+
+    if (!isOpen) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50" onClick={onClose}>
+        <div className="bg-white rounded-lg shadow-lg w-full max-w-md max-h-96 flex flex-col" onClick={e => e.stopPropagation()}>
+          <div className="flex justify-between items-center p-4 border-b border-gray-200">
+            <h3 className="text-lg font-semibold">Select Schedule</h3>
+            <button className="text-gray-500 hover:text-gray-700" onClick={onClose}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </div>
+
+          <div className="p-4 border-b border-gray-200">
+            <input
+              type="text"
+              placeholder="Search schedules..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+            />
+          </div>
+
+          <div className="overflow-y-auto flex-grow">
+            {filteredSchedules && filteredSchedules.length > 0 ? (
+              <div className="divide-y divide-gray-100">
+                {filteredSchedules.map(schedule => {
+                  // Get site name from location data
+                  const siteName = getSiteNameFromLocationId(schedule.locationId) || schedule.siteName || 'Unknown Location';
+
+                  return (
+                    <div
+                      key={schedule.scheduleId}
+                      className="p-3 hover:bg-gray-50 cursor-pointer"
+                      onClick={() => {
+                        onSelectSchedule(schedule);
+                        onClose();
+                      }}
+                    >
+                      <div className="font-medium">{siteName}</div>
+                      <div className="text-sm text-gray-500 truncate">
+                        {schedule.pickupDate || 'No Date'} • {schedule.pickupTime || 'No Time'}
+                      </div>
+                      <div className="text-xs mt-1">
+                        {schedule.status && (
+                          <span className={`px-2 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full 
+                              ${schedule.status === 'COMPLETED' ? 'bg-green-100 text-green-800' :
+                              schedule.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
+                                'bg-gray-100 text-gray-800'}`}>
+                            {schedule.status}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="p-4 text-center text-gray-500">No schedules found</div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
   return (
     <div className="flex min-h-screen bg-gray-50">
       {/* Sidebar */}
@@ -433,7 +615,7 @@ const HistoryPage = () => {
             </li>
             <li className="flex items-center px-5 py-3 text-gray-500 font-medium cursor-pointer transition duration-300 hover:bg-[rgba(93,166,70,0.05)]">
               <Link to="/complaints" className="flex items-center no-underline text-inherit">
-              <span className="mr-3">
+                <span className="mr-3">
                   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
                   </svg>
@@ -444,16 +626,16 @@ const HistoryPage = () => {
             <li className="flex items-center px-5 py-3 text-gray-500 font-medium cursor-pointer transition duration-300 hover:bg-[rgba(93,166,70,0.05)]">
               <Link to="/missedPickup" className="flex items-center no-underline text-inherit">
                 <span className="mr-3">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-  <rect x="3" y="4" width="18" height="16" rx="2" ry="2"></rect>
-  <path d="M3 8h18"></path>
-  <line x1="8" y1="2" x2="8" y2="6"></line>
-  <line x1="16" y1="2" x2="16" y2="6"></line>
-  <line x1="12" y1="12" x2="12" y2="16"></line>
-  <line x1="10" y1="14" x2="14" y2="14"></line>
-  <line x1="18" y1="6" x2="6" y2="18"></line>
-  <line x1="6" y1="6" x2="18" y2="18"></line>
-</svg>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="4" width="18" height="16" rx="2" ry="2"></rect>
+                    <path d="M3 8h18"></path>
+                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                    <line x1="12" y1="12" x2="12" y2="16"></line>
+                    <line x1="10" y1="14" x2="14" y2="14"></line>
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                  </svg>
                 </span>
                 Missed Pickups
               </Link>
@@ -493,10 +675,10 @@ const HistoryPage = () => {
                 Collection Sites Map
               </Link>
             </li>
-    
+
           </ul>
         </div>
-        
+
         {/* User Info with Clickable Profile */}
         <div className="fixed bottom-0 left-0 w-60 p-4 flex items-center border-t border-gray-200 bg-white cursor-pointer" onClick={toggleProfilePopup}>
           <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-800 font-medium text-sm">
@@ -507,7 +689,7 @@ const HistoryPage = () => {
             <div className="text-xs text-gray-500">{profileEmail.email}</div>
           </div>
         </div>
-        
+
         {/* Profile Popup */}
         {showProfilePopup && (
           <div className="absolute bottom-16 left-2.5 w-56 bg-white shadow-md rounded-lg z-50 border border-gray-200 overflow-hidden">
@@ -541,11 +723,11 @@ const HistoryPage = () => {
           {/* Header with Actions */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 pb-4 border-b border-gray-100">
             <h1 className="text-2xl font-semibold text-gray-800 mb-4 sm:mb-0">Collection History</h1>
-            
+
             {(!isAdding && !isEditing) ? (
-              <button 
-              className="flex items-center px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
-              onClick={handleAddRecord}
+              <button
+                className="flex items-center px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+                onClick={handleAddRecord}
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
                   <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -555,7 +737,101 @@ const HistoryPage = () => {
               </button>
             ) : null}
           </div>
-          
+          {showScheduleModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-lg shadow-lg w-full max-w-2xl">
+                <div className="p-4 border-b border-gray-200 flex justify-between items-center">
+                  <h3 className="text-lg font-medium text-gray-800">Select Schedule</h3>
+                  <button
+                    onClick={() => setShowScheduleModal(false)}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="18" y1="6" x2="6" y2="18"></line>
+                      <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                  </button>
+                </div>
+
+                <div className="p-4">
+                  <div className="mb-4">
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={scheduleFilter}
+                        onChange={handleScheduleSearch}
+                        placeholder="Search schedules..."
+                        className="w-full px-3 py-2 pl-10 rounded-md border border-gray-300 focus:outline-none focus:ring-1 focus:ring-[#5da646] focus:border-[#5da646]"
+                      />
+                      <div className="absolute left-3 top-2.5 text-gray-400">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <circle cx="11" cy="11" r="8"></circle>
+                          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="max-h-80 overflow-y-auto">
+                    {filteredSchedules.length > 0 ? (
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {filteredSchedules.map((schedule) => (
+                            <tr
+                              key={schedule.scheduleId}
+                              className="hover:bg-gray-50 cursor-pointer"
+                              onClick={() => selectSchedule(schedule)}
+                            >
+                              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-800">
+                                {getSiteNameFromLocationId(schedule.locationId) || schedule.siteName || 'Unknown Location'}
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-800">
+                                {schedule.pickupDate || schedule.day || 'N/A'}
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-800">
+                                {schedule.pickupTime || 'N/A'}
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap text-sm">
+                                {schedule.status ? (
+                                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                          ${schedule.status === 'COMPLETED' ? 'bg-green-100 text-green-800' :
+                                      schedule.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
+                                        'bg-gray-100 text-gray-800'}`}>
+                                    {schedule.status}
+                                  </span>
+                                ) : 'N/A'}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    ) : (
+                      <div className="py-6 text-center text-gray-500">
+                        No schedules found matching your search.
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="p-4 bg-gray-50 border-t border-gray-200 flex justify-end">
+                  <button
+                    onClick={() => setShowScheduleModal(false)}
+                    className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
           {/* Form for Add/Edit */}
           {(isAdding || isEditing) && (
             <div className="bg-gray-50 p-5 rounded-lg border border-gray-100 mb-6">
@@ -576,21 +852,30 @@ const HistoryPage = () => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Schedule</label>
-                  <select
-                    name="scheduleId"
-                    value={formData.scheduleId}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-1 focus:ring-[#5da646] focus:border-[#5da646] bg-white"
-                    required
+                  <button
+                    type="button"
+                    onClick={handleOpenScheduleModal}
+                    className="w-full flex justify-between items-center px-3 py-2 rounded-md border border-gray-300 bg-white text-left focus:outline-none focus:ring-1 focus:ring-[#5da646] focus:border-[#5da646]"
                   >
-                    <option value="">Select Schedule</option>
-                    {schedules.map((schedule) => (
-                      <option key={schedule.id} value={schedule.id}>
-                        {schedule.location || schedule.siteName} - {schedule.day}
-                      </option>
-                    ))}
-                  </select>
+                    <span className="truncate text-gray-700">
+                      {formData.scheduleId
+                        ? (getSiteNameFromLocationId(schedules.find(s => s.scheduleId === formData.scheduleId)?.locationId) ||
+                          schedules.find(s => s.scheduleId === formData.scheduleId)?.siteName ||
+                          formData.scheduleId)
+                        : 'Select Schedule'}
+                    </span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                  </button>
                 </div>
+
+                <ScheduleSelectModal
+                  isOpen={isScheduleModalOpen}
+                  onClose={handleCloseScheduleModal}
+                  onSelectSchedule={handleSelectSchedule}
+                  schedules={schedules}
+                />
               </div>
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
@@ -604,14 +889,14 @@ const HistoryPage = () => {
                 ></textarea>
               </div>
               <div className="flex justify-end space-x-3">
-                <button 
+                <button
                   onClick={handleCancelAdd}
                   className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-opacity-50"
                 >
                   Cancel
                 </button>
-                <button 
-                  onClick={handleSaveRecord} 
+                <button
+                  onClick={handleSaveRecord}
                   disabled={!formData.collectionDate || !formData.scheduleId || loading}
                   className={`px-4 py-2 bg-[#5da646] text-white rounded-md hover:bg-[#4c8a3a] transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#5da646] focus:ring-opacity-50 ${(!formData.collectionDate || !formData.scheduleId || loading) ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
@@ -620,7 +905,7 @@ const HistoryPage = () => {
               </div>
             </div>
           )}
-          
+
           {/* Error Message */}
           {error && (
             <div className="bg-red-50 text-red-700 p-4 rounded-md mb-4 flex items-start">
@@ -632,7 +917,7 @@ const HistoryPage = () => {
               <span>{error}</span>
             </div>
           )}
-          
+
           {/* Loading State */}
           {loading && !isAdding && !isEditing && historyRecords.length === 0 ? (
             <div className="py-8 flex justify-center items-center text-gray-500">
@@ -658,20 +943,20 @@ const HistoryPage = () => {
                     <tr key={record.historyId} className="hover:bg-gray-50">
                       <td className="py-3 px-4 text-gray-800">
                         {new Date(record.collectionDate).toLocaleDateString('en-US', {
-                          year: 'numeric', 
-                          month: 'short', 
+                          year: 'numeric',
+                          month: 'short',
                           day: 'numeric'
                         })}
                       </td>
                       <td className="py-3 px-4 text-gray-800">{record.scheduleId}</td>
                       <td className="py-3 px-4 text-gray-700">
-                        {record.notes || 
+                        {record.notes ||
                           <span className="text-gray-400 italic">No notes</span>
                         }
                       </td>
                       <td className="py-3 px-4">
                         <div className="flex space-x-2">
-                          <button 
+                          <button
                             onClick={() => handleEditRecord(record)}
                             className="p-1 text-blue-600 hover:text-blue-800"
                             title="Edit"
@@ -679,9 +964,9 @@ const HistoryPage = () => {
                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                               <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
                               <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                              </svg>
+                            </svg>
                           </button>
-                          <button 
+                          <button
                             onClick={() => handleDeleteRecord(record.historyId)}
                             className="p-1 text-red-600 hover:text-red-800"
                             title="Delete"
@@ -711,7 +996,7 @@ const HistoryPage = () => {
               </div>
               <h3 className="text-lg font-medium text-gray-700 mb-2">No History Records Found</h3>
               <p className="text-gray-500 mb-4">Start tracking your collections by adding a new record.</p>
-              <button 
+              <button
                 className="inline-flex items-center px-4 py-2 bg-[#5da646] text-white rounded-md hover:bg-[#4c8a3a] transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#5da646] focus:ring-opacity-50"
                 onClick={handleAddRecord}
               >
@@ -725,7 +1010,7 @@ const HistoryPage = () => {
           )}
         </div>
       </div>
-      
+
       {/* Profile Modal */}
       {showProfileModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -733,7 +1018,7 @@ const HistoryPage = () => {
             <div className="p-6 border-b border-gray-200">
               <div className="flex justify-between items-center">
                 <h2 className="text-xl font-semibold text-gray-800">User Profile</h2>
-                <button 
+                <button
                   onClick={() => setShowProfileModal(false)}
                   className="text-gray-400 hover:text-gray-600"
                 >
@@ -754,7 +1039,7 @@ const HistoryPage = () => {
                   <p className="text-gray-600">{profileData.role}</p>
                 </div>
               </div>
-              
+
               <div className="space-y-4">
                 <div className="flex items-start">
                   <div className="text-gray-500 w-8 mt-0.5">
@@ -767,7 +1052,7 @@ const HistoryPage = () => {
                     <div className="text-gray-800">{profileData.phone}</div>
                   </div>
                 </div>
-                
+
                 <div className="flex items-start">
                   <div className="text-gray-500 w-8 mt-0.5">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -780,7 +1065,7 @@ const HistoryPage = () => {
                     <div className="text-gray-800">{profileEmail.email}</div>
                   </div>
                 </div>
-                
+
                 <div className="flex items-start">
                   <div className="text-gray-500 w-8 mt-0.5">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -793,7 +1078,7 @@ const HistoryPage = () => {
                     <div className="text-gray-800">{profileData.address}</div>
                   </div>
                 </div>
-                
+
                 <div className="flex items-start">
                   <div className="text-gray-500 w-8 mt-0.5">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -808,7 +1093,7 @@ const HistoryPage = () => {
                     <div className="text-gray-800">{profileData.joinDate}</div>
                   </div>
                 </div>
-                
+
                 <div className="flex items-start">
                   <div className="text-gray-500 w-8 mt-0.5">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -826,7 +1111,7 @@ const HistoryPage = () => {
               </div>
             </div>
             <div className="p-4 bg-gray-50 rounded-b-lg flex justify-end">
-              <button 
+              <button
                 onClick={() => setShowProfileModal(false)}
                 className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-50"
               >
