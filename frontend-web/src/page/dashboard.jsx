@@ -504,7 +504,7 @@ function VermigoDashboard() {
           }}
         >
           <span>{day}</span>
-          {hasSchedule && <span className="text-xs text-green-700 absolute -bottom-1">Pickup</span>}
+          {hasSchedule &&     <span className="text-xs absolute" style={{ bottom: '0.2rem' }}>Pickup</span>}
         </div>
       );
     }
@@ -1345,9 +1345,7 @@ function VermigoDashboard() {
                 >
                   Close
                 </button>
-                <button className="px-4 py-2 bg-green-600 rounded-md text-sm font-medium text-white hover:bg-green-700">
-                  Edit Profile
-                </button>
+         
               </div>
             </div>
           </div>
