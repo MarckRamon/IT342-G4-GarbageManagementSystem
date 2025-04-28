@@ -336,4 +336,62 @@ public class UserService {
         logger.info("Successfully updated FCM token for user ID: {}", userId);
         return user;
     }
+
+    /**
+     * Updates the timezone for a user.
+     * @param userId The ID of the user to update.
+     * @param timezone The new timezone (in IANA format, e.g. "America/New_York").
+     * @return The updated User object.
+     * @throws ExecutionException If Firestore operation fails.
+     * @throws InterruptedException If Firestore operation is interrupted.
+     * @throws IllegalArgumentException If the user is not found or timezone is invalid.
+     */
+    public User updateTimezone(String userId, String timezone) 
+            throws ExecutionException, InterruptedException, IllegalArgumentException {
+        User user = getUserById(userId);
+        if (user == null) {
+            logger.warn("Timezone update failed: User not found with ID: {}", userId);
+            throw new IllegalArgumentException("User not found with ID: " + userId);
+        }
+        
+        // Validate timezone
+        try {
+            java.time.ZoneId.of(timezone);
+        } catch (java.time.zone.ZoneRulesException e) {
+            logger.warn("Timezone update failed: Invalid timezone: {}", timezone);
+            throw new IllegalArgumentException("Invalid timezone: " + timezone);
+        }
+
+        user.setTimezone(timezone);
+
+        // Update in Firestore
+        DocumentReference docRef = firestore.collection(COLLECTION_NAME).document(userId);
+        ApiFuture<WriteResult> result = docRef.update("timezone", timezone);
+        result.get(); // Wait for completion
+
+        logger.info("Successfully updated timezone for user ID: {} to {}", userId, timezone);
+        return user;
+    }
+    
+    /**
+     * Gets the timezone for a user.
+     * @param userId The ID of the user.
+     * @return The timezone string.
+     * @throws ExecutionException If Firestore operation fails.
+     * @throws InterruptedException If Firestore operation is interrupted.
+     * @throws IllegalArgumentException If the user is not found.
+     */
+    public String getUserTimezone(String userId) 
+            throws ExecutionException, InterruptedException, IllegalArgumentException {
+        User user = getUserById(userId);
+        if (user == null) {
+            logger.warn("Get timezone failed: User not found with ID: {}", userId);
+            throw new IllegalArgumentException("User not found with ID: " + userId);
+        }
+        String timezone = user.getTimezone();
+        if (timezone == null || timezone.isEmpty()) {
+            return "UTC"; // Default to UTC if not set
+        }
+        return timezone;
+    }
 } 

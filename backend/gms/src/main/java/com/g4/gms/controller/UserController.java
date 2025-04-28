@@ -6,6 +6,7 @@ import com.g4.gms.dto.ProfileRequest;
 import com.g4.gms.dto.ProfileResponse;
 import com.g4.gms.dto.UpdateFcmTokenDto;
 import com.g4.gms.dto.UpdateNotificationSettingsDto;
+import com.g4.gms.dto.UpdateTimezoneDto;
 import com.g4.gms.model.User;
 import com.g4.gms.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -205,6 +206,56 @@ public class UserController {
         } catch (ExecutionException | InterruptedException e) {
             // Firestore operation failed
             return ResponseEntity.status(500).body(Map.of("message", "Error updating FCM token: " + e.getMessage()));
+        } catch (Exception e) {
+            // Catch any other unexpected exceptions
+            return ResponseEntity.status(500).body(Map.of("message", "An unexpected error occurred: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Update user's timezone
+     * @param userId User ID
+     * @param request UpdateTimezoneDto containing the timezone
+     * @return ResponseEntity indicating success or failure
+     */
+    @PutMapping("/{userId}/timezone")
+    public ResponseEntity<?> updateTimezone(
+            @PathVariable String userId,
+            @RequestBody UpdateTimezoneDto request) {
+        try {
+            userService.updateTimezone(userId, request.getTimezone());
+            return ResponseEntity.ok().body(Map.of(
+                "message", "Timezone updated successfully",
+                "timezone", request.getTimezone()
+            ));
+        } catch (IllegalArgumentException e) {
+            // User not found or invalid timezone
+            return ResponseEntity.status(400).body(Map.of("message", e.getMessage()));
+        } catch (ExecutionException | InterruptedException e) {
+            // Firestore operation failed
+            return ResponseEntity.status(500).body(Map.of("message", "Error updating timezone: " + e.getMessage()));
+        } catch (Exception e) {
+            // Catch any other unexpected exceptions
+            return ResponseEntity.status(500).body(Map.of("message", "An unexpected error occurred: " + e.getMessage()));
+        }
+    }
+    
+    /**
+     * Get user's timezone
+     * @param userId User ID
+     * @return ResponseEntity containing the timezone
+     */
+    @GetMapping("/{userId}/timezone")
+    public ResponseEntity<?> getTimezone(@PathVariable String userId) {
+        try {
+            String timezone = userService.getUserTimezone(userId);
+            return ResponseEntity.ok().body(Map.of("timezone", timezone));
+        } catch (IllegalArgumentException e) {
+            // User not found
+            return ResponseEntity.status(404).body(Map.of("message", e.getMessage()));
+        } catch (ExecutionException | InterruptedException e) {
+            // Firestore operation failed
+            return ResponseEntity.status(500).body(Map.of("message", "Error retrieving timezone: " + e.getMessage()));
         } catch (Exception e) {
             // Catch any other unexpected exceptions
             return ResponseEntity.status(500).body(Map.of("message", "An unexpected error occurred: " + e.getMessage()));
