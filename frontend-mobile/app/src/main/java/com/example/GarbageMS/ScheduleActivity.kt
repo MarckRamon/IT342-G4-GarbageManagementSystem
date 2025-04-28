@@ -11,6 +11,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.GarbageMS.adapters.ScheduleAdapter
 import com.example.GarbageMS.databinding.ActivityScheduleBinding
 import com.example.GarbageMS.models.Schedule
+import com.example.GarbageMS.services.ReminderService
 import com.example.GarbageMS.services.ScheduleService
 import com.example.GarbageMS.utils.DateConverter
 import com.kizitonwose.calendar.core.CalendarDay
@@ -32,6 +33,7 @@ class ScheduleActivity : BaseActivity() {
 
     private lateinit var binding: ActivityScheduleBinding
     private val scheduleService = ScheduleService.getInstance()
+    private val reminderService = ReminderService.getInstance()
     private lateinit var scheduleAdapter: ScheduleAdapter
     private val TAG = "ScheduleActivity"
     
@@ -50,6 +52,7 @@ class ScheduleActivity : BaseActivity() {
 
         // BaseActivity handles authentication checks
         scheduleService.initialize(sessionManager)
+        reminderService.initialize(sessionManager)
 
         // Setup RecyclerView and adapter
         setupRecyclerView()
@@ -83,8 +86,14 @@ class ScheduleActivity : BaseActivity() {
         
         // Set up Remind Me button click listener
         scheduleAdapter.setOnRemindMeClickListener { schedule ->
-            // The navigation to HomeActivity is now handled in the adapter
+            // Log when remind me is clicked, actual reminder is created in adapter
             Log.d(TAG, "Remind Me button clicked for schedule: ${schedule.scheduleId}")
+        }
+        
+        // Set up Complete button click listener
+        scheduleAdapter.setOnCompleteClickListener { schedule ->
+            // Log when complete button is clicked, actual completion is handled in adapter
+            Log.d(TAG, "Complete button clicked for schedule: ${schedule.scheduleId}")
         }
     }
     
@@ -196,6 +205,11 @@ class ScheduleActivity : BaseActivity() {
                         Log.d(TAG, "Loaded ${allSchedules.size} schedules")
                         allSchedules.forEach { schedule ->
                             Log.d(TAG, "Schedule: ${schedule.scheduleId} - Date: ${schedule.pickupDate}, Time: ${schedule.pickupTime}, Status: ${schedule.status}")
+                            
+                            // Check for completed schedules and create history records for them
+                            if (schedule.status.equals("COMPLETED", ignoreCase = true)) {
+                                checkAndCreateHistoryForCompletedSchedule(schedule)
+                            }
                         }
                         
                         // Add test data if no schedules are available
@@ -244,10 +258,68 @@ class ScheduleActivity : BaseActivity() {
                     
                     Toast.makeText(
                         this@ScheduleActivity,
-                        "Using test schedule data",
+                        "Error loading schedules: ${e.message}",
                         Toast.LENGTH_SHORT
                     ).show()
                 }
+            }
+        }
+    }
+    
+    /**
+     * Check if a completed schedule already has a history record and creates one if needed
+     */
+    private fun checkAndCreateHistoryForCompletedSchedule(schedule: Schedule) {
+        Log.d(TAG, "Checking if history record exists for completed schedule: ${schedule.scheduleId}")
+        
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                // First, check if the user is logged in
+                if (sessionManager.getToken().isNullOrEmpty()) {
+                    Log.d(TAG, "User not logged in, cannot create history")
+                    return@launch
+                }
+                
+                // Check if history record already exists for this schedule
+                val historyService = com.example.GarbageMS.services.HistoryService.getInstance().apply {
+                    initialize(sessionManager)
+                }
+                
+                val existingHistories = historyService.getAllHistory().getOrNull() ?: emptyList()
+                val historyExists = existingHistories.any { it.scheduleId == schedule.scheduleId }
+                
+                if (historyExists) {
+                    Log.d(TAG, "History record already exists for schedule ID: ${schedule.scheduleId}")
+                    return@launch
+                }
+                
+                // Create a history record in the background without navigating
+                val currentDate = java.time.LocalDate.now().format(java.time.format.DateTimeFormatter.ISO_DATE)
+                val notes = "Garbage collected from location ${schedule.locationId}"
+                
+                val historyRequest = com.example.GarbageMS.models.HistoryRequest(
+                    collectionDate = currentDate,
+                    notes = notes,
+                    scheduleId = schedule.scheduleId
+                )
+                
+                val result = historyService.createHistory(historyRequest)
+                if (result.isSuccess) {
+                    Log.d(TAG, "Successfully created history record for schedule: ${schedule.scheduleId}")
+                    
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(
+                            this@ScheduleActivity,
+                            "Created history record for completed collection",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                } else {
+                    val exception = result.exceptionOrNull()
+                    Log.e(TAG, "Error creating history: ${exception?.message}", exception)
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error checking/creating history: ${e.message}", e)
             }
         }
     }
@@ -379,6 +451,12 @@ class ScheduleActivity : BaseActivity() {
                 }
                 R.id.navigation_schedule -> {
                     // Already on this screen, do nothing
+                    true // Consume the event
+                }
+                R.id.navigation_history -> {
+                    val intent = Intent(this, HistoryActivity::class.java)
+                    intent.flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+                    startActivity(intent)
                     true // Consume the event
                 }
                 R.id.navigation_map -> {

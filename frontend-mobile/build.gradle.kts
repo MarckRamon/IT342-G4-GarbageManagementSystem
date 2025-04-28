@@ -7,8 +7,18 @@ plugins {
 }
 
 buildscript {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
     dependencies {
         classpath("com.google.gms:google-services:4.4.0")
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.22")
     }
+}
+
+// Configure project-wide Gradle settings
+tasks.register("clean", Delete::class) {
+    delete(rootProject.buildDir)
 }

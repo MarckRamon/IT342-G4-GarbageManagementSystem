@@ -139,6 +139,16 @@ interface ApiService {
         @Header("Authorization") authToken: String
     ): Response<Map<String, Any>>
 
+    // History endpoints
+    @GET("/api/history")
+    suspend fun getAllHistory(): Response<List<HistoryResponse>>
+    
+    @POST("/api/history")
+    suspend fun createHistory(
+        @Header("Authorization") authToken: String,
+        @Body historyRequest: Map<String, String>
+    ): Response<HistoryResponse>
+
     companion object {
         private const val TAG = "ApiService"
         

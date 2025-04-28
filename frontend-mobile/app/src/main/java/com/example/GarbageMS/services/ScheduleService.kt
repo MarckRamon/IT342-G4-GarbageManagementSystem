@@ -1,5 +1,6 @@
 package com.example.GarbageMS.services
 
+import android.content.Context
 import android.util.Log
 import com.example.GarbageMS.models.Schedule
 import com.example.GarbageMS.models.ScheduleRequest
@@ -17,6 +18,7 @@ class ScheduleService private constructor() {
     private val TAG = "ScheduleService"
     private val apiService: ApiService = ApiService.create()
     private lateinit var sessionManager: SessionManager
+    private lateinit var context: Context
 
     companion object {
         @Volatile
@@ -32,6 +34,11 @@ class ScheduleService private constructor() {
     fun initialize(sessionManager: SessionManager) {
         this.sessionManager = sessionManager
         Log.d(TAG, "ScheduleService initialized with SessionManager")
+    }
+    
+    fun setContext(context: Context) {
+        this.context = context
+        Log.d(TAG, "ScheduleService context set")
     }
 
     /**
@@ -195,6 +202,66 @@ class ScheduleService private constructor() {
             return@withContext Result.success(schedule)
         } catch (e: Exception) {
             Log.e(TAG, "Error getting schedule by ID: ${e.message}", e)
+            return@withContext Result.failure(e)
+        }
+    }
+    
+    /**
+     * Update a schedule with new details
+     * JWT required
+     */
+    suspend fun updateSchedule(scheduleId: String, scheduleRequest: ScheduleRequest): Result<Schedule> = withContext(Dispatchers.IO) {
+        try {
+            if (!::sessionManager.isInitialized) {
+                Log.e(TAG, "SessionManager not initialized!")
+                return@withContext Result.failure(IOException("SessionManager not initialized"))
+            }
+            
+            val token = sessionManager.getToken()
+            if (token.isNullOrEmpty()) {
+                Log.e(TAG, "No auth token available")
+                return@withContext Result.failure(IOException("No authentication token available"))
+            }
+            
+            Log.d(TAG, "Updating schedule with ID: $scheduleId")
+            Log.d(TAG, "Schedule update details: date=${scheduleRequest.pickupDate}, time=${scheduleRequest.pickupTime}, status=${scheduleRequest.status}")
+            
+            val authHeader = "Bearer $token"
+            val response = apiService.updateSchedule(scheduleId, authHeader, scheduleRequest)
+            
+            if (!response.isSuccessful) {
+                Log.e(TAG, "Failed to update schedule: ${response.code()}")
+                val errorBody = response.errorBody()?.string() ?: "No error body"
+                Log.e(TAG, "Error body: $errorBody")
+                return@withContext Result.failure(IOException("Failed to update schedule: ${response.code()} - $errorBody"))
+            }
+            
+            val scheduleResponse = response.body()
+            if (scheduleResponse == null) {
+                Log.e(TAG, "Empty response body")
+                return@withContext Result.failure(IOException("Empty response body"))
+            }
+            
+            if (!scheduleResponse.success) {
+                Log.e(TAG, "API returned failure: ${scheduleResponse.message}")
+                return@withContext Result.failure(IOException(scheduleResponse.message ?: "Unknown error"))
+            }
+            
+            Log.d(TAG, "Schedule updated successfully")
+            
+            val schedule = Schedule(
+                scheduleId = scheduleResponse.scheduleId ?: "",
+                pickupDate = scheduleResponse.pickupDate ?: "",
+                pickupTime = scheduleResponse.pickupTime ?: "",
+                locationId = scheduleResponse.locationId ?: "",
+                status = scheduleResponse.status ?: scheduleRequest.status,
+                userId = scheduleResponse.userId ?: "",
+                userEmail = scheduleResponse.userEmail ?: ""
+            )
+            
+            return@withContext Result.success(schedule)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error updating schedule: ${e.message}", e)
             return@withContext Result.failure(e)
         }
     }

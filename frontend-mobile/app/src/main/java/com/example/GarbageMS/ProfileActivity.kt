@@ -86,6 +86,18 @@ class ProfileActivity : BaseActivity() {
                     startActivity(intent)
                     true
                 }
+                R.id.navigation_history -> {
+                    val intent = Intent(this, HistoryActivity::class.java)
+                    intent.flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+                    startActivity(intent)
+                    true
+                }
+                R.id.navigation_map -> {
+                    val intent = Intent(this, MapActivity::class.java)
+                    intent.flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+                    startActivity(intent)
+                    true
+                }
                 else -> false
             }
         }

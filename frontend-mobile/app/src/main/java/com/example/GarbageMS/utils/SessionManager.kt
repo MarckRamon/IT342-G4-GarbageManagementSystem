@@ -39,6 +39,8 @@ class SessionManager private constructor(context: Context) {
         private const val TOKEN_EXPIRY = "token_expiry"
         private const val KEY_LAST_ACTIVITY = "last_activity"
         private const val SESSION_TIMEOUT = 3600L // 5 seconds for testing
+        private const val KEY_USER_EMAIL = "user_email"
+        private const val KEY_FCM_TOKEN = "fcm_token"
         
         // Keep a single instance to avoid multiple timers
         @Volatile
@@ -125,8 +127,26 @@ class SessionManager private constructor(context: Context) {
     fun logout() {
         Log.d(TAG, "Logging out user")
         cancelSessionTimeout()
+        
+        // Store reminder data temporarily
+        val reminderData = mutableMapOf<String, Any?>()
+        reminderData["reminder_title"] = prefs.getString("reminder_title", null)
+        reminderData["reminder_message"] = prefs.getString("reminder_message", null)
+        reminderData["reminder_date"] = prefs.getString("reminder_date", null)
+        reminderData["reminder_schedule_id"] = prefs.getString("reminder_schedule_id", null)
+        
+        // Clear all preferences
         editor.clear()
         editor.apply()
+        
+        // Restore reminder data
+        reminderData.forEach { (key, value) ->
+            if (value != null) {
+                editor.putString(key, value as String)
+            }
+        }
+        editor.apply()
+        
         sessionTimeoutDialogShown = false
         stopExpiryTimer()
     }
@@ -408,6 +428,13 @@ class SessionManager private constructor(context: Context) {
      * @return The email string or null if not found or not logged in
      */
     fun getUserEmail(): String? {
+        // First try to get from SharedPreferences
+        val savedEmail = prefs.getString(KEY_USER_EMAIL, null)
+        if (!savedEmail.isNullOrEmpty()) {
+            return savedEmail
+        }
+        
+        // If not in SharedPreferences, try to get from token
         val token = getToken() ?: return null
         return extractEmailFromToken(token)
     }
@@ -436,5 +463,27 @@ class SessionManager private constructor(context: Context) {
             }
             return false
         }
+    }
+
+    fun saveUserEmail(email: String) {
+        editor.putString(KEY_USER_EMAIL, email)
+        editor.apply()
+        Log.d(TAG, "User email saved")
+    }
+
+    fun setFCMToken(token: String) {
+        editor.putString(KEY_FCM_TOKEN, token)
+        editor.apply()
+        Log.d(TAG, "FCM token saved")
+    }
+
+    fun getFCMToken(): String? {
+        return prefs.getString(KEY_FCM_TOKEN, null)
+    }
+
+    fun clearSession() {
+        editor.clear()
+        editor.apply()
+        Log.d(TAG, "Session cleared")
     }
 } 
