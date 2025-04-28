@@ -4,6 +4,7 @@ import com.g4.gms.dto.EmailRequest;
 import com.g4.gms.dto.EmailResponse;
 import com.g4.gms.dto.ProfileRequest;
 import com.g4.gms.dto.ProfileResponse;
+import com.g4.gms.dto.UpdateFcmTokenDto;
 import com.g4.gms.dto.UpdateNotificationSettingsDto;
 import com.g4.gms.model.User;
 import com.g4.gms.service.UserService;
@@ -179,6 +180,31 @@ public class UserController {
         } catch (ExecutionException | InterruptedException e) {
             // Firestore operation failed
             return ResponseEntity.status(500).body(Map.of("message", "Error retrieving notification settings: " + e.getMessage()));
+        } catch (Exception e) {
+            // Catch any other unexpected exceptions
+            return ResponseEntity.status(500).body(Map.of("message", "An unexpected error occurred: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Update user's FCM token for push notifications
+     * @param userId User ID
+     * @param request UpdateFcmTokenDto containing the FCM token
+     * @return ResponseEntity indicating success or failure
+     */
+    @PutMapping("/{userId}/fcm-token")
+    public ResponseEntity<?> updateFcmToken(
+            @PathVariable String userId,
+            @RequestBody UpdateFcmTokenDto request) {
+        try {
+            userService.updateFcmToken(userId, request.getFcmToken());
+            return ResponseEntity.ok().body(Map.of("message", "FCM token updated successfully"));
+        } catch (IllegalArgumentException e) {
+            // User not found
+            return ResponseEntity.status(404).body(Map.of("message", e.getMessage()));
+        } catch (ExecutionException | InterruptedException e) {
+            // Firestore operation failed
+            return ResponseEntity.status(500).body(Map.of("message", "Error updating FCM token: " + e.getMessage()));
         } catch (Exception e) {
             // Catch any other unexpected exceptions
             return ResponseEntity.status(500).body(Map.of("message", "An unexpected error occurred: " + e.getMessage()));

@@ -15,6 +15,7 @@ public class User {
     private String location;
     private String phoneNumber;
     private boolean notificationsEnabled = true; // Added field, default to true
+    private String fcmToken; // Firebase Cloud Messaging token for push notifications
 
     // Default constructor
     public User() {}
@@ -128,6 +129,16 @@ public class User {
     @PropertyName("notificationsEnabled")
     public void setNotificationsEnabled(boolean notificationsEnabled) {
         this.notificationsEnabled = notificationsEnabled;
+    }
+
+    @PropertyName("fcmToken")
+    public String getFcmToken() {
+        return fcmToken;
+    }
+
+    @PropertyName("fcmToken")
+    public void setFcmToken(String fcmToken) {
+        this.fcmToken = fcmToken;
     }
 
     @Override
