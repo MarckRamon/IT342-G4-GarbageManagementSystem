@@ -12,8 +12,11 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.core.io.ClassPathResource;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
@@ -23,6 +26,7 @@ public class NotificationService {
     
     private static final Logger logger = LoggerFactory.getLogger(NotificationService.class);
     private static final String FCM_API_URL = "https://fcm.googleapis.com/v1/projects/%s/messages:send";
+    private static final String FIREBASE_CONFIG_PATH = "serviceAccountKey.json";
     
     @Autowired
     private FirebaseApp firebaseApp;
@@ -124,10 +128,15 @@ public class NotificationService {
      * @throws IOException If unable to get access token
      */
     private String getAccessToken() throws IOException {
-        GoogleCredentials googleCredentials = GoogleCredentials
-                .fromStream(firebaseApp.getOptions().getCredentials().getInputStream())
-                .createScoped("https://www.googleapis.com/auth/firebase.messaging");
+        // Load Firebase service account credentials from the resource file
+        InputStream serviceAccount = new ClassPathResource(FIREBASE_CONFIG_PATH).getInputStream();
         
+        // Create GoogleCredentials with the FCM scope
+        GoogleCredentials googleCredentials = GoogleCredentials
+                .fromStream(serviceAccount)
+                .createScoped(Arrays.asList("https://www.googleapis.com/auth/firebase.messaging"));
+        
+        // Refresh the token if needed
         googleCredentials.refreshIfExpired();
         return googleCredentials.getAccessToken().getTokenValue();
     }
