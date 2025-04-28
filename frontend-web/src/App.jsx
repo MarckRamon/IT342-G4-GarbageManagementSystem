@@ -10,7 +10,8 @@ import VermigoDashboard from './page/dashboard.jsx';
 import VermigoSchedule from './page/Schedule.jsx';
 import VermigoComplaints from './page/complaints.jsx';
 import MapPage from './page/MapPage.jsx';
-
+import HistoryList from './page/HistoryList.jsx';
+import MissedPickup from './page/MissedPickup.jsx';
 import { useEffect } from 'react';
 
 function RequireAuth({ children }) {
@@ -39,6 +40,16 @@ function App() {
         <Route path="/dashboard" element={
           <RequireAuth>
             <VermigoDashboard />
+          </RequireAuth>
+        } />
+          <Route path="/missedPickup" element={
+          <RequireAuth>
+            <MissedPickup />
+          </RequireAuth>
+        } />
+            <Route path="/history" element={
+          <RequireAuth>
+            <HistoryList />
           </RequireAuth>
         } />
         <Route path="/schedule" element={
