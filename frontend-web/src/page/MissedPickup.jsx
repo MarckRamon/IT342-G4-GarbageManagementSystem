@@ -36,6 +36,7 @@ const fetchUserProfile = async (userId, authToken) => {
     }
   };
 const MissedPickupPage = () => {
+  const navigate = useNavigate();
     const [showProfilePopup, setShowProfilePopup] = useState(false);
     const [showProfileModal, setShowProfileModal] = useState(false);   
   const [missedPickups, setMissedPickups] = useState([]);
