@@ -16,7 +16,7 @@ public class User {
     private String phoneNumber;
     private boolean notificationsEnabled = true; // Added field, default to true
     private String fcmToken; // Firebase Cloud Messaging token for push notifications
-    private String timezone = "UTC"; // User's timezone, default to UTC
+    private String timezone = "Asia/Manila"; // User's timezone, default to Philippines
 
     // Default constructor
     public User() {}

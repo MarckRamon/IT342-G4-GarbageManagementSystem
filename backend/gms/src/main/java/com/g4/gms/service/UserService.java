@@ -390,7 +390,7 @@ public class UserService {
         }
         String timezone = user.getTimezone();
         if (timezone == null || timezone.isEmpty()) {
-            return "UTC"; // Default to UTC if not set
+            return "Asia/Manila"; // Default to Philippines if not set
         }
         return timezone;
     }
