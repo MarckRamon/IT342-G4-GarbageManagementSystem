@@ -1,15 +1,23 @@
-import React, { useState,useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, Home, MapPin, User, Mail, Phone, Briefcase, LogOut, ChevronLeft, ChevronRight, Plus, X, Trash2, Edit } from 'lucide-react';
-
 import { Link, useNavigate } from 'react-router-dom';
-const API_BASE_URL = 'http://localhost:8080/api';
 import axios from 'axios';
+
+const API_BASE_URL = 'http://localhost:8080/api';
 
 // Create axios instance with default config
 const api = axios.create({
   baseURL: API_BASE_URL
 });
-
+const fetchLocations = async () => {
+  try {
+    const response = await api.get('/pickup-locations');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching locations:', error);
+    throw error;
+  }
+};
 const fetchUserProfile = async (userId, authToken) => {
   try {
     const response = await api.get(`/users/${userId}/profile`, {
@@ -24,19 +32,6 @@ const fetchUserProfile = async (userId, authToken) => {
   }
 };
 
-const updateUserProfile = async (userId, authToken, profileData) => {
-  try {
-    const response = await api.put(`/users/${userId}/profile`, profileData, {
-      headers: {
-        'Authorization': `Bearer ${authToken}`
-      }
-    });
-    return response.data;
-  } catch (error) {
-    console.error('Error updating profile:', error);
-    throw error;
-  }
-};
 const fetchUserEmail = async (userId, authToken) => {
   try {
     const response = await api.get(`/users/${userId}/profile/email`, {
@@ -50,144 +45,92 @@ const fetchUserEmail = async (userId, authToken) => {
     throw error;
   }
 };
+
+// New API functions for schedules
+const fetchSchedules = async () => {
+  try {
+    const response = await api.get('/schedule');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching schedules:', error);
+    throw error;
+  }
+};
+
+const addSchedule = async (scheduleData) => {
+  try {
+    const response = await api.post('/schedule', scheduleData);
+    return response.data;
+  } catch (error) {
+    console.error('Error adding schedule:', error);
+    throw error;
+  }
+};
+
+const updateSchedule = async (scheduleId, scheduleData) => {
+  try {
+    const response = await api.put(`/schedule/${scheduleId}`, scheduleData);
+    return response.data;
+  } catch (error) {
+    console.error('Error updating schedule:', error);
+    throw error;
+  }
+};
+
+const deleteSchedule = async (scheduleId) => {
+  try {
+    const response = await api.delete(`/schedule/${scheduleId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error deleting schedule:', error);
+    throw error;
+  }
+};
+
 export default function VermigoSchedule() {
   const navigate = useNavigate();
-  
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
     phoneNumber: ''
-});
-const [isLoading, setIsLoading] = useState(true);
-const [error, setError] = useState(null);
-const [editMode, setEditMode] = useState(false);
+  });
+  const [isLoading, setIsLoading] = useState(true);
+  const [multipleSchedules, setMultipleSchedules] = useState([]);
+const [showMultipleSchedulesModal, setShowMultipleSchedulesModal] = useState(false);
+  const [selectedDay, setSelectedDay] = useState(null);
+  const [weekSchedules, setWeekSchedules] = useState([]);
+const [selectedWeekStart, setSelectedWeekStart] = useState(null);
+const [showTimeModal, setShowTimeModal] = useState(false);
+const [daySchedules, setDaySchedules] = useState([]);
+  const [error, setError] = useState(null);
   const [showProfilePopup, setShowProfilePopup] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showAddScheduleModal, setShowAddScheduleModal] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [pageLoaded, setPageLoaded] = useState(false);
-
-  const [schedules, setSchedules] = useState([
-    { id: 1, date: '2025-04-15', area: 'North District', type: 'General Waste', time: '08:00 AM', truck: 'Truck-01' },
-    { id: 2, date: '2025-04-18', area: 'East District', type: 'Recyclables', time: '09:30 AM', truck: 'Truck-03' },
-    { id: 3, date: '2025-04-22', area: 'South District', type: 'Organic Waste', time: '07:00 AM', truck: 'Truck-02' },
-    { id: 4, date: '2025-04-25', area: 'West District', type: 'General Waste', time: '08:30 AM', truck: 'Truck-04' },
-    { id: 5, date: '2025-04-29', area: 'Central District', type: 'Hazardous Waste', time: '10:00 AM', truck: 'Truck-05' }
-  ]);
-  useEffect(() => {
-    setTimeout(() => {
-      setPageLoaded(true);
-    }, 100);
-    // Retrieve authToken and userId from localStorage
-    const authToken = localStorage.getItem('authToken');
-    const userId = localStorage.getItem('userId');
-
-    // Log the values to the console
-    console.log('Auth Token:', authToken);
-    console.log('User ID:', userId);
-
-    // Check if both values are present
-    if (!authToken || !userId) {
-        console.log('Authentication information missing');
-        // For development purposes, we'll still load the dashboard
-        setIsLoading(false);
-        return;
-        // In production, you would redirect to login:
-        // setError('Authentication information missing. Please log in again.');
-        // navigate('/login');
-        // return;
-    }
-
-    // Setup axios interceptor to add auth token to all requests
-    const interceptor = api.interceptors.request.use(
-        config => {
-            config.headers.Authorization = `Bearer ${authToken}`;
-            return config;
-        },
-        error => {
-            return Promise.reject(error);
-        }
-    );
-    const loadUserEmail = async () =>{
-      const profileEmailResponse = await fetchUserEmail(userId, authToken);
-      console.log('Profile email received:', profileEmailResponse);
-
-      if (profileEmailResponse && profileEmailResponse.success) {
-          setProfileEmail({
-              email: profileEmailResponse.email
-          })
-      }
-  }
-    // Fetch user profile data
-    const loadUserProfile = async () => {
-        try {
-            setIsLoading(true);
-            const profileResponse = await fetchUserProfile(userId, authToken);
-            
-            console.log('Profile data received:', profileResponse);
-            
-            if (profileResponse && profileResponse.success) {
-                // Update the profileData state
-                setProfileData({
-                    ...profileData,
-                    name: `${profileResponse.firstName} ${profileResponse.lastName}`,
-                    phone: profileResponse.phoneNumber,
-                    firstName: profileResponse.firstName,
-                    lastName: profileResponse.lastName
-                });
-            } else {
-                setError('Failed to load profile data');
-            }
-            
-            setIsLoading(false);
-        } catch (err) {
-            // Handle axios specific errors
-            if (err.response) {
-                // The request was made and the server responded with a status code
-                // that falls out of the range of 2xx
-                console.error("Server error:", err.response.status, err.response.data);
-                setError(`Server error: ${err.response.status}`);
-            } else if (err.request) {
-                // The request was made but no response was received
-                console.error("Network error:", err.request);
-                setError('Network error. Please check your connection.');
-            } else {
-                // Something happened in setting up the request
-                console.error("Request configuration error:", err.message);
-                setError('Error setting up request');
-            }
-            setIsLoading(false);
-        }
-    };
-
-    // Load profile data if auth token and user ID are available
-    if (authToken && userId) {
-        loadUserProfile();
-        loadUserEmail();
-    } else {
-        setIsLoading(false);
-    }
-
-    // Clean up interceptor when component unmounts
-    return () => {
-        api.interceptors.request.eject(interceptor);
-    };
-}, []);
-  const openProfileModal = () => {
-    setShowProfilePopup(false);
-    setShowProfileModal(true);
-  };
-  const [newSchedule, setNewSchedule] = useState({
-    date: '',
-    area: '',
-    type: 'General Waste',
-    time: '',
-    truck: ''
+  const [schedules, setSchedules] = useState([]);
+  const [locations, setLocations] = useState([]);
+  const [showEditScheduleModal, setShowEditScheduleModal] = useState(false);
+  const [editingSchedule, setEditingSchedule] = useState({
+    scheduleId: '',
+    locationId: 'location-id-from-pickup-locations',
+    pickupDate: '',
+    pickupTime: '',
+    status: ''
   });
-  const [profileEmail, setProfileEmail]= useState({
+  
+  const [newSchedule, setNewSchedule] = useState({
+    locationId: '',
+    pickupDate: '',
+    pickupTime: '',
+    status: 'PENDING'
+  });
+  
+  const [profileEmail, setProfileEmail] = useState({
     email: ""
-});
+  });
+  
   const [profileData, setProfileData] = useState({
     name: "Loading...",
     email: "loading@example.com",
@@ -198,13 +141,137 @@ const [editMode, setEditMode] = useState(false);
     department: "Field Operations",
     firstName: "",
     lastName: ""
-});
+  });
+
+  useEffect(() => {
+    setTimeout(() => {
+      setPageLoaded(true);
+    }, 100);
+    
+    const authToken = localStorage.getItem('authToken');
+    const userId = localStorage.getItem('userId');
+    
+    console.log('Auth Token:', authToken);
+    console.log('User ID:', userId);
+    
+    if (!authToken || !userId) {
+      console.log('Authentication information missing');
+      setIsLoading(false);
+      return;
+    }
+
+    // Set up auth interceptor
+    const interceptor = api.interceptors.request.use(
+      config => {
+        config.headers.Authorization = `Bearer ${authToken}`;
+        return config;
+      },
+      error => {
+        return Promise.reject(error);
+      }
+    );
+
+    // Load all necessary data
+    const loadAllData = async () => {
+      try {
+        setIsLoading(true);
+        
+        // Fetch user profile and email
+        const profilePromise = fetchUserProfile(userId, authToken);
+        const emailPromise = fetchUserEmail(userId, authToken);
+        const schedulesPromise = fetchSchedules();
+        const locationsPromise = fetchLocations();
+        
+        const [profileResponse, emailResponse, schedulesResponse, locationsResponse] = await Promise.all([
+          profilePromise,
+          emailPromise,
+          schedulesPromise,
+          locationsPromise
+        ]);
+        console.log('Locations:', locations);
+        console.log('Profile data received:', profileResponse);
+        console.log('Email data received:', emailResponse);
+        console.log('Schedules data received:', schedulesResponse);
+        
+        // Update profile data
+        if (profileResponse && profileResponse.success) {
+          setProfileData({
+            ...profileData,
+            name: `${profileResponse.firstName} ${profileResponse.lastName}`,
+            phone: profileResponse.phoneNumber,
+            firstName: profileResponse.firstName,
+            lastName: profileResponse.lastName
+          });
+        }
+        
+        // Update email data
+        if (emailResponse && emailResponse.success) {
+          setProfileEmail({
+            email: emailResponse.email
+          });
+        }
+        
+        // Update schedules
+        if (schedulesResponse) {
+          setSchedules(schedulesResponse);
+        }
+        if (locationsResponse) {
+          setLocations(locationsResponse);
+        }
+        setIsLoading(false);
+      } catch (err) {
+        handleApiError(err);
+        setIsLoading(false);
+      }
+    };
+
+    loadAllData();
+
+    // Clean up interceptor when component unmounts
+    return () => {
+      api.interceptors.request.eject(interceptor);
+    };
+  }, []);
+
+  const handleApiError = (err) => {
+    if (err.response) {
+      // The request was made and the server responded with a status code
+      // that falls out of the range of 2xx
+      console.error("Server error:", err.response.status, err.response.data);
+      setError(`Server error: ${err.response.status}`);
+    } else if (err.request) {
+      // The request was made but no response was received
+      console.error("Network error:", err.request);
+      setError('Network error. Please check your connection.');
+    } else {
+      // Something happened in setting up the request
+      console.error("Request configuration error:", err.message);
+      setError('Error setting up request');
+    }
+  };
 
   const monthNames = ["January", "February", "March", "April", "May", "June",
     "July", "August", "September", "October", "November", "December"];
     
   const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-  
+  const getDayStatusClass = (daySchedules) => {
+    if (!daySchedules || daySchedules.length === 0) return '';
+    
+    // If any schedule is cancelled, show as red
+    if (daySchedules.some(s => s.status === 'CANCELLED')) {
+      return 'bg-red-100 text-red-700';
+    }
+    // If any schedule is pending, show as yellow
+    else if (daySchedules.some(s => s.status === 'PENDING')) {
+      return 'bg-yellow-100 text-yellow-700';
+    }
+    // If all are completed, show as green
+    else if (daySchedules.every(s => s.status === 'COMPLETED')) {
+      return 'bg-green-100 text-green-700';
+    }
+    
+    return 'bg-green-100 text-green-700'; // Default
+  };
   const getDaysInMonth = (month, year) => {
     return new Date(year, month + 1, 0).getDate();
   };
@@ -212,7 +279,84 @@ const [editMode, setEditMode] = useState(false);
   const getFirstDayOfMonth = (month, year) => {
     return new Date(year, month, 1).getDay();
   };
+  const getWeekDates = (year, month, day) => {
+    const selectedDate = new Date(year, month, day);
+    const weekDates = [];
+    
+    // Start from current day and include the next 6 days (full week view)
+    for (let i = 0; i < 7; i++) {
+      const currentDate = new Date(selectedDate);
+      currentDate.setDate(selectedDate.getDate() + i);
+      weekDates.push({
+        date: currentDate,
+        dayName: dayNames[currentDate.getDay()],
+        dayNumber: currentDate.getDate(),
+        month: currentDate.getMonth(),
+        year: currentDate.getFullYear(),
+        dateString: `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`
+      });
+    }
+    
+    return weekDates;
+  };
   
+  // Get schedules for the week
+  const getWeekSchedules = (weekDates) => {
+    const weekSchedules = [];
+    
+    weekDates.forEach(dayInfo => {
+      const daySchedules = schedules.filter(schedule => schedule.pickupDate === dayInfo.dateString);
+      weekSchedules.push({
+        ...dayInfo,
+        schedules: daySchedules
+      });
+    });
+    
+    return weekSchedules;
+  };
+  const generateTimeSlots = () => {
+    const timeSlots = [];
+    
+    // Generate slots from 5:00 to 22:00 (5AM to 10PM)
+    for (let hour = 5; hour <= 22; hour++) {
+      const formattedHour = hour > 12 ? hour - 12 : hour;
+      const period = hour >= 12 ? 'PM' : 'AM';
+      
+      timeSlots.push({
+        hour: hour,
+        displayTime: `${formattedHour}:00 ${period}`
+      });
+    }
+    
+    return timeSlots;
+  };
+  
+  // Handle day click to show scheduler
+  const handleDayClick = (day) => {
+    const weekDates = getWeekDates(selectedYear, selectedMonth, day);
+    const scheduleData = getWeekSchedules(weekDates);
+    
+    setSelectedDay(day);
+    setSelectedWeekStart(weekDates[0].date);
+    setWeekSchedules(scheduleData);
+    setShowTimeModal(true);
+  };
+  
+  // Find if there's a schedule for a specific day and hour
+  const findSchedulesForTimeSlot = (dateInfo, hour) => {
+    if (!dateInfo.schedules || dateInfo.schedules.length === 0) return [];
+    
+    return dateInfo.schedules.filter(schedule => {
+      const scheduleParts = schedule.pickupTime.split(':');
+      const scheduleHour = parseInt(scheduleParts[0], 10);
+      return scheduleHour === hour;
+    });
+  };
+
+  const handleMultipleSchedulesView = (schedules) => {
+    setMultipleSchedules(schedules);
+    setShowMultipleSchedulesModal(true);
+  };
   const generateCalendarDays = () => {
     const daysInMonth = getDaysInMonth(selectedMonth, selectedYear);
     const firstDayOfMonth = getFirstDayOfMonth(selectedMonth, selectedYear);
@@ -220,18 +364,36 @@ const [editMode, setEditMode] = useState(false);
     
     // Add empty cells for days before the first day of the month
     for (let i = 0; i < firstDayOfMonth; i++) {
-      calendarDays.push(<div key={`empty-${i}`} className="h-10 md:h-12"></div>);
+      calendarDays.push(<div key={`empty-${i}`} className="h-12 md:h-14"></div>);
     }
     
     // Add cells for each day of the month
     for (let day = 1; day <= daysInMonth; day++) {
       const currentDate = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-      const hasSchedule = schedules.some(schedule => schedule.date === currentDate);
+      const daySchedules = schedules.filter(schedule => schedule.pickupDate === currentDate);
+      const hasSchedule = daySchedules.length > 0;
+      const statusClass = hasSchedule ? getDayStatusClass(daySchedules) : '';
       
       calendarDays.push(
-        <div key={day} className={`h-10 md:h-12 flex flex-col items-center justify-center rounded ${hasSchedule ? 'bg-green-100 text-green-700 font-medium relative' : ''}`}>
+        <div 
+          key={day} 
+          className={`h-12 md:h-14 flex flex-col items-center justify-center rounded ${
+            hasSchedule 
+              ? `${statusClass} relative cursor-pointer hover:opacity-80 transition-opacity` 
+              : ''
+          }`}
+          onClick={() => {
+            // Always allow clicking to show the scheduler, even if no schedules
+            handleDayClick(day);
+          }}
+        >
           <span>{day}</span>
-          {hasSchedule && <span className="text-xs text-green-700 absolute -bottom-1">Pickup</span>}
+          {hasSchedule && (
+            <span className="text-xs absolute" style={{ bottom: '0.2rem' }}>
+              {daySchedules.length > 0 && daySchedules.some(s => s.status === 'CANCELLED') ? 'Cancelled' :
+              daySchedules.length > 0 && daySchedules.some(s => s.status === 'PENDING') ? 'Pending' : 'Completed'}
+            </span>
+          )}
         </div>
       );
     }
@@ -264,34 +426,157 @@ const [editMode, setEditMode] = useState(false);
       [name]: value
     });
   };
+  
   const handleLogout = () => {
-    // Here you would normally clear authentication tokens, etc.
     localStorage.removeItem('authToken');
     localStorage.removeItem('userId');
     navigate('/login');
-};
-  const handleAddSchedule = () => {
-    const newId = schedules.length > 0 ? Math.max(...schedules.map(s => s.id)) + 1 : 1;
-    const updatedSchedules = [...schedules, { ...newSchedule, id: newId }];
-    setSchedules(updatedSchedules);
-    setNewSchedule({
-      date: '',
-      area: '',
-      type: 'General Waste',
-      time: '',
-      truck: ''
-    });
-    setShowAddScheduleModal(false);
+  };
+  
+  const openProfileModal = () => {
+    setShowProfilePopup(false);
+    setShowProfileModal(true);
+  };
+  
+  const handleAddSchedule = async () => {
+    try {
+      const userId = localStorage.getItem('userId');
+      if (!userId) {
+        setError('User  not authenticated');
+        return;
+      }
+      
+      const scheduleData = {
+        ...newSchedule,
+        userId,
+        locationId: newSchedule.locationId || 'location-id-from-pickup-locations' // Use dummy ID
+      };
+      
+      const response = await addSchedule(scheduleData);
+      
+      if (response) {
+        // Fetch updated schedules
+        const updatedSchedules = await fetchSchedules();
+        setSchedules(updatedSchedules);
+        
+        // Reset form
+        setNewSchedule({
+          locationId: '',
+          pickupDate: '',
+          pickupTime: '',
+          status: 'PENDING'
+        });
+        
+        setShowAddScheduleModal(false);
+      }
+    } catch (err) {
+      handleApiError(err);
+    }
   };
 
-  const handleDeleteSchedule = (id) => {
-    const updatedSchedules = schedules.filter(schedule => schedule.id !== id);
-    setSchedules(updatedSchedules);
+  const handleDeleteSchedule = async (scheduleId) => {
+    try {
+      await deleteSchedule(scheduleId);
+      
+      // Update local state
+      setSchedules(schedules.filter(schedule => schedule.scheduleId !== scheduleId));
+    } catch (err) {
+      handleApiError(err);
+    }
   };
-  const mainContentAnimationClass = pageLoaded 
-  ? 'opacity-100 translate-y-0' 
-  : 'opacity-0 translate-y-6';
   
+  const getScheduleColors = (status) => {
+    switch (status) {
+      case 'PENDING':
+        return {
+          bg: 'bg-yellow-100',
+          border: 'border-yellow-500',
+          text: 'text-yellow-700'
+        };
+      case 'COMPLETED':
+        return {
+          bg: 'bg-green-100',
+          border: 'border-green-500',
+          text: 'text-green-700'
+        };
+      case 'CANCELLED':
+        return {
+          bg: 'bg-red-100',
+          border: 'border-red-500',
+          text: 'text-red-700'
+        };
+      default:
+        return {
+          bg: 'bg-gray-100',
+          border: 'border-gray-500',
+          text: 'text-gray-700'
+        };
+    }
+  };
+  
+  const getStatusClass = (status) => {
+    switch (status) {
+      case 'PENDING':
+        return 'bg-yellow-100 text-yellow-700';
+      case 'COMPLETED':
+        return 'bg-green-100 text-green-700';
+      case 'CANCELLED':
+        return 'bg-red-100 text-red-700';
+      default:
+        return 'bg-gray-100 text-gray-700';
+    }
+  };
+  
+  const mainContentAnimationClass = pageLoaded 
+    ? 'opacity-100 translate-y-0' 
+    : 'opacity-0 translate-y-6';
+    const handleEditSchedule = (schedule) => {
+      setEditingSchedule({
+        scheduleId: schedule.scheduleId,
+        locationId: schedule.locationId,
+        pickupDate: schedule.pickupDate,
+        pickupTime: schedule.pickupTime, // Ensure this is set
+        status: schedule.status
+      });
+      setShowEditScheduleModal(true);
+    };
+    
+    // Add this function to handle the edit input changes
+    const handleEditInputChange = (e) => {
+      const { name, value } = e.target;
+      setEditingSchedule({
+        ...editingSchedule,
+        [name]: value // This should correctly update the pickupTime
+      });
+    };
+    
+    // Add this function to handle the schedule update
+    const handleUpdateSchedule = async () => {
+      try {
+        const updatedData = {
+          ...editingSchedule,
+          locationId: editingSchedule.locationId || 'location-id-from-pickup-locations' // Use dummy ID
+        };
+        
+        const response = await updateSchedule(editingSchedule.scheduleId, updatedData);
+        
+        if (response) {
+          // Update local state
+          setSchedules(
+            schedules.map(schedule => 
+              schedule.scheduleId === editingSchedule.scheduleId 
+                ? updatedData 
+                : schedule
+            )
+          );
+          
+          setShowEditScheduleModal(false);
+        }
+      } catch (err) {
+        handleApiError(err);
+      }
+    };
+
   return (
     <div className="flex min-h-screen bg-gray-50">
       {/* Sidebar */}
@@ -319,12 +604,40 @@ const [editMode, setEditMode] = useState(false);
                 Complaints
               </Link>
             </li></Link>
+            <li className="flex items-center px-5 py-3 text-gray-500 font-medium cursor-pointer transition duration-300 hover:bg-[rgba(93,166,70,0.05)]">
+              <Link to="/missedPickup" className="flex items-center no-underline text-inherit">
+                <span className="mr-3">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <rect x="3" y="4" width="18" height="16" rx="2" ry="2"></rect>
+  <path d="M3 8h18"></path>
+  <line x1="8" y1="2" x2="8" y2="6"></line>
+  <line x1="16" y1="2" x2="16" y2="6"></line>
+  <line x1="12" y1="12" x2="12" y2="16"></line>
+  <line x1="10" y1="14" x2="14" y2="14"></line>
+  <line x1="18" y1="6" x2="6" y2="18"></line>
+  <line x1="6" y1="6" x2="18" y2="18"></line>
+</svg>
+                </span>
+                Missed Pickups
+              </Link>
+            </li>
             <Link to="/schedule" className="flex items-center no-underline text-inherit">
             <li className="flex items-center px-5 py-3 text-green-600 font-medium cursor-pointer bg-green-50 hover:bg-green-50 transition-colors">
               <Calendar className="mr-3 w-5 h-5" />
               Collection Schedule
             </li>
             </Link>
+            <li className="flex items-center px-5 py-3 text-slate-500 font-medium cursor-pointer transition-all duration-300 hover:bg-green-50/20">
+              <Link to="/history" className="flex items-center no-underline text-inherit">
+                <span className="mr-3">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12 6 12 12 16 14"></polyline>
+                  </svg>
+                </span>
+                Collection History
+              </Link>
+            </li>
             <Link to="/map" className="flex items-center no-underline text-inherit">
             <li className="flex items-center px-5 py-3 text-gray-500 font-medium cursor-pointer hover:bg-green-50 transition-colors">
             <span className="mr-3">
@@ -372,103 +685,434 @@ const [editMode, setEditMode] = useState(false);
                     </div>
                 )}
       </div>
-
-      {/* Main Content */}
-      <div className={`flex-1 p-3 ml-60 transition-all duration-700 ease-out ${mainContentAnimationClass}`}>
+{/* Main Content */}
+<div className="flex-1 ml-60 p-6">
         {/* Header */}
         <div className="flex justify-between items-center mb-6 pb-4 border-b border-gray-200">
           <h1 className="text-2xl font-semibold text-gray-800">Collection Schedule</h1>
           <button 
             onClick={() => setShowAddScheduleModal(true)}
-            className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-          >
+            className="flex items-center px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+            >
             <Plus className="w-4 h-4 mr-2" />
             Add Schedule
           </button>
         </div>
-
-        {/* Schedule List */}
-        <div className="bg-white p-6 rounded-lg shadow-sm mb-6">
-          <h2 className="text-lg font-semibold mb-4">Upcoming Collections</h2>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="text-left py-3 px-4 text-gray-500 font-medium">Date</th>
-                  <th className="text-left py-3 px-4 text-gray-500 font-medium">Time</th>
-                  <th className="text-left py-3 px-4 text-gray-500 font-medium">Area</th>
-                  <th className="text-left py-3 px-4 text-gray-500 font-medium">Waste Type</th>
-                  <th className="text-left py-3 px-4 text-gray-500 font-medium">Truck ID</th>
-                  <th className="text-right py-3 px-4 text-gray-500 font-medium">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {schedules.map(schedule => (
-                  <tr key={schedule.id} className="border-b border-gray-100 hover:bg-gray-50">
-                    <td className="py-3 px-4">{new Date(schedule.date).toLocaleDateString()}</td>
-                    <td className="py-3 px-4">{schedule.time}</td>
-                    <td className="py-3 px-4">{schedule.area}</td>
-                    <td className="py-3 px-4">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        schedule.type === 'General Waste' ? 'bg-gray-100 text-gray-700' :
-                        schedule.type === 'Recyclables' ? 'bg-blue-100 text-blue-700' :
-                        schedule.type === 'Organic Waste' ? 'bg-green-100 text-green-700' :
-                        schedule.type === 'Hazardous Waste' ? 'bg-red-100 text-red-700' :
-                        'bg-purple-100 text-purple-700'
-                      }`}>
-                        {schedule.type}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4">{schedule.truck}</td>
-                    <td className="py-3 px-4 text-right">
-                      <button className="text-gray-500 hover:text-gray-700 mr-2">
-                        <Edit className="w-4 h-4" />
-                      </button>
-                      <button className="text-red-500 hover:text-red-700" onClick={() => handleDeleteSchedule(schedule.id)}>
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+ 
+    {/* Scheduler Modal */}
+    {showTimeModal && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50" onClick={() => setShowTimeModal(false)}>
+        <div className="bg-white rounded-lg shadow-lg w-full max-w-5xl h-3/4 overflow-hidden" onClick={e => e.stopPropagation()}>
+          <div className="flex justify-between items-center p-4 border-b border-gray-200">
+            <h3 className="text-lg font-semibold">
+              Pickup Schedule for Week of {selectedWeekStart ? selectedWeekStart.toLocaleDateString() : ''}
+            </h3>
+            <button className="text-gray-500 hover:text-gray-700" onClick={() => setShowTimeModal(false)}>
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          
+          <div className="p-4 h-full overflow-auto">
+            {/* Scheduler Header - Days */}
+            <div className="flex border-b border-gray-200">
+              <div className="w-24 flex-shrink-0"></div> {/* Time column */}
+              {weekSchedules.map((dayInfo, index) => (
+                <div key={index} className="flex-1 text-center p-2 min-w-24">
+                  <div className="font-medium">{dayInfo.dayName}</div>
+                  <div className="text-sm text-gray-500">{dayInfo.dayNumber}</div>
+                </div>
+              ))}
+            </div>
+  
+{showMultipleSchedulesModal && (
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50" onClick={() => setShowMultipleSchedulesModal(false)}>
+    <div className="bg-white rounded-lg shadow-lg w-full max-w-md" onClick={e => e.stopPropagation()}>
+      <div className="flex justify-between items-center p-5 border-b border-gray-200">
+        <h3 className="text-lg font-semibold">Multiple Pickups</h3>
+        <button className="text-gray-500 hover:text-gray-700" onClick={() => setShowMultipleSchedulesModal(false)}>
+          <X className="w-5 h-5" />
+        </button>
+      </div>
+      <div className="p-5">
+        <div className="mb-4">
+          <h4 className="text-md font-medium mb-2">Scheduled Pickups</h4>
+          <div className="space-y-3">
+            {multipleSchedules.map((schedule, index) => (
+              <div key={index} className={`p-3 rounded border-l-4 ${getScheduleColors(schedule.status).border}`}>
+                <div className="flex justify-between">
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusClass(schedule.status)}`}>
+                    {schedule.status}
+                  </span>
+                  <div className="flex space-x-2">
+                    <button 
+                      className="text-gray-500 hover:text-gray-700" 
+                      onClick={() => {
+                        setShowMultipleSchedulesModal(false);
+                        handleEditSchedule(schedule);
+                      }}
+                    >
+                      <Edit className="w-4 h-4" />
+                    </button>
+                    <button 
+                      className="text-red-500 hover:text-red-700" 
+                      onClick={() => {
+                        handleDeleteSchedule(schedule.scheduleId);
+                        if (multipleSchedules.length <= 2) {
+                          setShowMultipleSchedulesModal(false);
+                        }
+                        setMultipleSchedules(multipleSchedules.filter(s => s.scheduleId !== schedule.scheduleId));
+                      }}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+                <div className="mt-2">
+                  <div className="text-sm">Time: {schedule.pickupTime}</div>
+                  <div className="text-sm">Location: {schedule.locationId}</div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
-        
-        {/* Calendar View */}
-        <div className="bg-white p-6 rounded-lg shadow-sm">
-          <div className="flex justify-between items-center mb-4">
-            <div className="flex items-center">
-              <div className="text-xl font-semibold mr-2">{monthNames[selectedMonth]}</div>
-              <div className="text-xl text-gray-500">{selectedYear}</div>
-            </div>
-            <div className="flex">
-              <button 
-                onClick={handlePrevMonth}
-                className="p-1 hover:bg-gray-100 rounded-md text-gray-500 hover:text-gray-700"
-              >
-                <ChevronLeft className="w-5 h-5" />
-              </button>
-              <button 
-                onClick={handleNextMonth}
-                className="p-1 hover:bg-gray-100 rounded-md text-gray-500 hover:text-gray-700 ml-1"
-              >
-                <ChevronRight className="w-5 h-5" />
-              </button>
+        <div className="flex justify-end space-x-3 pt-4">
+          <button 
+            className="px-4 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+            onClick={() => setShowMultipleSchedulesModal(false)}
+          >
+            Close
+          </button>
+          <button 
+            className="px-4 py-2 bg-green-600 rounded-md text-sm font-medium text-white hover:bg-green-700"
+            onClick={() => {
+              setShowMultipleSchedulesModal(false);
+              setShowAddScheduleModal(true);
+            }}
+          >
+            Add Another
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+            {/* Scheduler Body - Time Slots */}
+            <div className="relative">
+              {generateTimeSlots().map((timeSlot, timeIndex) => (
+                <div key={timeIndex} className="flex border-b border-gray-100">
+                  <div className="w-24 p-2 text-right text-sm text-gray-500 border-r border-gray-200 flex-shrink-0">
+                    {timeSlot.displayTime}
+                  </div>
+                  
+                  {weekSchedules.map((dayInfo, dayIndex) => {
+  const schedulesForTimeSlot = findSchedulesForTimeSlot(dayInfo, timeSlot.hour);
+  const hasMultipleSchedules = schedulesForTimeSlot.length > 1;
+  const singleSchedule = schedulesForTimeSlot[0];
+  const colors = schedulesForTimeSlot.length > 0 ? 
+    (hasMultipleSchedules ? 
+      { bg: 'bg-purple-100', border: 'border-purple-500', text: 'text-purple-700' } : 
+      getScheduleColors(singleSchedule.status)) : 
+    null;
+  
+  return (
+    <div key={dayIndex} className="flex-1 p-1 min-h-16 min-w-24 relative border-r border-gray-100">
+      {schedulesForTimeSlot.length > 0 && (
+        <div 
+          className={`absolute inset-0 m-1 ${colors.bg} border-l-4 ${colors.border} rounded p-2 cursor-pointer hover:opacity-90 transition-opacity`}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (hasMultipleSchedules) {
+              handleMultipleSchedulesView(schedulesForTimeSlot);
+            } else {
+              handleEditSchedule(singleSchedule);
+            }
+          }}
+        >
+          <div className={`text-xs font-medium ${colors.text}`}>{timeSlot.displayTime}</div>
+          <div className="text-xs text-gray-600 truncate">
+            {hasMultipleSchedules ? 
+              `${schedulesForTimeSlot.length} Pickups` : 
+              `${singleSchedule.locationId.substring(0, 8)}...`}
+          </div>
+          <div className="mt-1">
+            <span className={`px-1.5 py-0.5 rounded-full text-xs font-medium ${
+              hasMultipleSchedules ? 
+              'bg-purple-100 text-purple-700' : 
+              getStatusClass(singleSchedule.status)
+            }`}>
+              {hasMultipleSchedules ? 'Multiple' : singleSchedule.status}
+            </span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+})}
+                </div>
+              ))}
             </div>
           </div>
           
-          <div className="grid grid-cols-7 gap-1">
-            {dayNames.map(day => (
-              <div key={day} className="text-xs text-gray-500 text-center py-2">{day}</div>
-            ))}
-            {generateCalendarDays()}
+          <div className="p-4 border-t border-gray-200">
+            <div className="flex justify-between">
+              <button 
+                className="px-4 py-2 bg-green-600 rounded-md text-sm font-medium text-white hover:bg-green-700 flex items-center"
+                onClick={() => {
+                  setShowTimeModal(false);
+                  setShowAddScheduleModal(true);
+                }}
+              >
+                <Plus className="w-4 h-4 mr-1" />
+                Add Pickup
+              </button>
+              <button 
+                className="px-4 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+                onClick={() => setShowTimeModal(false)}
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       </div>
+    )}
+        {/* Calendar View */}
+        <div className="bg-white p-6 rounded-lg shadow-sm">
+    <div className="flex justify-between items-center mb-4">
+      <div className="flex items-center">
+        <div className="text-xl font-semibold mr-2">{monthNames[selectedMonth]}</div>
+        <div className="text-xl text-gray-500">{selectedYear}</div>
+      </div>
+      <div className="flex">
+        <button 
+          onClick={handlePrevMonth}
+          className="p-1 hover:bg-gray-100 rounded-md text-gray-500 hover:text-gray-700"
+        >
+          <ChevronLeft className="w-5 h-5" />
+        </button>
+        <button 
+          onClick={handleNextMonth}
+          className="p-1 hover:bg-gray-100 rounded-md text-gray-500 hover:text-gray-700 ml-1"
+        >
+          <ChevronRight className="w-5 h-5" />
+        </button>
+      </div>
+    </div>
+    
+    <div className="grid grid-cols-7 gap-1">
+      {dayNames.map(day => (
+        <div key={day} className="text-xs text-gray-500 text-center py-2 font-medium">{day}</div>
+      ))}
+      {generateCalendarDays()}
+    </div>
+        </div>
+
+        <br></br>
+         {/* Schedule List */}
+         <div className="bg-white p-6 rounded-lg shadow-sm mb-6">
+          <h2 className="text-lg font-semibold mb-4">Upcoming Collections</h2>
       
-        {/* Profile Modal */}
-        {showProfileModal && (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="text-left py-3 px-4 text-gray-500 font-medium">Schedule ID</th>
+                    <th className="text-left py-3 px-4 text-gray-500 font-medium">Location ID</th>
+                    <th className="text-left py-3 px-4 text-gray-500 font-medium">Date</th>
+                    <th className="text-left py-3 px-4 text-gray-500 font-medium">Time</th>
+                    <th className="text-left py-3 px-4 text-gray-500 font-medium">Status</th>
+                    <th className="text-right py-3 px-4 text-gray-500 font-medium">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {schedules.map(schedule => (
+                    <tr key={schedule.scheduleId} className="border-b border-gray-100 hover:bg-gray-50">
+                      <td className="py-3 px-4">{schedule.scheduleId}</td>
+                      <td className="py-3 px-4">{schedule.locationId}</td>
+                      <td className="py-3 px-4">{new Date(schedule.pickupDate).toLocaleDateString()}</td>
+                      <td className="py-3 px-4">{schedule.pickupTime}</td>
+                      <td className="py-3 px-4">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusClass(schedule.status)}`}>
+                          {schedule.status}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        <button className="text-gray-500 hover:text-gray-700 mr-2"
+                            onClick={() => handleEditSchedule(schedule)}>
+                          <Edit className="w-4 h-4" />
+                      
+                        </button>
+                        <button 
+                          className="text-red-500 hover:text-red-700" 
+                          onClick={() => handleDeleteSchedule(schedule.scheduleId)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          
+        </div>
+     
+      </div>
+       
+ {/* Edit Schedule Modal */}
+{showEditScheduleModal && (
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50" onClick={() => setShowEditScheduleModal(false)}>
+    <div className="bg-white rounded-lg shadow-lg w-full max-w-md" onClick={e => e.stopPropagation()}>
+      <div className="flex justify-between items-center p-5 border-b border-gray-200">
+        <h3 className="text-lg font-semibold">Edit Collection Schedule</h3>
+        <button className="text-gray-500 hover:text-gray-700" onClick={() => setShowEditScheduleModal(false)}>
+          <X className="w-5 h-5" />
+        </button>
+      </div>
+      <div className="p-5">
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+          <input 
+            type="date" 
+            name="pickupDate"
+            value={editingSchedule.pickupDate}
+            onChange={handleEditInputChange}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+          />
+        </div>
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Time</label>
+          <input 
+            type="text" 
+            name="pickupTime"
+            value={editingSchedule.pickupTime}
+            onChange={handleEditInputChange}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+          />
+        </div>
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+          <select 
+            name="locationId"
+            value={editingSchedule.locationId}
+            onChange={handleEditInputChange}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+          >
+            <option value="dummy-location-id">Dummy Location</option>
+            {/* Add more options as needed */}
+          </select>
+        </div>
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+          <select 
+            name="status"
+            value={editingSchedule.status}
+            onChange={handleEditInputChange}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+          >
+            <option value="PENDING">Pending</option>
+            <option value="COMPLETED">Completed</option>
+            <option value="CANCELLED">Cancelled</option>
+          </select>
+        </div>
+        <div className="flex justify-end space-x-3 pt-4">
+          <button 
+            className="px-4 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+            onClick={() => setShowEditScheduleModal(false)}
+          >
+            Cancel
+          </button>
+          <button 
+            className="px-4 py-2 bg-green-600 rounded-md text-sm font-medium text-white hover:bg-green-700"
+            onClick={handleUpdateSchedule}
+                    disabled={!editingSchedule.pickupDate || !editingSchedule.pickupTime}
+                  >
+                 Update Schedule
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+
+      {/* Add Schedule Modal */}
+{showAddScheduleModal && (
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50" onClick={() => setShowAddScheduleModal(false)}>
+    <div className="bg-white rounded-lg shadow-lg w-full max-w-md" onClick={e => e.stopPropagation()}>
+      <div className="flex justify-between items-center p-5 border-b border-gray-200">
+        <h3 className="text-lg font-semibold">Add Collection Schedule</h3>
+        <button className="text-gray-500 hover:text-gray-700" onClick={() => setShowAddScheduleModal(false)}>
+          <X className="w-5 h-5" />
+        </button>
+      </div>
+      <div className="p-5">
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+          <input 
+            type="date" 
+            name="pickupDate"
+            value={newSchedule.pickupDate}
+            onChange={handleInputChange}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+          />
+        </div>
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Time</label>
+          <input 
+            type="text" 
+            name="pickupTime"
+            value={newSchedule.pickupTime}
+            onChange={handleInputChange}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+          />
+        </div>
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+          <select 
+            name="locationId"
+            value={newSchedule.locationId}
+            onChange={handleInputChange}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+          >
+            <option value="dummy-location-id">Dummy Location</option>
+            {/* Add more options as needed */}
+          </select>
+        </div>
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+          <select 
+            name="status"
+            value={newSchedule.status}
+            onChange={handleInputChange}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+          >
+            <option value="PENDING">Pending</option>
+            <option value="COMPLETED">Completed</option>
+            <option value="CANCELLED">Cancelled</option>
+          </select>
+        </div>
+        <div className="flex justify-end space-x-3 pt-4">
+          <button 
+            className="px-4 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+            onClick={() => setShowAddScheduleModal(false)}
+          >
+            Cancel
+          </button>
+          <button 
+            className="px-4 py-2 bg-green-600 rounded-md text-sm font-medium text-white hover:bg-green-700"
+            onClick={handleAddSchedule}
+            disabled={!newSchedule.pickupDate || !newSchedule.pickupTime}
+          >
+            Add Schedule
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+        
+            {/* Profile Modal */}
+      {showProfileModal && (
         <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-50">
           <div className="bg-white rounded-lg shadow-lg w-11/12 max-w-xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex justify-between items-center p-5 border-b border-slate-200">
@@ -526,110 +1170,6 @@ const [editMode, setEditMode] = useState(false);
                   Edit Profile
                 </button>
               </div>
-            </div>
-          </div>
-        </div>
-      )}
-      
-      {/* Add Schedule Modal */}
-      {showAddScheduleModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50" onClick={() => setShowAddScheduleModal(false)}>
-          <div className="bg-white rounded-lg shadow-lg w-full max-w-md" onClick={e => e.stopPropagation()}>
-            <div className="flex justify-between items-center p-5 border-b border-gray-200">
-              <h3 className="text-lg font-semibold">Add Collection Schedule</h3>
-              <button className="text-gray-500 hover:text-gray-700" onClick={() => setShowAddScheduleModal(false)}>
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            
-            <div className="p-5">
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
-                <input 
-                  type="date" 
-                  name="date"
-                  value={newSchedule.date}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                />
-              </div>
-              
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Time</label>
-                <input 
-                  type="time" 
-                  name="time"
-                  value={newSchedule.time}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                />
-              </div>
-              
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Area</label>
-                <select 
-                  name="area"
-                  value={newSchedule.area}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                >
-                  <option value="">Select an area</option>
-                  <option value="North District">North District</option>
-                  <option value="South District">South District</option>
-                  <option value="East District">East District</option>
-                  <option value="West District">West District</option>
-                  <option value="Central District">Central District</option>
-                </select>
-              </div>
-              
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Waste Type</label>
-                <select 
-                  name="type"
-                  value={newSchedule.type}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                >
-                  <option value="General Waste">General Waste</option>
-                  <option value="Recyclables">Recyclables</option>
-                  <option value="Organic Waste">Organic Waste</option>
-                  <option value="Hazardous Waste">Hazardous Waste</option>
-                  <option value="Bulky Items">Bulky Items</option>
-                </select>
-              </div>
-              
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Truck ID</label>
-                <select 
-                  name="truck"
-                  value={newSchedule.truck}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                >
-                  <option value="">Select a truck</option>
-                  <option value="Truck-01">Truck-01</option>
-                  <option value="Truck-02">Truck-02</option>
-                  <option value="Truck-03">Truck-03</option>
-                  <option value="Truck-04">Truck-04</option>
-                  <option value="Truck-05">Truck-05</option>
-                </select>
-              </div>
-            </div>
-            
-            <div className="flex justify-end p-5 border-t border-gray-200">
-              <button 
-                className="px-4 py-2 border border-gray-200 rounded-lg mr-3 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                onClick={() => setShowAddScheduleModal(false)}
-              >
-                Cancel
-              </button>
-              <button 
-                className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700"
-                onClick={handleAddSchedule}
-                disabled={!newSchedule.date || !newSchedule.time || !newSchedule.area || !newSchedule.truck}
-              >
-                Add Schedule
-              </button>
             </div>
           </div>
         </div>

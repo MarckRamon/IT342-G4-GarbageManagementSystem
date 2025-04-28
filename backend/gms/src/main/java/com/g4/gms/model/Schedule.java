@@ -4,6 +4,7 @@ import com.google.cloud.firestore.annotation.PropertyName;
 
 public class Schedule {
     private String scheduleId;
+    private String title;
     private String pickupDate;
     private String pickupTime;
     private String locationId;
@@ -14,8 +15,9 @@ public class Schedule {
     public Schedule() {}
 
     // Constructor with all fields
-    public Schedule(String scheduleId, String pickupDate, String pickupTime, String locationId, String status, String userId) {
+    public Schedule(String scheduleId, String title, String pickupDate, String pickupTime, String locationId, String status, String userId) {
         this.scheduleId = scheduleId;
+        this.title = title;
         this.pickupDate = pickupDate;
         this.pickupTime = pickupTime;
         this.locationId = locationId;
@@ -31,6 +33,16 @@ public class Schedule {
     @PropertyName("scheduleId")
     public void setScheduleId(String scheduleId) {
         this.scheduleId = scheduleId;
+    }
+
+    @PropertyName("title")
+    public String getTitle() {
+        return title;
+    }
+
+    @PropertyName("title")
+    public void setTitle(String title) {
+        this.title = title;
     }
 
     @PropertyName("pickupDate")

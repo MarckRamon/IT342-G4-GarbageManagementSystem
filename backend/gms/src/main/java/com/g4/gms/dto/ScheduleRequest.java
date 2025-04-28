@@ -1,6 +1,7 @@
 package com.g4.gms.dto;
 
 public class ScheduleRequest {
+    private String title;
     private String pickupDate;
     private String pickupTime;
     private String locationId;
@@ -10,11 +11,20 @@ public class ScheduleRequest {
     public ScheduleRequest() {}
 
     // Constructor with all fields
-    public ScheduleRequest(String pickupDate, String pickupTime, String locationId, String status) {
+    public ScheduleRequest(String title, String pickupDate, String pickupTime, String locationId, String status) {
+        this.title = title;
         this.pickupDate = pickupDate;
         this.pickupTime = pickupTime;
         this.locationId = locationId;
         this.status = status;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
     }
 
     public String getPickupDate() {

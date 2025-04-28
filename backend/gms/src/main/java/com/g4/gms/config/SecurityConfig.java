@@ -71,9 +71,28 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.PUT, "/api/tip/**").authenticated()
                 .requestMatchers(HttpMethod.DELETE, "/api/tip/**").authenticated()
                 
+                // History endpoints - GET is public, POST needs authentication
+                .requestMatchers(HttpMethod.GET, "/api/history", "/api/history/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/history").authenticated()
+                
+                // Missed endpoints - GET is public, others need authentication
+                .requestMatchers(HttpMethod.GET, "/api/missed", "/api/missed/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/missed").authenticated()
+                .requestMatchers(HttpMethod.PUT, "/api/missed/**").authenticated()
+                .requestMatchers(HttpMethod.DELETE, "/api/missed/**").authenticated()
+                
+                // Reminder endpoints - GET is public, others need authentication
+                .requestMatchers(HttpMethod.GET, "/api/reminder", "/api/reminder/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/reminder").authenticated()
+                .requestMatchers(HttpMethod.PUT, "/api/reminder/**").authenticated()
+                .requestMatchers(HttpMethod.DELETE, "/api/reminder/**").authenticated()
+                
                 // User profile endpoints
                 .requestMatchers(HttpMethod.GET, "/api/users/{userId}/profile", "/api/users/{userId}/profile/email", "/api/users/{userId}/profile/notifications").authenticated()
                 .requestMatchers(HttpMethod.PUT, "/api/users/{userId}/profile", "/api/users/{userId}/profile/email", "/api/users/{userId}/profile/notifications").authenticated()
+                
+                // Notification endpoints - all require authentication
+                .requestMatchers(HttpMethod.POST, "/api/notifications/send", "/api/notifications/send-multicast").authenticated()
                 
                 // Example: Secure a hypothetical admin endpoint - requires ADMIN role
                 // .requestMatchers("/api/admin/**").hasRole("ADMIN") 

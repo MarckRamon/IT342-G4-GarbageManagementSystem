@@ -118,7 +118,7 @@ const MapPage = () => {
   const [pageLoaded, setPageLoaded] = useState(false);
   const [profileEmail, setProfileEmail]= useState({
     email: ""
-});
+  });
   // Profile data object
   const [profileData, setProfileData] = useState({
     name: "Loading...",
@@ -130,7 +130,7 @@ const MapPage = () => {
     department: "Field Operations",
     firstName: "",
     lastName: ""
-});
+  });
   useEffect(() => {
     // Retrieve authToken and userId from localStorage
     const authToken = localStorage.getItem('authToken');
@@ -142,91 +142,91 @@ const MapPage = () => {
 
     // Check if both values are present
     if (!authToken || !userId) {
-        console.log('Authentication information missing');
-        // For development purposes, we'll still load the dashboard
-        setIsLoading(false);
-        return;
-        // In production, you would redirect to login:
-        // setError('Authentication information missing. Please log in again.');
-        // navigate('/login');
-        // return;
+      console.log('Authentication information missing');
+      // For development purposes, we'll still load the dashboard
+      setIsLoading(false);
+      return;
+      // In production, you would redirect to login:
+      // setError('Authentication information missing. Please log in again.');
+      // navigate('/login');
+      // return;
     }
 
     // Setup axios interceptor to add auth token to all requests
     const interceptor = api.interceptors.request.use(
-        config => {
-            config.headers.Authorization = `Bearer ${authToken}`;
-            return config;
-        },
-        error => {
-            return Promise.reject(error);
-        }
+      config => {
+        config.headers.Authorization = `Bearer ${authToken}`;
+        return config;
+      },
+      error => {
+        return Promise.reject(error);
+      }
     );
     const loadUserEmail = async () =>{
       const profileEmailResponse = await fetchUserEmail(userId, authToken);
       console.log('Profile email received:', profileEmailResponse);
 
       if (profileEmailResponse && profileEmailResponse.success) {
-          setProfileEmail({
-              email: profileEmailResponse.email
-          })
+        setProfileEmail({
+          email: profileEmailResponse.email
+        })
       }
-  }
+    }
     // Fetch user profile data
     const loadUserProfile = async () => {
-        try {
-            setIsLoading(true);
-            const profileResponse = await fetchUserProfile(userId, authToken);
-            
-            console.log('Profile data received:', profileResponse);
-            
-            if (profileResponse && profileResponse.success) {
-                // Update the profileData state
-                setProfileData({
-                    ...profileData,
-                    name: `${profileResponse.firstName} ${profileResponse.lastName}`,
-                    phone: profileResponse.phoneNumber,
-                    firstName: profileResponse.firstName,
-                    lastName: profileResponse.lastName
-                });
-            } else {
-                setError('Failed to load profile data');
-            }
-            
-            setIsLoading(false);
-        } catch (err) {
-            // Handle axios specific errors
-            if (err.response) {
-                // The request was made and the server responded with a status code
-                // that falls out of the range of 2xx
-                console.error("Server error:", err.response.status, err.response.data);
-                setError(`Server error: ${err.response.status}`);
-            } else if (err.request) {
-                // The request was made but no response was received
-                console.error("Network error:", err.request);
-                setError('Network error. Please check your connection.');
-            } else {
-                // Something happened in setting up the request
-                console.error("Request configuration error:", err.message);
-                setError('Error setting up request');
-            }
-            setIsLoading(false);
+      try {
+        setIsLoading(true);
+        const profileResponse = await fetchUserProfile(userId, authToken);
+        
+        console.log('Profile data received:', profileResponse);
+        
+        if (profileResponse && profileResponse.success) {
+          // Update the profileData state
+          setProfileData({
+            ...profileData,
+            name: `${profileResponse.firstName} ${profileResponse.lastName}`,
+            phone: profileResponse.phoneNumber,
+            firstName: profileResponse.firstName,
+            lastName: profileResponse.lastName
+          });
+        } else {
+          setError('Failed to load profile data');
         }
+        
+        setIsLoading(false);
+      } catch (err) {
+        // Handle axios specific errors
+        if (err.response) {
+          // The request was made and the server responded with a status code
+          // that falls out of the range of 2xx
+          console.error("Server error:", err.response.status, err.response.data);
+          setError(`Server error: ${err.response.status}`);
+        } else if (err.request) {
+          // The request was made but no response was received
+          console.error("Network error:", err.request);
+          setError('Network error. Please check your connection.');
+        } else {
+          // Something happened in setting up the request
+          console.error("Request configuration error:", err.message);
+          setError('Error setting up request');
+        }
+        setIsLoading(false);
+      }
     };
 
     // Load profile data if auth token and user ID are available
     if (authToken && userId) {
-        loadUserProfile();
-        loadUserEmail();
+      loadUserProfile();
+      loadUserEmail();
     } else {
-        setIsLoading(false);
+      setIsLoading(false);
     }
 
     // Clean up interceptor when component unmounts
     return () => {
-        api.interceptors.request.eject(interceptor);
+      api.interceptors.request.eject(interceptor);
     };
-}, []);
+  }, []);
   // Fetch all pickup locations from API
   useEffect(() => {
     setTimeout(() => {
@@ -241,7 +241,7 @@ const MapPage = () => {
         if (response.data.success) {
           // Transform the data to match our marker format
           const transformedMarkers = response.data.locations.map(location => ({
-            id: location.id,
+            locationId: location.locationId,
             position: [location.latitude, location.longitude],
             name: location.siteName,
             wasteType: location.wasteType,
@@ -292,7 +292,7 @@ const MapPage = () => {
   const handleEditPin = (marker) => {
     setIsEditing(true);
     setIsAdding(false);
-    setEditingMarkerId(marker.id);
+    setEditingMarkerId(marker.locationId);
     setNewPin({ position: marker.position });
     setFormData({
       name: marker.name,
@@ -301,19 +301,19 @@ const MapPage = () => {
     });
   };
   
-  const handleDeletePin = async (id) => {
+  const handleDeletePin = async (locationId) => {
     try {
       setLoading(true);
       setError(null);
       
       // DELETE request needs JWT token
-      const response = await axios.delete(`${API_URL}/${id}`, {
+      const response = await axios.delete(`${API_URL}/${locationId}`, {
         headers: getAuthHeader()
       });
       
       if (response.data.success) {
         // Remove the marker from the state
-        const updatedMarkers = markers.filter(marker => marker.id !== id);
+        const updatedMarkers = markers.filter(marker => marker.locationId !== locationId);
         setMarkers(updatedMarkers);
       } else {
         setError(response.data.message || 'Failed to delete pickup location');
@@ -372,9 +372,9 @@ const MapPage = () => {
             
             // Update the marker in the state
             const updatedMarkers = markers.map(marker => 
-              marker.id === editingMarkerId 
+              marker.locationId === editingMarkerId 
                 ? {
-                    id: updatedLocation.id || editingMarkerId, // Use existing ID as fallback
+                    locationId: updatedLocation.locationId || editingMarkerId, // Use existing ID as fallback
                     position: [
                       updatedLocation.latitude || newPin.position[0],
                       updatedLocation.longitude || newPin.position[1]
@@ -402,11 +402,11 @@ const MapPage = () => {
             const newLocation = response.data.location || response.data.data || response.data;
             
             // Generate a temporary ID if none is provided by the backend
-            const newId = newLocation.id || Date.now();
+            const newId = newLocation.locationId || Date.now();
             
             // Add the new marker to the state
             const newMarker = {
-              id: newId,
+              locationId: newId,
               position: [
                 newLocation.latitude || newPin.position[0],
                 newLocation.longitude || newPin.position[1]
@@ -471,10 +471,11 @@ const MapPage = () => {
     localStorage.removeItem('authToken');
     localStorage.removeItem('userId');
     navigate('/login');
-};
-const mainContentAnimationClass = pageLoaded 
-? 'opacity-100 translate-y-0' 
-: 'opacity-0 translate-y-6';
+  };
+  
+  const mainContentAnimationClass = pageLoaded 
+    ? 'opacity-100 translate-y-0' 
+    : 'opacity-0 translate-y-6';
 
   return (
 
@@ -509,6 +510,23 @@ const mainContentAnimationClass = pageLoaded
               </Link>
             </li>
             <li className="flex items-center px-5 py-3 text-gray-500 font-medium cursor-pointer transition duration-300 hover:bg-[rgba(93,166,70,0.05)]">
+              <Link to="/missedPickup" className="flex items-center no-underline text-inherit">
+                <span className="mr-3">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <rect x="3" y="4" width="18" height="16" rx="2" ry="2"></rect>
+  <path d="M3 8h18"></path>
+  <line x1="8" y1="2" x2="8" y2="6"></line>
+  <line x1="16" y1="2" x2="16" y2="6"></line>
+  <line x1="12" y1="12" x2="12" y2="16"></line>
+  <line x1="10" y1="14" x2="14" y2="14"></line>
+  <line x1="18" y1="6" x2="6" y2="18"></line>
+  <line x1="6" y1="6" x2="18" y2="18"></line>
+</svg>
+                </span>
+                Missed Pickups
+              </Link>
+            </li>
+            <li className="flex items-center px-5 py-3 text-gray-500 font-medium cursor-pointer transition duration-300 hover:bg-[rgba(93,166,70,0.05)]">
               <Link to="/schedule" className="flex items-center no-underline text-inherit">
                 <span className="mr-3">
                   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -521,7 +539,18 @@ const mainContentAnimationClass = pageLoaded
                 Collection Schedule
               </Link>
             </li>
-            <li className="flex items-center px-5 py-3 text-[#5da646] font-medium cursor-pointer transition duration-300 bg-[rgba(93,166,70,0.08)]">
+            <li className="flex items-center px-5 py-3 text-slate-500 font-medium cursor-pointer transition-all duration-300 hover:bg-green-50/20">
+              <Link to="/history" className="flex items-center no-underline text-inherit">
+                <span className="mr-3">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12 6 12 12 16 14"></polyline>
+                  </svg>
+                </span>
+                Collection History
+              </Link>
+            </li>
+            <li className="flex items-center px-5 py-3 text-green-600 font-medium cursor-pointer transition-all duration-300 bg-green-50/30">
               <Link to="/map" className="flex items-center no-underline text-inherit">
                 <span className="mr-3">
                   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -542,6 +571,7 @@ const mainContentAnimationClass = pageLoaded
                         <div className="text-sm font-medium">{profileData.name}</div>
                         <div className="text-xs text-gray-500">{profileEmail.email}</div>
                     </div>
+
                 </div>
           
           {/* Profile Popup */}
@@ -581,7 +611,9 @@ const mainContentAnimationClass = pageLoaded
           <h1 className="text-2xl font-semibold text-gray-800">Garbage Collection Sites</h1>
 
             {(!isAdding && !isEditing) ? (
-              <button className="add-pin-btn" onClick={handleAddPin}>Add Collection Site</button>
+              <button       className="flex items-center px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+
+              onClick={handleAddPin}>Add Collection Site</button>
             ) : (
               <div className="pin-form">
                 <input
@@ -675,13 +707,11 @@ const mainContentAnimationClass = pageLoaded
                         >
                           Edit
                         </button>
-                        <button 
+                          
+                          <button 
                           className="delete-btn"
-                          onClick={() => handleDeletePin(marker.id)}
-                          disabled={loading}
-                        >
-                          {loading ? 'Deleting...' : 'Delete'}
-                        </button>
+                          onClick={() => handleDeletePin(marker.locationId)}>Delete</button>
+
                       </div>
                     </div>
                   </Popup>

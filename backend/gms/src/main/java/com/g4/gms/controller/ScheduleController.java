@@ -39,6 +39,7 @@ public class ScheduleController {
                 
                 ScheduleResponse response = new ScheduleResponse(
                     schedule.getScheduleId(),
+                    schedule.getTitle(),
                     schedule.getPickupDate(),
                     schedule.getPickupTime(),
                     schedule.getLocationId(),
@@ -77,6 +78,7 @@ public class ScheduleController {
             
             ScheduleResponse response = new ScheduleResponse(
                 schedule.getScheduleId(),
+                schedule.getTitle(),
                 schedule.getPickupDate(),
                 schedule.getPickupTime(),
                 schedule.getLocationId(),
@@ -109,6 +111,7 @@ public class ScheduleController {
             
             // Create a new Schedule object from the request
             Schedule schedule = new Schedule();
+            schedule.setTitle(request.getTitle());
             schedule.setPickupDate(request.getPickupDate());
             schedule.setPickupTime(request.getPickupTime());
             schedule.setLocationId(request.getLocationId());
@@ -121,6 +124,7 @@ public class ScheduleController {
             
             ScheduleResponse response = new ScheduleResponse(
                 createdSchedule.getScheduleId(),
+                createdSchedule.getTitle(),
                 createdSchedule.getPickupDate(),
                 createdSchedule.getPickupTime(),
                 createdSchedule.getLocationId(),
@@ -168,6 +172,7 @@ public class ScheduleController {
             }
             
             // Update the schedule with the new data
+            existingSchedule.setTitle(request.getTitle());
             existingSchedule.setPickupDate(request.getPickupDate());
             existingSchedule.setPickupTime(request.getPickupTime());
             existingSchedule.setLocationId(request.getLocationId());
@@ -179,6 +184,7 @@ public class ScheduleController {
             
             ScheduleResponse response = new ScheduleResponse(
                 updatedSchedule.getScheduleId(),
+                updatedSchedule.getTitle(),
                 updatedSchedule.getPickupDate(),
                 updatedSchedule.getPickupTime(),
                 updatedSchedule.getLocationId(),
@@ -233,15 +239,15 @@ public class ScheduleController {
             // Delete the schedule
             boolean deleted = scheduleService.deleteSchedule(scheduleId);
             
-            Map<String, Object> response = new HashMap<>();
+            Map<String, Object> responseMap = new HashMap<>();
             if (deleted) {
-                response.put("success", true);
-                response.put("message", "Schedule deleted successfully");
-                return ResponseEntity.ok(response);
+                responseMap.put("success", true);
+                responseMap.put("message", "Schedule deleted successfully");
+                return ResponseEntity.ok(responseMap);
             } else {
-                response.put("success", false);
-                response.put("message", "Failed to delete schedule");
-                return ResponseEntity.badRequest().body(response);
+                responseMap.put("success", false);
+                responseMap.put("message", "Failed to delete schedule");
+                return ResponseEntity.badRequest().body(responseMap);
             }
         } catch (IllegalArgumentException e) {
             Map<String, Object> response = new HashMap<>();
@@ -276,6 +282,7 @@ public class ScheduleController {
             for (Schedule schedule : schedules) {
                 ScheduleResponse response = new ScheduleResponse(
                     schedule.getScheduleId(),
+                    schedule.getTitle(),
                     schedule.getPickupDate(),
                     schedule.getPickupTime(),
                     schedule.getLocationId(),
