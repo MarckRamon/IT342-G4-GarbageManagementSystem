@@ -1,0 +1,13 @@
+# Build stage
+FROM maven:3.9.8-eclipse-temurin-21 AS build
+WORKDIR /app
+COPY pom.xml .
+COPY src/ ./src
+RUN mvn clean install -U
+
+# Run stage
+FROM openjdk:21-jre-slim
+COPY --from=build /app/target/GMS-0.0.1-SNAPSHOT.jar app.jar
+WORKDIR /app
+EXPOSE 8080
+CMD ["java", "-jar", "app.jar"]
