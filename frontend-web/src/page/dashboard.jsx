@@ -492,8 +492,8 @@ function VermigoDashboard() {
         <div
           key={day}
           className={`h-12 md:h-14 flex flex-col items-center justify-center rounded ${hasSchedule
-              ? 'bg-green-100 text-green-700 font-medium relative cursor-pointer hover:bg-green-200 transition-colors'
-              : ''
+            ? 'bg-green-100 text-green-700 font-medium relative cursor-pointer hover:bg-green-200 transition-colors'
+            : ''
             }`}
           onClick={() => {
             if (hasSchedule) {
