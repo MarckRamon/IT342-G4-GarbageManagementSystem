@@ -18,18 +18,24 @@ import java.io.InputStream;
 public class FirebaseConfig {
 
     @Bean
-    public FirebaseApp firebaseApp() throws IOException {
-        if (FirebaseApp.getApps().isEmpty()) {
-            InputStream serviceAccount = new ClassPathResource("serviceAccountKey.json").getInputStream();
-            
-            FirebaseOptions options = FirebaseOptions.builder()
-                    .setCredentials(GoogleCredentials.fromStream(serviceAccount))
-                    .build();
-            
-            return FirebaseApp.initializeApp(options);
-        } else {
-            return FirebaseApp.getInstance();
+    public Firestore firestore() throws IOException {
+        if (firestoreInstance == null) {
+            if (FirebaseApp.getApps().isEmpty()) {
+                String firebaseConfig = System.getenv("FIREBASE_CONFIG");
+                if (firebaseConfig == null) {
+                    throw new IOException("FIREBASE_CONFIG environment variable not set!");
+                }
+                InputStream serviceAccount = new ByteArrayInputStream(firebaseConfig.getBytes(StandardCharsets.UTF_8));
+
+                FirebaseOptions options = FirebaseOptions.builder()
+                        .setCredentials(GoogleCredentials.fromStream(serviceAccount))
+                        .build();
+
+                FirebaseApp.initializeApp(options);
+            }
+            firestoreInstance = FirestoreClient.getFirestore();
         }
+        return firestoreInstance; // Always return the same Firestore instance
     }
 
     @Bean
