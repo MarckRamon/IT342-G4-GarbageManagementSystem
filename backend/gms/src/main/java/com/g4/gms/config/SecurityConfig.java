@@ -91,6 +91,9 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/users/{userId}/profile", "/api/users/{userId}/profile/email", "/api/users/{userId}/profile/notifications").authenticated()
                 .requestMatchers(HttpMethod.PUT, "/api/users/{userId}/profile", "/api/users/{userId}/profile/email", "/api/users/{userId}/profile/notifications").authenticated()
                 
+                // Notification endpoints - all require authentication
+                .requestMatchers(HttpMethod.POST, "/api/notifications/send", "/api/notifications/send-multicast").authenticated()
+                
                 // Example: Secure a hypothetical admin endpoint - requires ADMIN role
                 // .requestMatchers("/api/admin/**").hasRole("ADMIN") 
                 

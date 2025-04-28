@@ -6,6 +6,7 @@ import com.google.firebase.FirebaseOptions;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.cloud.FirestoreClient;
 import com.google.cloud.firestore.Firestore;
+import com.google.firebase.messaging.FirebaseMessaging;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
@@ -39,5 +40,10 @@ public class FirebaseConfig {
     @Bean
     public Firestore firestore() throws IOException {
         return FirestoreClient.getFirestore(firebaseApp());
+    }
+
+    @Bean
+    public FirebaseMessaging firebaseMessaging() throws IOException {
+        return FirebaseMessaging.getInstance(firebaseApp());
     }
 } 
