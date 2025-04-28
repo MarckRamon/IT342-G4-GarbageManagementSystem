@@ -6,7 +6,7 @@ COPY src/ ./src
 RUN mvn clean install -U
 
 # Run stage
-FROM eclipse-temurin:21-jre-slim
+FROM eclipse-adoptium/temurin:21-jre-slim
 COPY --from=build /app/target/GMS-0.0.1-SNAPSHOT.jar app.jar
 WORKDIR /app
 EXPOSE 8080
