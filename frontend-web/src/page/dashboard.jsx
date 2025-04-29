@@ -3,7 +3,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recha
 import { Calendar, Clock, Home, MapPin, User, Mail, Phone, Briefcase, LogOut, ChevronLeft, ChevronRight, Plus, X, Trash2, Edit } from 'lucide-react';
 import HistoryWidget from './DashboardHistoryWidget'
 import { Link, useNavigate } from 'react-router-dom';
-const API_BASE_URL = 'http://localhost:8080/api';
+const API_BASE_URL = 'https://it342-g4-garbagemanagementsystem-kflf.onrender.com/api';
 import axios from 'axios';
 
 // Create axios instance with default config
@@ -492,8 +492,8 @@ function VermigoDashboard() {
         <div
           key={day}
           className={`h-12 md:h-14 flex flex-col items-center justify-center rounded ${hasSchedule
-              ? 'bg-green-100 text-green-700 font-medium relative cursor-pointer hover:bg-green-200 transition-colors'
-              : ''
+            ? 'bg-green-100 text-green-700 font-medium relative cursor-pointer hover:bg-green-200 transition-colors'
+            : ''
             }`}
           onClick={() => {
             if (hasSchedule) {
@@ -504,7 +504,7 @@ function VermigoDashboard() {
           }}
         >
           <span>{day}</span>
-          {hasSchedule && <span className="text-xs text-green-700 absolute -bottom-1">Pickup</span>}
+          {hasSchedule &&     <span className="text-xs absolute" style={{ bottom: '0.2rem' }}>Pickup</span>}
         </div>
       );
     }
@@ -1345,9 +1345,7 @@ function VermigoDashboard() {
                 >
                   Close
                 </button>
-                <button className="px-4 py-2 bg-green-600 rounded-md text-sm font-medium text-white hover:bg-green-700">
-                  Edit Profile
-                </button>
+         
               </div>
             </div>
           </div>

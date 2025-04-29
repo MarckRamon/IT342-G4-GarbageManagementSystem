@@ -3,7 +3,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recha
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:8080/api';
+const API_BASE_URL = 'https://it342-g4-garbagemanagementsystem-kflf.onrender.com/api';
 
 // Create axios instance with default config
 const api = axios.create({
@@ -20,7 +20,7 @@ const fetchUserProfile = async (userId, authToken) => {
     return response.data;
   } catch (error) {
     console.error('Error fetching profile:', error);
-    throw error;  
+    throw error;
   }
 };
 
@@ -60,7 +60,7 @@ const fetchComplaints = async (authToken) => {
         'Authorization': `Bearer ${authToken}`
       }
     });
-    
+
     // Transform the data to match our frontend structure
     const transformedData = response.data.map(item => ({
       id: item.feedbackId,
@@ -71,7 +71,7 @@ const fetchComplaints = async (authToken) => {
       status: item.status.toLowerCase(),
       urgency: item.urgency || 'medium'
     }));
-    
+
     return transformedData;
   } catch (error) {
     console.error('Error fetching complaints:', error);
@@ -89,7 +89,7 @@ const createComplaint = async (authToken, complaintData) => {
       userId: complaintData.userAddress,
       status: complaintData.status.toUpperCase()
     };
-    
+
     const response = await api.post('/feedback', transformedData, {
       headers: {
         'Authorization': `Bearer ${authToken}`
@@ -113,7 +113,7 @@ const updateComplaint = async (authToken, complaintId, complaintData) => {
       userId: complaintData.userAddress,
       status: complaintData.status.toUpperCase()
     };
-    
+
     const response = await api.put(`/feedback/${complaintId}`, transformedData, {
       headers: {
         'Authorization': `Bearer ${authToken}`
@@ -177,7 +177,7 @@ function VermigoComplaints() {
     setTimeout(() => {
       setPageLoaded(true);
     }, 100);
-    
+
     // Retrieve authToken and userId from localStorage
     const authToken = localStorage.getItem('authToken');
     const userId = localStorage.getItem('userId');
@@ -191,7 +191,7 @@ function VermigoComplaints() {
       console.log('Authentication information missing');
       // For development purposes, we'll still load the dashboard
       setIsLoading(false);
-      
+
       // Load sample data for development
       loadSampleData();
       return;
@@ -216,7 +216,7 @@ function VermigoComplaints() {
       try {
         const profileEmailResponse = await fetchUserEmail(userId, authToken);
         console.log('Profile email received:', profileEmailResponse);
-    
+
         if (profileEmailResponse && profileEmailResponse.success) {
           setProfileEmail({
             email: profileEmailResponse.email
@@ -226,14 +226,14 @@ function VermigoComplaints() {
         console.error('Error loading user email:', err);
       }
     };
-    
+
     const loadUserProfile = async () => {
       try {
         setIsLoading(true);
         const profileResponse = await fetchUserProfile(userId, authToken);
-        
+
         console.log('Profile data received:', profileResponse);
-        
+
         if (profileResponse && profileResponse.success) {
           // Update the profileData state
           setProfileData({
@@ -260,36 +260,36 @@ function VermigoComplaints() {
         }
       }
     };
-    
+
     const loadComplaints = async () => {
       try {
         const complaintsData = await fetchComplaints(authToken);
         setComplaints(complaintsData);
-        
+
         // Calculate stats
         const total = complaintsData.length;
         const pending = complaintsData.filter(c => c.status === 'pending').length;
         const inProgress = complaintsData.filter(c => c.status === 'in-progress').length;
         const resolved = complaintsData.filter(c => c.status === 'resolved').length;
-        
+
         setStats({
           total,
           pending,
           inProgress,
           resolved
         });
-        
+
       } catch (err) {
         console.error("Error loading complaints:", err);
         setError('Failed to load complaints');
-        
+
         // Load sample data for development
         loadSampleData();
       } finally {
         setIsLoading(false);
       }
     };
-    
+
     // Load data if auth token and user ID are available
     if (authToken && userId) {
       loadUserProfile();
@@ -306,7 +306,7 @@ function VermigoComplaints() {
       api.interceptors.request.eject(interceptor);
     };
   }, []);
-  
+
   // Load sample data for development
   const loadSampleData = () => {
     // Sample complaints data based on the provided JSON
@@ -339,32 +339,32 @@ function VermigoComplaints() {
         urgency: "low"
       }
     ];
-    
+
     setComplaints(sampleComplaints);
-    
+
     // Calculate stats
     const total = sampleComplaints.length;
     const pending = sampleComplaints.filter(c => c.status === 'pending').length;
     const inProgress = sampleComplaints.filter(c => c.status === 'in-progress').length;
     const resolved = sampleComplaints.filter(c => c.status === 'resolved').length;
-    
+
     setStats({
       total,
       pending,
       inProgress,
       resolved
     });
-    
+
     setIsLoading(false);
   };
-  
+
   const handleLogout = () => {
     // Here you would normally clear authentication tokens, etc.
     localStorage.removeItem('authToken');
     localStorage.removeItem('userId');
     navigate('/login');
   };
-  
+
   const toggleProfilePopup = () => {
     setShowProfilePopup(!showProfilePopup);
   };
@@ -378,15 +378,15 @@ function VermigoComplaints() {
       lastName: profileData.lastName,
       phoneNumber: profileData.phone
     });
-    
+
     // Reset edit mode
     setEditMode(false);
   };
-  
+
   const [profileEmail, setProfileEmail] = useState({
     email: ""
   });
-  
+
   const [profileData, setProfileData] = useState({
     name: "Loading...",
     email: "loading@example.com",
@@ -398,11 +398,11 @@ function VermigoComplaints() {
     firstName: "",
     lastName: ""
   });
-  
+
   // Generate complaint statistics based on categories
   const generateComplaintStatistics = () => {
     const categories = {};
-    
+
     // Count complaints by subject/title (as categories)
     complaints.forEach(complaint => {
       const category = complaint.subject;
@@ -412,37 +412,37 @@ function VermigoComplaints() {
         categories[category]++;
       }
     });
-    
+
     // Convert to array format for chart
     return Object.keys(categories).map(key => ({
       name: key,
       count: categories[key]
     }));
   };
-  
+
   const complaintsChartData = generateComplaintStatistics();
-  
+
   const filterComplaints = () => {
     let filteredData = complaints;
-    
+
     // Filter by tab/status
     if (activeTab !== 'all') {
       filteredData = filteredData.filter(c => c.status === activeTab);
     }
-    
+
     // Filter by search query
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      filteredData = filteredData.filter(c => 
-        c.subject.toLowerCase().includes(query) || 
+      filteredData = filteredData.filter(c =>
+        c.subject.toLowerCase().includes(query) ||
         c.message.toLowerCase().includes(query) ||
         c.user.toLowerCase().includes(query)
       );
     }
-    
+
     return filteredData;
   };
-  
+
   const getStatusBadgeClass = (status) => {
     switch (status) {
       case 'pending':
@@ -455,45 +455,45 @@ function VermigoComplaints() {
         return 'bg-gray-100 text-gray-800';
     }
   };
-  
+
   const handleComplaintClick = (complaint) => {
     setSelectedComplaint(complaint);
   };
-  
+
   const handleCloseComplaintDetail = () => {
     setSelectedComplaint(null);
     setResponseText('');
   };
-  
+
   const handleStatusChange = async (e) => {
     const newStatus = e.target.value;
-    
+
     if (selectedComplaint) {
       const updatedComplaint = {
         ...selectedComplaint,
         status: newStatus
       };
-      
+
       setSelectedComplaint(updatedComplaint);
-      
+
       // Get auth token
       const authToken = localStorage.getItem('authToken');
-      
+
       try {
         // Update in backend
         await updateComplaint(authToken, updatedComplaint.id, updatedComplaint);
-        
+
         // Update in local state
-        setComplaints(prev => 
+        setComplaints(prev =>
           prev.map(c => c.id === updatedComplaint.id ? updatedComplaint : c)
         );
-        
+
         // Update stats
         const total = complaints.length;
         const pending = complaints.filter(c => c.id !== updatedComplaint.id && c.status === 'pending').length + (newStatus === 'pending' ? 1 : 0);
         const inProgress = complaints.filter(c => c.id !== updatedComplaint.id && c.status === 'in-progress').length + (newStatus === 'in-progress' ? 1 : 0);
         const resolved = complaints.filter(c => c.id !== updatedComplaint.id && c.status === 'resolved').length + (newStatus === 'resolved' ? 1 : 0);
-        
+
         setStats({
           total,
           pending,
@@ -509,11 +509,11 @@ function VermigoComplaints() {
       }
     }
   };
-  
+
   const handleSearchChange = (e) => {
     setSearchQuery(e.target.value);
   };
-  
+
   const handleNewComplaintChange = (e) => {
     const { name, value } = e.target;
     setNewComplaint(prev => ({
@@ -521,29 +521,29 @@ function VermigoComplaints() {
       [name]: value
     }));
   };
-  
+
   const handleAddComplaint = async () => {
     // Get auth token and user ID
     const authToken = localStorage.getItem('authToken');
     const userId = localStorage.getItem('userId');
-    
+
     const complaintData = {
       ...newComplaint,
       user: profileEmail.email || 'user@example.com',
       userAddress: userId || 'user-id',
     };
-    
+
     try {
       const response = await createComplaint(authToken, complaintData);
-      
+
       // Add the new complaint to the list with the generated ID
       const newComplaintWithId = {
         ...complaintData,
         id: response.feedbackId || `temp-${Date.now()}`
       };
-      
+
       setComplaints(prev => [newComplaintWithId, ...prev]);
-      
+
       // Update stats
       setStats(prev => ({
         ...prev,
@@ -552,7 +552,7 @@ function VermigoComplaints() {
         inProgress: complaintData.status === 'in-progress' ? prev.inProgress + 1 : prev.inProgress,
         resolved: complaintData.status === 'resolved' ? prev.resolved + 1 : prev.resolved
       }));
-      
+
       // Close modal and reset form
       setShowNewComplaintModal(false);
       setNewComplaint({
@@ -569,9 +569,9 @@ function VermigoComplaints() {
         ...complaintData,
         id: tempId
       };
-      
+
       setComplaints(prev => [newComplaintWithId, ...prev]);
-      
+
       // Update stats
       setStats(prev => ({
         ...prev,
@@ -580,7 +580,7 @@ function VermigoComplaints() {
         inProgress: complaintData.status === 'in-progress' ? prev.inProgress + 1 : prev.inProgress,
         resolved: complaintData.status === 'resolved' ? prev.resolved + 1 : prev.resolved
       }));
-      
+
       // Close modal and reset form
       setShowNewComplaintModal(false);
       setNewComplaint({
@@ -591,20 +591,20 @@ function VermigoComplaints() {
       });
     }
   };
-  
+
   const handleDeleteComplaint = async () => {
     if (!selectedComplaint) return;
-  
+
     // Get auth token
     const authToken = localStorage.getItem('authToken');
-  
+
     try {
       // Delete from backend
       await deleteComplaint(authToken, selectedComplaint.id);
-  
+
       // Update local state
       setComplaints(prev => prev.filter(c => c.id !== selectedComplaint.id));
-  
+
       // Update stats
       setStats(prev => ({
         ...prev,
@@ -613,7 +613,7 @@ function VermigoComplaints() {
         inProgress: selectedComplaint.status === 'in-progress' ? prev.inProgress - 1 : prev.inProgress,
         resolved: selectedComplaint.status === 'resolved' ? prev.resolved - 1 : prev.resolved
       }));
-  
+
       // Close modal
       setSelectedComplaint(null);
     } catch (err) {
@@ -623,17 +623,17 @@ function VermigoComplaints() {
   };
 
   // CSS for animations
-  const mainContentAnimationClass = pageLoaded 
-    ? 'opacity-100 translate-y-0' 
+  const mainContentAnimationClass = pageLoaded
+    ? 'opacity-100 translate-y-0'
     : 'opacity-0 translate-y-6';
 
   return (
     <div className="flex min-h-screen bg-gray-50">
-    {/* Sidebar */}
-    <div className="fixed w-60 h-full bg-white border-r border-gray-200 shadow-sm z-0">
-      <div className="p-5 border-b border-gray-200">
-        <div className="text-2xl font-bold text-[#5da646]">Vermigo Admin</div>
-      </div>
+      {/* Sidebar */}
+      <div className="fixed w-60 h-full bg-white border-r border-gray-200 shadow-sm z-0">
+        <div className="p-5 border-b border-gray-200">
+          <div className="text-2xl font-bold text-[#5da646]">Vermigo Admin</div>
+        </div>
         <div className="py-5">
           <ul className="list-none">
             <li className="flex items-center px-5 py-3 text-slate-500 font-medium cursor-pointer transition-all duration-300 hover:bg-green-50/20">
@@ -660,16 +660,16 @@ function VermigoComplaints() {
             <li className="flex items-center px-5 py-3 text-gray-500 font-medium cursor-pointer transition duration-300 hover:bg-[rgba(93,166,70,0.05)]">
               <Link to="/missedPickup" className="flex items-center no-underline text-inherit">
                 <span className="mr-3">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-  <rect x="3" y="4" width="18" height="16" rx="2" ry="2"></rect>
-  <path d="M3 8h18"></path>
-  <line x1="8" y1="2" x2="8" y2="6"></line>
-  <line x1="16" y1="2" x2="16" y2="6"></line>
-  <line x1="12" y1="12" x2="12" y2="16"></line>
-  <line x1="10" y1="14" x2="14" y2="14"></line>
-  <line x1="18" y1="6" x2="6" y2="18"></line>
-  <line x1="6" y1="6" x2="18" y2="18"></line>
-</svg>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="4" width="18" height="16" rx="2" ry="2"></rect>
+                    <path d="M3 8h18"></path>
+                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                    <line x1="12" y1="12" x2="12" y2="16"></line>
+                    <line x1="10" y1="14" x2="14" y2="14"></line>
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                  </svg>
                 </span>
                 Missed Pickups
               </Link>
@@ -722,7 +722,7 @@ function VermigoComplaints() {
               <div className="text-xs text-gray-500">{profileEmail.email}</div>
             </div>
           </div>
-          
+
           {/* Profile Popup */}
           {showProfilePopup && (
             <div className="absolute bottom-16 left-2.5 w-56 bg-white shadow-md rounded-lg z-10 border border-slate-200 overflow-hidden">
@@ -750,34 +750,27 @@ function VermigoComplaints() {
           )}
         </div>
       </div>
-  
+
       {/* Main Content with animation */}
       <div className={`flex-1 p-3 ml-60 transition-all duration-700 ease-out ${mainContentAnimationClass}`}>
         {/* Header */}
         <div className="flex justify-between items-center mb-6 pb-4 border-b border-slate-200">
           <h1 className="text-2xl font-semibold">Complaints Management</h1>
           <div className="flex space-x-2">
-            <button className="py-2 px-4 bg-white border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50 transition-all duration-200 flex items-center">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                <polyline points="17 8 12 3 7 8"></polyline>
-                <line x1="12" y1="3" x2="12" y2="15"></line>
-              </svg>
-              Export
-            </button>
-            <button 
-      className="flex items-center px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
-      onClick={() => setShowNewComplaintModal(true)}
+
+            <button
+              className="flex items-center px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+              onClick={() => setShowNewComplaintModal(true)}
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
                 <line x1="12" y1="5" x2="12" y2="19"></line>
                 <line x1="5" y1="12" x2="19" y2="12"></line>
               </svg>
               Add Complaint
-              </button>
+            </button>
           </div>
         </div>
-        
+
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-100">
@@ -838,11 +831,11 @@ function VermigoComplaints() {
             </div>
           </div>
         </div>
-        
+
         {/* Main Content - Split Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Complaints List and Chart Section */}
-          
+
           <div className="col-span-2">
             {/* Filters and Search */}
             {/* Complaints Chart */}
@@ -862,25 +855,25 @@ function VermigoComplaints() {
             <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-100 mb-4">
               <div className="flex flex-col md:flex-row md:justify-between md:items-center">
                 <div className="flex space-x-2 mb-3 md:mb-0">
-                  <button 
+                  <button
                     className={`px-3 py-1.5 text-sm font-medium rounded-md ${activeTab === 'all' ? 'bg-green-50 text-green-700' : 'bg-white text-slate-700'}`}
                     onClick={() => setActiveTab('all')}
                   >
                     All
                   </button>
-                  <button 
+                  <button
                     className={`px-3 py-1.5 text-sm font-medium rounded-md ${activeTab === 'pending' ? 'bg-yellow-50 text-yellow-700' : 'bg-white text-slate-700'}`}
                     onClick={() => setActiveTab('pending')}
                   >
                     Pending
                   </button>
-                  <button 
+                  <button
                     className={`px-3 py-1.5 text-sm font-medium rounded-md ${activeTab === 'in-progress' ? 'bg-blue-50 text-blue-700' : 'bg-white text-slate-700'}`}
                     onClick={() => setActiveTab('in-progress')}
                   >
                     In Progress
                   </button>
-                  <button 
+                  <button
                     className={`px-3 py-1.5 text-sm font-medium rounded-md ${activeTab === 'resolved' ? 'bg-green-50 text-green-700' : 'bg-white text-slate-700'}`}
                     onClick={() => setActiveTab('resolved')}
                   >
@@ -888,9 +881,9 @@ function VermigoComplaints() {
                   </button>
                 </div>
                 <div className="relative">
-                  <input 
-                    type="text" 
-                    placeholder="Search complaints..." 
+                  <input
+                    type="text"
+                    placeholder="Search complaints..."
                     className="pl-9 pr-4 py-2 border border-slate-200 rounded-md w-full md:w-64 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                     value={searchQuery}
                     onChange={handleSearchChange}
@@ -902,13 +895,13 @@ function VermigoComplaints() {
                 </div>
               </div>
             </div>
-            
+
             {/* Complaints List */}
             <div className="bg-white rounded-lg shadow-sm border border-slate-100 overflow-hidden">
               <div className="p-4 border-b border-slate-100">
                 <h2 className="text-lg font-semibold">Recent Complaints</h2>
               </div>
-              
+
               {isLoading ? (
                 <div className="flex justify-center items-center p-12">
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-700"></div>
@@ -919,7 +912,7 @@ function VermigoComplaints() {
                     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
                   </svg>
                   <p className="mt-4 text-slate-500">No complaints found</p>
-                  <button 
+                  <button
                     className="mt-3 px-4 py-2 bg-green-50 text-green-700 rounded-md text-sm font-medium"
                     onClick={() => setShowNewComplaintModal(true)}
                   >
@@ -929,8 +922,8 @@ function VermigoComplaints() {
               ) : (
                 <ul className="divide-y divide-slate-100">
                   {filterComplaints().map((complaint) => (
-                    <li 
-                      key={complaint.id} 
+                    <li
+                      key={complaint.id}
                       className="p-4 transition-colors duration-200 hover:bg-slate-50 cursor-pointer"
                       onClick={() => handleComplaintClick(complaint)}
                     >
@@ -971,17 +964,17 @@ function VermigoComplaints() {
                 </ul>
               )}
             </div>
-            
-            
+
+
           </div>
-      
+
           {/* Stats and Detail View */}
           <div className="col-span-1">
             {selectedComplaint ? (
               <div className="bg-white rounded-lg shadow-sm border border-slate-100 overflow-hidden sticky top-4">
                 <div className="p-4 border-b border-slate-100 flex justify-between items-center">
                   <h2 className="text-lg font-semibold">Complaint Details</h2>
-                  <button 
+                  <button
                     className="text-slate-400 hover:text-slate-600"
                     onClick={handleCloseComplaintDetail}
                   >
@@ -994,7 +987,7 @@ function VermigoComplaints() {
                 <div className="p-4">
                   <div className="mb-4">
                     <label className="block text-sm font-medium text-slate-700 mb-1">Status</label>
-                    <select 
+                    <select
                       className="w-full p-2 border border-slate-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                       value={selectedComplaint.status}
                       onChange={handleStatusChange}
@@ -1023,19 +1016,29 @@ function VermigoComplaints() {
                     </div>
                   </div>
                   <div className="mb-4">
+                    <label className="block text-sm font-medium text-slate-700 mb-1">User ID</label>
+                    <div className="p-2 bg-slate-50 rounded-md text-slate-800">
+                      {selectedComplaint.userAddress}
+                    </div>
+                  </div>
+                  {/*
+                  <div className="mb-4">
                     <label className="block text-sm font-medium text-slate-700 mb-1">Response</label>
-                    <textarea 
+                    <textarea
                       className="w-full p-2 border border-slate-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent h-24"
                       placeholder="Enter your response..."
                       value={responseText}
                       onChange={(e) => setResponseText(e.target.value)}
                     ></textarea>
-                  </div>
+                  </div>*/}
                   <div className="flex space-x-2">
-                    <button className="flex-1 py-2 px-4 bg-green-600 rounded-md text-sm font-medium text-white hover:bg-green-700 transition-all duration-200">
-                      Send Response
+                    <button
+                      className="flex-1 py-2 px-4 bg-green-600 rounded-md text-sm font-medium text-white hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-all duration-200"
+                      disabled
+                    >
+
                     </button>
-                    <button 
+                    <button
                       className="py-2 px-4 bg-red-50 text-red-700 rounded-md text-sm font-medium hover:bg-red-100 transition-all duration-200"
                       onClick={handleDeleteComplaint}
                     >
@@ -1053,11 +1056,11 @@ function VermigoComplaints() {
                   <div className="mb-4">
                     <div className="flex justify-between mb-1">
                       <span className="text-sm text-slate-700">Pending</span>
-                     
+
                     </div>
                     <div className="w-full bg-slate-100 rounded-full h-2">
-                      <div 
-                        className="bg-yellow-500 h-2 rounded-full" 
+                      <div
+                        className="bg-yellow-500 h-2 rounded-full"
                         style={{ width: `${stats.total > 0 ? (stats.pending / stats.total) * 100 : 0}%` }}
                       ></div>
                     </div>
@@ -1065,11 +1068,11 @@ function VermigoComplaints() {
                   <div className="mb-4">
                     <div className="flex justify-between mb-1">
                       <span className="text-sm text-slate-700">In Progress</span>
-                     
+
                     </div>
                     <div className="w-full bg-slate-100 rounded-full h-2">
-                      <div 
-                        className="bg-blue-500 h-2 rounded-full" 
+                      <div
+                        className="bg-blue-500 h-2 rounded-full"
                         style={{ width: `${stats.total > 0 ? (stats.inProgress / stats.total) * 100 : 0}%` }}
                       ></div>
                     </div>
@@ -1077,11 +1080,11 @@ function VermigoComplaints() {
                   <div className="mb-4">
                     <div className="flex justify-between mb-1">
                       <span className="text-sm text-slate-700">Resolved</span>
-                
+
                     </div>
                     <div className="w-full bg-slate-100 rounded-full h-2">
-                      <div 
-                        className="bg-green-500 h-2 rounded-full" 
+                      <div
+                        className="bg-green-500 h-2 rounded-full"
                         style={{ width: `${stats.total > 0 ? (stats.resolved / stats.total) * 100 : 0}%` }}
                       ></div>
                     </div>
@@ -1098,87 +1101,87 @@ function VermigoComplaints() {
             )}
           </div>
         </div>
-        
-        </div>
-             {/* Add New Complaint Modal */}
-             {showNewComplaintModal && (
-    <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-10">
-        <div className="bg-white rounded-lg shadow-lg w-11/12 max-w-xl" onClick={(e) => e.stopPropagation()}>
+
+      </div>
+      {/* Add New Complaint Modal */}
+      {showNewComplaintModal && (
+        <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-10">
+          <div className="bg-white rounded-lg shadow-lg w-11/12 max-w-xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex justify-between items-center p-5 border-b border-slate-200">
-                <h3 className="text-lg font-semibold">Add New Complaint</h3>
-                <button 
-                  className="text-slate-400 hover:text-slate-600"
+              <h3 className="text-lg font-semibold">Add New Complaint</h3>
+              <button
+                className="text-slate-400 hover:text-slate-600"
+                onClick={() => setShowNewComplaintModal(false)}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            </div>
+            <div className="p-4">
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-slate-700 mb-1">Subject</label>
+                <input
+                  type="text"
+                  name="subject"
+                  placeholder="Enter complaint subject"
+                  className="w-full p-2 border border-slate-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  value={newComplaint.subject}
+                  onChange={handleNewComplaintChange}
+                />
+              </div>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
+                <textarea
+                  name="message"
+                  placeholder="Enter complaint description"
+                  className="w-full p-2 border border-slate-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent h-32"
+                  value={newComplaint.message}
+                  onChange={handleNewComplaintChange}
+                ></textarea>
+              </div>
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Status</label>
+                  <select
+                    name="status"
+                    className="w-full p-2 border border-slate-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    value={newComplaint.status}
+                    onChange={handleNewComplaintChange}
+                  >
+                    <option value="pending">Pending</option>
+                    <option value="in-progress">In Progress</option>
+                    <option value="resolved">Resolved</option>
+                  </select>
+                </div>
+
+              </div>
+              <div className="flex space-x-2">
+                <button
+                  className="flex-1 py-2 px-4 bg-slate-100 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-200 transition-all duration-200"
                   onClick={() => setShowNewComplaintModal(false)}
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                    <line x1="6" y1="6" x2="18" y2="18"></line>
-                  </svg>
+                  Cancel
                 </button>
-              </div>
-              <div className="p-4">
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Subject</label>
-                  <input 
-                    type="text" 
-                    name="subject"
-                    placeholder="Enter complaint subject"
-                    className="w-full p-2 border border-slate-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                    value={newComplaint.subject}
-                    onChange={handleNewComplaintChange}
-                  />
-                </div>
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
-                  <textarea 
-                    name="message"
-                    placeholder="Enter complaint description"
-                    className="w-full p-2 border border-slate-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent h-32"
-                    value={newComplaint.message}
-                    onChange={handleNewComplaintChange}
-                  ></textarea>
-                </div>
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Status</label>
-                    <select 
-                      name="status"
-                      className="w-full p-2 border border-slate-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                      value={newComplaint.status}
-                      onChange={handleNewComplaintChange}
-                    >
-                      <option value="pending">Pending</option>
-                      <option value="in-progress">In Progress</option>
-                      <option value="resolved">Resolved</option>
-                    </select>
-                  </div>
-                 
-                </div>
-                <div className="flex space-x-2">
-                  <button 
-                    className="flex-1 py-2 px-4 bg-slate-100 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-200 transition-all duration-200"
-                    onClick={() => setShowNewComplaintModal(false)}
-                  >
-                    Cancel
-                  </button>
-                  <button 
-      className="flex items-center px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
-      onClick={handleAddComplaint}
-                  >
-                    Add Complaint
-                  </button>
-                </div>
+                <button
+                  className="flex items-center px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+                  onClick={handleAddComplaint}
+                >
+                  Add Complaint
+                </button>
               </div>
             </div>
           </div>
-        )}
-        {/* Profile Modal */}
-        {showProfileModal && (
+        </div>
+      )}
+      {/* Profile Modal */}
+      {showProfileModal && (
         <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-50">
           <div className="bg-white rounded-lg shadow-lg w-11/12 max-w-xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex justify-between items-center p-5 border-b border-slate-200">
               <h3 className="text-xl font-semibold">Profile</h3>
-              <button 
+              <button
                 className="bg-transparent border-none cursor-pointer flex items-center justify-center p-2 rounded text-slate-500 hover:bg-slate-100 hover:text-slate-800"
                 onClick={() => setShowProfileModal(false)}
               >
@@ -1188,7 +1191,7 @@ function VermigoComplaints() {
                 </svg>
               </button>
             </div>
-            
+
             <div className="p-5">
               <div className="flex items-center mb-6">
                 <div className="w-20 h-20 rounded-full bg-slate-100 flex items-center justify-center text-slate-800 font-medium text-2xl mr-5">
@@ -1200,7 +1203,7 @@ function VermigoComplaints() {
                   <div className="text-xs text-slate-400 mt-1">Member since {profileData.joinDate}</div>
                 </div>
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 <div>
                   <div className="text-xs text-slate-500 mb-1">Email</div>
@@ -1219,24 +1222,22 @@ function VermigoComplaints() {
                   <div className="text-sm">{profileData.address}</div>
                 </div>
               </div>
-              
+
               <div className="flex justify-end space-x-3 pt-4 border-t border-slate-200">
-                <button 
+                <button
                   className="px-4 py-2 bg-white border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50"
                   onClick={() => setShowProfileModal(false)}
                 >
                   Close
                 </button>
-                <button className="px-4 py-2 bg-green-600 rounded-md text-sm font-medium text-white hover:bg-green-700">
-                  Edit Profile
-                </button>
+             
               </div>
             </div>
           </div>
         </div>
       )}
 
- 
+
     </div>
   );
 }
