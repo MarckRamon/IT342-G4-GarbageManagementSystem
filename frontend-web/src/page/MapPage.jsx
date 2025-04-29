@@ -6,7 +6,7 @@ import axios from 'axios';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import '../styles/MapPage.css';
-const API_BASE_URL = 'http://localhost:8080/api';
+const API_BASE_URL = 'https://it342-g4-garbagemanagementsystem-kflf.onrender.com/api';
 
 
 // Create axios instance with default config
@@ -63,7 +63,7 @@ L.Icon.Default.mergeOptions({
 });
 
 // Backend API URL
-const API_URL = 'http://localhost:8080/api/pickup-locations';
+const API_URL = 'https://it342-g4-garbagemanagementsystem-kflf.onrender.com/api/pickup-locations';
 
 // Helper function to get auth token
 const getAuthHeader = () => {

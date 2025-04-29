@@ -3,7 +3,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recha
 import { Calendar, Clock, Home, MapPin, User, Mail, Phone, Briefcase, LogOut, ChevronLeft, ChevronRight, Plus, X, Trash2, Edit } from 'lucide-react';
 import HistoryWidget from './DashboardHistoryWidget'
 import { Link, useNavigate } from 'react-router-dom';
-const API_BASE_URL = 'http://localhost:8080/api';
+const API_BASE_URL = 'https://it342-g4-garbagemanagementsystem-kflf.onrender.com/api';
 import axios from 'axios';
 
 // Create axios instance with default config

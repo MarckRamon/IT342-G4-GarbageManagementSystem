@@ -33,7 +33,7 @@
       setIsLoading(true);
 
       try {
-          const response = await axios.post('http://localhost:8080/api/auth/login', {
+          const response = await axios.post('https://it342-g4-garbagemanagementsystem-kflf.onrender.com/api/auth/login', {
               email,
               password
           });
