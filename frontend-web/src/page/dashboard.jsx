@@ -975,28 +975,7 @@ function VermigoDashboard() {
                             <MapPin className="w-4 h-4 mr-1" />
                             <span>Location ID: {schedule.locationId}</span>
                           </div>
-                          <div className="mt-3 flex justify-end space-x-2">
-                            <button
-                              className="p-1 text-gray-500 hover:text-gray-700"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleEditSchedule(schedule);
-                                setShowTimeModal(false);
-                              }}
-                            >
-                              <Edit className="w-4 h-4" />
-                            </button>
-                            <button
-                              className="p-1 text-red-500 hover:text-red-700"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteSchedule(schedule.scheduleId);
-                                setShowTimeModal(false);
-                              }}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
+                        
                         </div>
                       ))}
                     </div>

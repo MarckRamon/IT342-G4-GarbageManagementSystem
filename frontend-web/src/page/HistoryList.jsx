@@ -65,6 +65,18 @@ const fetchSchedules = async () => {
 };
 
 const HistoryPage = () => {
+  
+// Add these state variables to the existing state declarations in HistoryPage component
+const [filters, setFilters] = useState({
+  dateFrom: '',
+  dateTo: '',
+  locationId: '',
+  scheduleId: '',
+  status: '' // Assuming history records might have a status field
+});
+const [filteredHistoryRecords, setFilteredHistoryRecords] = useState([]);
+const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
+const [showFilters, setShowFilters] = useState(false);
   const [locations, setLocations] = useState([]);
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
   const [showScheduleModal, setShowScheduleModal] = useState(false);
@@ -563,6 +575,72 @@ const HistoryPage = () => {
       </div>
     );
   };
+
+  useEffect(() => {
+    // If no filters are active, show all records
+    if (!filters.dateFrom && !filters.dateTo && !filters.locationId && !filters.scheduleId && !filters.status) {
+      setFilteredHistoryRecords(historyRecords);
+      return;
+    }
+  
+    // Apply filters
+    const filtered = historyRecords.filter(record => {
+      // Date filtering
+      if (filters.dateFrom || filters.dateTo) {
+        const recordDate = new Date(record.collectionDate);
+        const fromDate = filters.dateFrom ? new Date(filters.dateFrom) : new Date(0);
+        const toDate = filters.dateTo ? new Date(filters.dateTo) : new Date(8640000000000000); // Max date
+        
+        if (recordDate < fromDate || recordDate > toDate) {
+          return false;
+        }
+      }
+  
+      // Schedule filtering
+      if (filters.scheduleId && record.scheduleId !== filters.scheduleId) {
+        return false;
+      }
+  
+      // Location filtering - assuming schedules are linked to locations
+      if (filters.locationId && schedules.find(s => s.scheduleId === record.scheduleId)?.locationId !== filters.locationId) {
+        return false;
+      }
+  
+      // Status filtering
+      if (filters.status && record.status !== filters.status) {
+        return false;
+      }
+  
+      return true;
+    });
+  
+    setFilteredHistoryRecords(filtered);
+  }, [historyRecords, filters, schedules]);
+  
+  // Add this handler to update filter state
+  const handleFilterChange = (e) => {
+    const { name, value } = e.target;
+    setFilters({
+      ...filters,
+      [name]: value
+    });
+  };
+  
+  // Add this handler to clear all filters
+  const clearFilters = () => {
+    setFilters({
+      dateFrom: '',
+      dateTo: '',
+      locationId: '',
+      scheduleId: '',
+      status: ''
+    });
+  };
+  
+  // Add this function to toggle the filter panel
+  const toggleFilters = () => {
+    setShowFilters(!showFilters);
+  };
   return (
     <div className="flex min-h-screen bg-gray-50">
       {/* Sidebar */}
@@ -691,22 +769,162 @@ const HistoryPage = () => {
       <div className={`flex-1 ml-60 p-6 transition-all duration-700 ease-out ${mainContentAnimationClass}`}>
         <div className="bg-white rounded-lg shadow-sm p-6">
           {/* Header with Actions */}
+          {/* Filter panel */}
+{showFilters && (
+  <div className="bg-white p-4 mb-6 rounded-lg border border-gray-200 shadow-sm">
+    <div className="flex items-center justify-between mb-4">
+      <h3 className="text-lg font-medium text-gray-800">Filter History Records</h3>
+      <button
+        onClick={clearFilters}
+        className="text-sm text-gray-500 hover:text-gray-700"
+      >
+        Clear all filters
+      </button>
+    </div>
+    
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* Date range filters */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">From Date</label>
+        <input
+          type="date"
+          name="dateFrom"
+          value={filters.dateFrom}
+          onChange={handleFilterChange}
+          className="w-full px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-1 focus:ring-[#5da646] focus:border-[#5da646]"
+        />
+      </div>
+      
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">To Date</label>
+        <input
+          type="date"
+          name="dateTo"
+          value={filters.dateTo}
+          onChange={handleFilterChange}
+          className="w-full px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-1 focus:ring-[#5da646] focus:border-[#5da646]"
+        />
+      </div>
+      
+      {/* Location filter */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+        <select
+          name="locationId"
+          value={filters.locationId}
+          onChange={handleFilterChange}
+          className="w-full px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-1 focus:ring-[#5da646] focus:border-[#5da646]"
+        >
+          <option value="">All Locations</option>
+          {locations.map(location => (
+            <option key={location.locationId} value={location.locationId}>
+              {location.siteName}
+            </option>
+          ))}
+        </select>
+      </div>
+      
+      {/* Schedule filter */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Schedule</label>
+        <select
+          name="scheduleId"
+          value={filters.scheduleId}
+          onChange={handleFilterChange}
+          className="w-full px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-1 focus:ring-[#5da646] focus:border-[#5da646]"
+        >
+          <option value="">All Schedules</option>
+          {schedules.map(schedule => (
+            <option key={schedule.scheduleId} value={schedule.scheduleId}>
+              {getSiteNameFromLocationId(schedule.locationId) || schedule.siteName || 'Unknown'} - {schedule.pickupDate || 'No Date'}
+            </option>
+          ))}
+        </select>
+      </div>
+      
+      {/* Status filter */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+        <select
+          name="status"
+          value={filters.status}
+          onChange={handleFilterChange}
+          className="w-full px-3 py-2 rounded-md border border-gray-300 focus:outline-none focus:ring-1 focus:ring-[#5da646] focus:border-[#5da646]"
+        >
+          <option value="">All Statuses</option>
+          <option value="COMPLETED">Completed</option>
+          <option value="PENDING">Pending</option>
+          <option value="CANCELLED">Cancelled</option>
+        </select>
+      </div>
+    </div>
+    
+    {/* Filter summary and results count */}
+    <div className="mt-4 pt-3 border-t border-gray-200 text-sm text-gray-600">
+      {filteredHistoryRecords.length} records found
+      {(filters.dateFrom || filters.dateTo || filters.locationId || filters.scheduleId || filters.status) && 
+        " matching your filters"}
+    </div>
+  </div>
+)}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 pb-4 border-b border-gray-100">
-            <h1 className="text-2xl font-semibold text-gray-800 mb-4 sm:mb-0">Collection History</h1>
+  <h1 className="text-2xl font-semibold text-gray-800 mb-4 sm:mb-0">
+    Collection History
+  </h1>
 
-            {(!isAdding && !isEditing) ? (
-              <button
-                className="flex items-center px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
-                onClick={handleAddRecord}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
-                  <line x1="12" y1="5" x2="12" y2="19"></line>
-                  <line x1="5" y1="12" x2="19" y2="12"></line>
-                </svg>
-                Add History Record
-              </button>
-            ) : null}
-          </div>
+  {/* Buttons container */}
+  {(!isAdding && !isEditing) && (
+    <div className="flex gap-2">
+      <button
+        className="flex items-center px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+        onClick={handleAddRecord}
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="mr-2"
+        >
+          <line x1="12" y1="5" x2="12" y2="19"></line>
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+        </svg>
+        Add History Record
+      </button>
+
+      <button
+        onClick={toggleFilters}
+        className="flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-300"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="mr-2"
+        >
+          <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+        </svg>
+        {showFilters ? 'Hide Filters' : 'Show Filters'}
+      </button>
+      
+    </div>
+
+    
+  )}
+
+  
+</div>
           {showScheduleModal && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
               <div className="bg-white rounded-lg shadow-lg w-full max-w-2xl">
@@ -890,73 +1108,71 @@ const HistoryPage = () => {
           )}
 
           {/* Loading State */}
-          {loading && !isAdding && !isEditing && historyRecords.length === 0 ? (
-            <div className="py-8 flex justify-center items-center text-gray-500">
-              <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-[#5da646]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              <span>Loading history records...</span>
-            </div>
-          ) : historyRecords.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="min-w-full bg-white">
-                <thead className="bg-gray-50 text-gray-600 text-sm">
-                  <tr>
-                    <th className="py-3 px-4 text-left font-medium">Collection Date</th>
-                    <th className="py-3 px-4 text-left font-medium">Schedule ID</th>
-                    <th className="py-3 px-4 text-left font-medium">Notes</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {historyRecords.map((record) => (
-                    <tr key={record.historyId} className="hover:bg-gray-50">
-                      <td className="py-3 px-4 text-gray-800">
-                        {new Date(record.collectionDate).toLocaleDateString('en-US', {
-                          year: 'numeric',
-                          month: 'short',
-                          day: 'numeric'
-                        })}
-                      </td>
-                      <td className="py-3 px-4 text-gray-800">{record.scheduleId}</td>
-                      <td className="py-3 px-4 text-gray-700">
-                        {record.notes ||
-                          <span className="text-gray-400 italic">No notes</span>
-                        }
-                      </td>
-      
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="bg-gray-50 p-8 rounded-lg text-center">
-              <div className="inline-flex justify-center items-center w-16 h-16 bg-gray-100 rounded-full mb-4">
-                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400">
-                  <circle cx="12" cy="12" r="10"></circle>
-                  <line x1="12" y1="8" x2="12" y2="16"></line>
-                  <line x1="8" y1="12" x2="16" y2="12"></line>
-                </svg>
-              </div>
-              <h3 className="text-lg font-medium text-gray-700 mb-2">No History Records Found</h3>
-              <p className="text-gray-500 mb-4">Start tracking your collections by adding a new record.</p>
-              <button
-                className="inline-flex items-center px-4 py-2 bg-[#5da646] text-white rounded-md hover:bg-[#4c8a3a] transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#5da646] focus:ring-opacity-50"
-                onClick={handleAddRecord}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
-                  <line x1="12" y1="5" x2="12" y2="19"></line>
-                  <line x1="5" y1="12" x2="19" y2="12"></line>
-                </svg>
-                Add First Record
-              </button>
-            </div>
-          )}
+          <div className="bg-white overflow-hidden shadow-sm sm:rounded-lg">
+  {loading ? (
+    <div className="flex justify-center items-center py-12">
+      <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-green-500"></div>
+    </div>
+  ) : error ? (
+    <div className="p-6 text-center text-red-500">{error}</div>
+  ) : filteredHistoryRecords.length > 0 ? (
+    <div className="overflow-x-auto">
+      <table className="min-w-full divide-y divide-gray-200">
+        <thead className="bg-gray-50">
+          <tr>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Collection Date
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Location
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Schedule
+            </th>
+       
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Notes
+            </th>
+     
+          </tr>
+        </thead>
+        <tbody className="bg-white divide-y divide-gray-200">
+          {filteredHistoryRecords.map((record) => {
+            // Find the related schedule
+            const schedule = schedules.find(s => s.scheduleId === record.scheduleId);
+            
+            return (
+              <tr key={record.historyId} className="hover:bg-gray-50">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
+                  {new Date(record.collectionDate).toLocaleDateString()}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
+                  {schedule ? getSiteNameFromLocationId(schedule.locationId) || schedule.siteName || 'Unknown' : 'N/A'}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
+                  {schedule ? `${schedule.pickupDate} ${schedule.pickupTime || ''}` : record.scheduleId}
+                </td>
+  
+                <td className="px-6 py-4 text-sm text-gray-800">
+                  <div className="max-w-xs truncate">
+                    {record.notes || '-'}
+                  </div>
+                </td>
+              
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  ) : (
+    <div className="p-6 text-center text-gray-500">
+      No history records found matching your criteria.
+    </div>
+  )}</div>
         </div>
       </div>
       
-     
             {/* Profile Modal */}
             {showProfileModal && (
         <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-50">
