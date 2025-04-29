@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { format, parseISO } from 'date-fns';
 import axios from 'axios';
 import { Link, useNavigate } from 'react-router-dom';
-const API_BASE_URL = 'http://localhost:8080/api';
+const API_BASE_URL = 'https://it342-g4-garbagemanagementsystem-kflf.onrender.com/api';
 
 // Create axios instance with default config
 const api = axios.create({
@@ -37,6 +37,12 @@ const fetchUserEmail = async (userId, authToken) => {
 };
 const MissedPickupPage = () => {
   const navigate = useNavigate();
+  const [userEmails, setUserEmails] = useState({});
+
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [selectedSchedule, setSelectedSchedule] = useState(null);
+  const [scheduleSearchTerm, setScheduleSearchTerm] = useState('');
+  const [useScheduleDateTime, setUseScheduleDateTime] = useState(false);
   const [showProfilePopup, setShowProfilePopup] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [missedPickups, setMissedPickups] = useState([]);
@@ -73,6 +79,34 @@ const MissedPickupPage = () => {
     firstName: "",
     lastName: ""
   });
+  useEffect(() => {
+    // Fetch emails for all unique userIds in missed pickups
+    if (missedPickups.length > 0) {
+      const uniqueUserIds = [...new Set(missedPickups.map(pickup => pickup.userId).filter(Boolean))];
+      uniqueUserIds.forEach(userId => {
+        fetchUserEmail1(userId);
+      });
+    }
+  }, [missedPickups]);
+  const fetchUserEmail1 = async (userId) => {
+    if (!userId || userEmails[userId]) return; // Skip if no userId or already fetched
+    
+    try {
+      const response = await api.get(`/users/${userId}/profile/email`, {
+        headers: getAuthHeader()
+      });
+      
+      if (response.data && response.data.success) {
+        setUserEmails(prev => ({
+          ...prev,
+          [userId]: response.data.email
+        }));
+      }
+    } catch (err) {
+      console.error(`Failed to fetch email for user ${userId}:`, err);
+      // Don't set error state here to avoid disrupting the UI
+    }
+  };
   const handleApiError = (err) => {
     if (err.response) {
       // The request was made and the server responded with a status code
@@ -268,11 +302,47 @@ const MissedPickupPage = () => {
     try {
       setLoading(true);
 
+      // Create the payload - if using schedule datetime, use the schedule's data
       const payload = {
         ...formData,
         userId: localStorage.getItem('userId') || 'current-user',
         status: 'pending'
       };
+
+      if (useScheduleDateTime && selectedSchedule) {
+        // Convert schedule's date and time to ISO format for reportDateTime
+        const dateStr = selectedSchedule.pickupDate;
+        const timeStr = selectedSchedule.pickupTime;
+        
+        // Parse the date and time strings to create a Date object
+        const [year, month, day] = dateStr.split('-').map(num => parseInt(num, 10));
+        let hours = 0;
+        let minutes = 0;
+        
+        // Parse time - handle both 12-hour and 24-hour formats
+        if (timeStr.includes('AM') || timeStr.includes('PM')) {
+          const timeParts = timeStr.replace(/\s*(AM|PM)/i, '').split(':');
+          hours = parseInt(timeParts[0], 10);
+          minutes = parseInt(timeParts[1], 10);
+          
+          // Adjust hours for PM
+          if (timeStr.includes('PM') && hours < 12) {
+            hours += 12;
+          }
+          // Adjust for 12 AM
+          if (timeStr.includes('AM') && hours === 12) {
+            hours = 0;
+          }
+        } else {
+          const timeParts = timeStr.split(':');
+          hours = parseInt(timeParts[0], 10);
+          minutes = parseInt(timeParts[1], 10);
+        }
+        
+        // Create the date object and convert to ISO string
+        const date = new Date(year, month - 1, day, hours, minutes);
+        payload.reportDateTime = date.toISOString().substring(0, 16);
+      }
 
       let response;
 
@@ -324,6 +394,31 @@ const MissedPickupPage = () => {
       // In a real app, you would also make an API call to update the status
     }
   };
+  const openScheduleSelector = () => {
+    setShowScheduleModal(true);
+    setScheduleSearchTerm('');
+  };
+  const filteredSchedules = schedules.filter(schedule => {
+    if (!scheduleSearchTerm) return true;
+    
+    const searchLower = scheduleSearchTerm.toLowerCase();
+    return (
+      (schedule.title && schedule.title.toLowerCase().includes(searchLower)) ||
+      (schedule.locationId && schedule.locationId.toLowerCase().includes(searchLower)) ||
+      (schedule.pickupDate && schedule.pickupDate.includes(searchLower)) ||
+      (schedule.pickupTime && schedule.pickupTime.toLowerCase().includes(searchLower))
+    );
+  });
+  const handleScheduleSelect = (schedule) => {
+    setSelectedSchedule(schedule);
+    setFormData({
+      ...formData,
+      scheduleId: schedule.scheduleId,
+      title: formData.title || schedule.title || ''
+    });
+    setShowScheduleModal(false);
+  };
+
   const handleLogout = () => {
     localStorage.removeItem('authToken');
     localStorage.removeItem('userId');
@@ -337,6 +432,15 @@ const MissedPickupPage = () => {
       reportDateTime: pickup.reportDateTime ? pickup.reportDateTime.substring(0, 16) : new Date().toISOString().substring(0, 16)
     });
 
+    // Find the corresponding schedule if exists
+    const schedule = schedules.find(s => s.scheduleId === pickup.scheduleId);
+    if (schedule) {
+      setSelectedSchedule(schedule);
+    } else {
+      setSelectedSchedule(null);
+    }
+    
+    setUseScheduleDateTime(false);
     setIsEditing(true);
     setCurrentMissedId(pickup.missedId);
     setShowModal(true);
@@ -377,6 +481,8 @@ const MissedPickupPage = () => {
       scheduleId: '',
       reportDateTime: new Date().toISOString().substring(0, 16)
     });
+    setSelectedSchedule(null);
+    setUseScheduleDateTime(false);
   };
 
   const handlePickupClick = (pickup) => {
@@ -623,21 +729,26 @@ const MissedPickupPage = () => {
                           </div>
                         </div>
                         <div className="flex items-center mt-2 md:mt-0">
-                          <div className="text-xs text-slate-500 mr-6">
-                            <div className="flex items-center">
-                              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1">
-                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                                <circle cx="12" cy="7" r="4"></circle>
-                              </svg>
-                              {pickup.userId || 'Anonymous User'}
-                            </div>
-                          </div>
-                          <button className="text-slate-400 hover:text-slate-600">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <polyline points="9 18 15 12 9 6"></polyline>
-                            </svg>
-                          </button>
-                        </div>
+  <div className="text-xs text-slate-500 mr-6">
+    <div className="flex items-center">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+        <circle cx="12" cy="7" r="4"></circle>
+      </svg>
+      {pickup.userId && userEmails[pickup.userId] ? (
+        <span title={pickup.userId}>{userEmails[pickup.userId]}</span>
+      ) : (
+        <span>{pickup.userId || 'Anonymous User'}</span>
+      )}
+    </div>
+  </div>
+  <button className="text-slate-400 hover:text-slate-600">
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </button>
+</div>
+
                       </div>
                     </li>
                   ))}
@@ -784,32 +895,70 @@ const MissedPickupPage = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Schedule</label>
-                  <select
-                    name="scheduleId"
-                    value={formData.scheduleId}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 rounded-md border border-slate-300 focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500"
-                    required
-                  >
-                    <option value="">Select a schedule</option>
-                    {schedules.map((schedule) => (
-                      <option key={schedule.id} value={schedule.id}>
-                        {schedule.location || schedule.id}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="flex items-center space-x-2">
+                    <div className="flex-1 relative">
+                      <input
+                        type="text"
+                        readOnly
+                        value={selectedSchedule ? `${selectedSchedule.title} (${selectedSchedule.pickupDate}, ${selectedSchedule.pickupTime})` : 'No schedule selected'}
+                        className="w-full px-3 py-2 rounded-md border border-slate-300 bg-slate-50 cursor-pointer"
+                        onClick={openScheduleSelector}
+                      />
+                      <input
+                        type="hidden"
+                        name="scheduleId"
+                        value={formData.scheduleId}
+                        required
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={openScheduleSelector}
+                      className="px-3 py-2 rounded-md bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors duration-200"
+                    >
+                      Select
+                    </button>
+                  </div>
+                  {selectedSchedule && (
+                    <div className="mt-2 text-sm text-slate-500">
+                      Location ID: {selectedSchedule.locationId} | Status: {selectedSchedule.status}
+                    </div>
+                  )}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Date & Time of Missed Collection</label>
-                  <input
-                    type="datetime-local"
-                    name="reportDateTime"
-                    value={formData.reportDateTime}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 rounded-md border border-slate-300 focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500"
-                    required
-                  />
+                  <div className="flex items-center mb-2">
+                    <input
+                      type="checkbox"
+                      id="useScheduleDateTime"
+                      checked={useScheduleDateTime}
+                      onChange={() => setUseScheduleDateTime(!useScheduleDateTime)}
+                      className="h-4 w-4 text-green-600 focus:ring-green-500 border-slate-300 rounded"
+                      disabled={!selectedSchedule}
+                    />
+                    <label htmlFor="useScheduleDateTime" className="ml-2 block text-sm font-medium text-slate-700">
+                      Use schedule date and time
+                    </label>
+                  </div>
+                  
+                  <div className={useScheduleDateTime ? "opacity-50 pointer-events-none" : ""}>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Date & Time of Missed Collection</label>
+                    <input
+                      type="datetime-local"
+                      name="reportDateTime"
+                      value={formData.reportDateTime}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 rounded-md border border-slate-300 focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500"
+                      required={!useScheduleDateTime}
+                      disabled={useScheduleDateTime}
+                    />
+                  </div>
+                  
+                  {useScheduleDateTime && selectedSchedule && (
+                    <div className="mt-2 p-2 bg-green-50 border border-green-100 rounded-md text-sm text-green-700">
+                      Using schedule datetime: {selectedSchedule.pickupDate} at {selectedSchedule.pickupTime}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -824,7 +973,7 @@ const MissedPickupPage = () => {
                 <button
                   type="submit"
                   className="px-4 py-2 rounded-md bg-green-600 text-white hover:bg-green-700 transition-colors duration-200"
-                  disabled={loading}
+                  disabled={loading || (!formData.scheduleId)}
                 >
                   {loading ? 'Saving...' : isEditing ? 'Update Report' : 'Submit Report'}
                 </button>
@@ -922,8 +1071,118 @@ const MissedPickupPage = () => {
                 >
                   Close
                 </button>
-                <button className="px-4 py-2 bg-green-600 rounded-md text-sm font-medium text-white hover:bg-green-700">
-                  Edit Profile
+     
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+       {/* Schedule Selection Modal */}
+       {showScheduleModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-2xl max-h-[80vh] flex flex-col">
+            <div className="p-4 border-b border-slate-200 flex justify-between items-center">
+              <h2 className="text-lg font-semibold text-slate-800">Select Schedule</h2>
+              <button
+                onClick={() => setShowScheduleModal(false)}
+                className="text-slate-400 hover:text-slate-600"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            </div>
+            
+            <div className="p-4 border-b border-slate-200">
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Search schedules by title, date, time..."
+                  className="w-full pl-10 pr-4 py-2 rounded-md border border-slate-300 focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500"
+                  value={scheduleSearchTerm}
+                  onChange={(e) => setScheduleSearchTerm(e.target.value)}
+                />
+                <div className="absolute left-3 top-2.5 text-slate-400">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                  </svg>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto">
+              {loading ? (
+                <div className="flex justify-center items-center p-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-700"></div>
+                </div>
+              ) : filteredSchedules.length === 0 ? (
+                <div className="flex flex-col items-center justify-center p-8 text-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                  </svg>
+                  <p className="mt-2 text-slate-500">No matching schedules found</p>
+                </div>
+              ) : (
+                <ul className="divide-y divide-slate-100">
+                  {filteredSchedules.map((schedule) => (
+                    <li 
+                      key={schedule.scheduleId}
+                      className="p-4 hover:bg-slate-50 cursor-pointer transition-colors duration-150"
+                      onClick={() => handleScheduleSelect(schedule)}
+                    >
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h3 className="font-medium text-slate-900">{schedule.title || 'Untitled Schedule'}</h3>
+                          <div className="mt-1 text-sm text-slate-500">
+                            <div className="flex items-center space-x-4">
+                              <span className="flex items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1">
+                                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                  <line x1="16" y1="2" x2="16" y2="6"></line>
+                                  <line x1="8" y1="2" x2="8" y2="6"></line>
+                                  <line x1="3" y1="10" x2="21" y2="10"></line>
+                                </svg>
+                                {schedule.pickupDate}
+                              </span>
+                              <span className="flex items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1">
+                                  <circle cx="12" cy="12" r="10"></circle>
+                                  <polyline points="12 6 12 12 16 14"></polyline>
+                                </svg>
+                                {schedule.pickupTime}
+                              </span>
+                            </div>
+                            <div className="mt-1">
+                              <span className="text-xs">Location ID: {schedule.locationId}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <span className={`px-2 py-1 text-xs rounded-full uppercase ${
+                          schedule.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
+                          schedule.status === 'COMPLETED' ? 'bg-green-100 text-green-800' :
+                          'bg-blue-100 text-blue-800'
+                        }`}>
+                          {schedule.status}
+                        </span>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            
+            <div className="p-4 border-t border-slate-200">
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setShowScheduleModal(false)}
+                  className="px-4 py-2 rounded-md border border-slate-300 text-slate-700 hover:bg-slate-100 transition-colors duration-200"
+                >
+                  Cancel
                 </button>
               </div>
             </div>

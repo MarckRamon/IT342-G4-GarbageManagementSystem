@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:8080/api';
+const API_BASE_URL = 'https://it342-g4-garbagemanagementsystem-kflf.onrender.com/api';
 
 // Create axios instance with default config
 const api = axios.create({
@@ -44,36 +44,6 @@ const addHistoryRecord = async (historyData) => {
     return response.data;
   } catch (error) {
     console.error('Error adding history record:', error);
-    throw error;
-  }
-};
-
-const updateHistoryRecord = async (historyId, historyData) => {
-  try {
-    const authToken = localStorage.getItem('authToken');
-    const response = await api.put(`/history/${historyId}`, historyData, {
-      headers: {
-        'Authorization': `Bearer ${authToken}`
-      }
-    });
-    return response.data;
-  } catch (error) {
-    console.error('Error updating history record:', error);
-    throw error;
-  }
-};
-
-const deleteHistoryRecord = async (historyId) => {
-  try {
-    const authToken = localStorage.getItem('authToken');
-    const response = await api.delete(`/history/${historyId}`, {
-      headers: {
-        'Authorization': `Bearer ${authToken}`
-      }
-    });
-    return response.data;
-  } catch (error) {
-    console.error('Error deleting history record:', error);
     throw error;
   }
 };
@@ -832,6 +802,7 @@ const HistoryPage = () => {
               </div>
             </div>
           )}
+          
           {/* Form for Add/Edit */}
           {(isAdding || isEditing) && (
             <div className="bg-gray-50 p-5 rounded-lg border border-gray-100 mb-6">
@@ -935,7 +906,6 @@ const HistoryPage = () => {
                     <th className="py-3 px-4 text-left font-medium">Collection Date</th>
                     <th className="py-3 px-4 text-left font-medium">Schedule ID</th>
                     <th className="py-3 px-4 text-left font-medium">Notes</th>
-                    <th className="py-3 px-4 text-left font-medium w-28">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -954,32 +924,7 @@ const HistoryPage = () => {
                           <span className="text-gray-400 italic">No notes</span>
                         }
                       </td>
-                      <td className="py-3 px-4">
-                        <div className="flex space-x-2">
-                          <button
-                            onClick={() => handleEditRecord(record)}
-                            className="p-1 text-blue-600 hover:text-blue-800"
-                            title="Edit"
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-                            </svg>
-                          </button>
-                          <button
-                            onClick={() => handleDeleteRecord(record.historyId)}
-                            className="p-1 text-red-600 hover:text-red-800"
-                            title="Delete"
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <polyline points="3 6 5 6 21 6"></polyline>
-                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                              <line x1="10" y1="11" x2="10" y2="17"></line>
-                              <line x1="14" y1="11" x2="14" y2="17"></line>
-                            </svg>
-                          </button>
-                        </div>
-                      </td>
+      
                     </tr>
                   ))}
                 </tbody>
@@ -1010,113 +955,65 @@ const HistoryPage = () => {
           )}
         </div>
       </div>
-
-      {/* Profile Modal */}
-      {showProfileModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-lg w-full max-w-md">
-            <div className="p-6 border-b border-gray-200">
-              <div className="flex justify-between items-center">
-                <h2 className="text-xl font-semibold text-gray-800">User Profile</h2>
-                <button
-                  onClick={() => setShowProfileModal(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                    <line x1="6" y1="6" x2="18" y2="18"></line>
-                  </svg>
-                </button>
-              </div>
+      
+     
+            {/* Profile Modal */}
+            {showProfileModal && (
+        <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-50">
+          <div className="bg-white rounded-lg shadow-lg w-11/12 max-w-xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex justify-between items-center p-5 border-b border-slate-200">
+              <h3 className="text-xl font-semibold">Profile</h3>
+              <button 
+                className="bg-transparent border-none cursor-pointer flex items-center justify-center p-2 rounded text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+                onClick={() => setShowProfileModal(false)}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
             </div>
-            <div className="p-6">
+            
+            <div className="p-5">
               <div className="flex items-center mb-6">
-                <div className="w-20 h-20 rounded-full bg-gray-100 flex items-center justify-center text-gray-800 font-medium text-2xl mr-4">
-                  {profileData.firstName.charAt(0).toUpperCase()}
+                <div className="w-20 h-20 rounded-full bg-slate-100 flex items-center justify-center text-slate-800 font-medium text-2xl mr-5">
+                {profileData.lastName.charAt(0).toUpperCase()}
                 </div>
                 <div>
-                  <h3 className="text-lg font-medium text-gray-800">{profileData.name}</h3>
-                  <p className="text-gray-600">{profileData.role}</p>
+                  <div className="text-xl font-semibold">{profileData.name}</div>
+                  <div className="text-sm text-slate-500">{profileData.role}</div>
+                  <div className="text-xs text-slate-400 mt-1">Member since {profileData.joinDate}</div>
                 </div>
               </div>
-
-              <div className="space-y-4">
-                <div className="flex items-start">
-                  <div className="text-gray-500 w-8 mt-0.5">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
-                    </svg>
-                  </div>
-                  <div className="ml-4">
-                    <div className="text-sm font-medium text-gray-500">Phone</div>
-                    <div className="text-gray-800">{profileData.phone}</div>
-                  </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div>
+                  <div className="text-xs text-slate-500 mb-1">Email</div>
+                  <div className="text-sm">{profileEmail.email}</div>
                 </div>
-
-                <div className="flex items-start">
-                  <div className="text-gray-500 w-8 mt-0.5">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
-                      <polyline points="22,6 12,13 2,6"></polyline>
-                    </svg>
-                  </div>
-                  <div className="ml-4">
-                    <div className="text-sm font-medium text-gray-500">Email</div>
-                    <div className="text-gray-800">{profileEmail.email}</div>
-                  </div>
+                <div>
+                  <div className="text-xs text-slate-500 mb-1">Phone</div>
+                  <div className="text-sm">{profileData.phone}</div>
                 </div>
-
-                <div className="flex items-start">
-                  <div className="text-gray-500 w-8 mt-0.5">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-                      <circle cx="12" cy="10" r="3"></circle>
-                    </svg>
-                  </div>
-                  <div className="ml-4">
-                    <div className="text-sm font-medium text-gray-500">Address</div>
-                    <div className="text-gray-800">{profileData.address}</div>
-                  </div>
+                <div>
+                  <div className="text-xs text-slate-500 mb-1">Department</div>
+                  <div className="text-sm">{profileData.department}</div>
                 </div>
-
-                <div className="flex items-start">
-                  <div className="text-gray-500 w-8 mt-0.5">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                      <line x1="16" y1="2" x2="16" y2="6"></line>
-                      <line x1="8" y1="2" x2="8" y2="6"></line>
-                      <line x1="3" y1="10" x2="21" y2="10"></line>
-                    </svg>
-                  </div>
-                  <div className="ml-4">
-                    <div className="text-sm font-medium text-gray-500">Join Date</div>
-                    <div className="text-gray-800">{profileData.joinDate}</div>
-                  </div>
-                </div>
-
-                <div className="flex items-start">
-                  <div className="text-gray-500 w-8 mt-0.5">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                      <circle cx="9" cy="7" r="4"></circle>
-                      <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-                      <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-                    </svg>
-                  </div>
-                  <div className="ml-4">
-                    <div className="text-sm font-medium text-gray-500">Department</div>
-                    <div className="text-gray-800">{profileData.department}</div>
-                  </div>
+                <div>
+                  <div className="text-xs text-slate-500 mb-1">Address</div>
+                  <div className="text-sm">{profileData.address}</div>
                 </div>
               </div>
-            </div>
-            <div className="p-4 bg-gray-50 rounded-b-lg flex justify-end">
-              <button
-                onClick={() => setShowProfileModal(false)}
-                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-50"
-              >
-                Close
-              </button>
+              
+              <div className="flex justify-end space-x-3 pt-4 border-t border-slate-200">
+                <button 
+                  className="px-4 py-2 bg-white border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50"
+                  onClick={() => setShowProfileModal(false)}
+                >
+                  Close
+                </button>
+              
+              </div>
             </div>
           </div>
         </div>

@@ -17,7 +17,7 @@ const DashboardHistoryWidget = () => {
     const fetchRecentHistory = async () => {
       setLoading(true);
       try {
-        const response = await axios.get('http://localhost:8080/api/history', {
+        const response = await axios.get('https://it342-g4-garbagemanagementsystem-kflf.onrender.com/api/history', {
           headers: getAuthHeader()
         });
 

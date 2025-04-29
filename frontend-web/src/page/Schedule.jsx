@@ -3,7 +3,7 @@ import { Calendar, Clock, Home, MapPin, User, Mail, Phone, Briefcase, LogOut, Ch
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:8080/api';
+const API_BASE_URL = 'https://it342-g4-garbagemanagementsystem-kflf.onrender.com/api';
 
 // Create axios instance with default config
 const api = axios.create({
@@ -845,77 +845,78 @@ export default function VermigoSchedule() {
                 </div>
 
                 {showMultipleSchedulesModal && (
-                  <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50" onClick={() => setShowMultipleSchedulesModal(false)}>
-                    <div className="bg-white rounded-lg shadow-lg w-full max-w-md" onClick={e => e.stopPropagation()}>
-                      <div className="flex justify-between items-center p-5 border-b border-gray-200">
-                        <h3 className="text-lg font-semibold">Multiple Pickups</h3>
-                        <button className="text-gray-500 hover:text-gray-700" onClick={() => setShowMultipleSchedulesModal(false)}>
-                          <X className="w-5 h-5" />
-                        </button>
-                      </div>
-                      <div className="p-5">
-                        <div className="mb-4">
-                          <h4 className="text-md font-medium mb-2">Scheduled Pickups</h4>
-                          <div className="space-y-3">
-                            {multipleSchedules.map((schedule, index) => (
-                              <div key={index} className={`p-3 rounded border-l-4 ${getScheduleColors(schedule.status).border}`}>
-                                <div className="flex justify-between">
-                                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusClass(schedule.status)}`}>
-                                    {schedule.status}
-                                  </span>
-                                  <div className="flex space-x-2">
-                                    <button
-                                      className="text-gray-500 hover:text-gray-700"
-                                      onClick={() => {
-                                        setShowMultipleSchedulesModal(false);
-                                        handleEditSchedule(schedule);
-                                      }}
-                                    >
-                                      <Edit className="w-4 h-4" />
-                                    </button>
-                                    <button
-                                      className="text-red-500 hover:text-red-700"
-                                      onClick={() => {
-                                        handleDeleteSchedule(schedule.scheduleId);
-                                        if (multipleSchedules.length <= 2) {
-                                          setShowMultipleSchedulesModal(false);
-                                        }
-                                        setMultipleSchedules(multipleSchedules.filter(s => s.scheduleId !== schedule.scheduleId));
-                                      }}
-                                    >
-                                      <Trash2 className="w-4 h-4" />
-                                    </button>
-                                  </div>
-                                </div>
-                                <div className="mt-2">
-                                  <div className="text-sm">Time: {schedule.pickupTime}</div>
-                                  <div className="text-sm">Location: {schedule.locationId}</div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                        <div className="flex justify-end space-x-3 pt-4">
-                          <button
-                            className="px-4 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
-                            onClick={() => setShowMultipleSchedulesModal(false)}
-                          >
-                            Close
-                          </button>
-                          <button
-                            className="px-4 py-2 bg-green-600 rounded-md text-sm font-medium text-white hover:bg-green-700"
-                            onClick={() => {
-                              setShowMultipleSchedulesModal(false);
-                              setShowAddScheduleModal(true);
-                            }}
-                          >
-                            Add Another
-                          </button>
-                        </div>
-                      </div>
-                    </div>
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50" onClick={() => setShowMultipleSchedulesModal(false)}>
+    <div className="bg-white rounded-lg shadow-lg w-full max-w-md" onClick={e => e.stopPropagation()}>
+      <div className="flex justify-between items-center p-5 border-b border-gray-200">
+        <h3 className="text-lg font-semibold">Multiple Pickups</h3>
+        <button className="text-gray-500 hover:text-gray-700" onClick={() => setShowMultipleSchedulesModal(false)}>
+          <X className="w-5 h-5" />
+        </button>
+      </div>
+      <div className="p-5">
+        <div className="mb-4">
+          <h4 className="text-md font-medium mb-2">Scheduled Pickups</h4>
+          <div className="space-y-3">
+            {multipleSchedules.map((schedule, index) => (
+              <div key={index} className={`p-3 rounded border-l-4 ${getScheduleColors(schedule.status).border}`}>
+                <div className="flex justify-between">
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusClass(schedule.status)}`}>
+                    {schedule.status}
+                  </span>
+                  <div className="flex space-x-2">
+                    <button
+                      className="text-gray-500 hover:text-gray-700"
+                      onClick={() => {
+                        setShowMultipleSchedulesModal(false);
+                        handleEditSchedule(schedule);
+                      }}
+                    >
+                      <Edit className="w-4 h-4" />
+                    </button>
+                    <button
+                      className="text-red-500 hover:text-red-700"
+                      onClick={() => {
+                        handleDeleteSchedule(schedule.scheduleId);
+                        if (multipleSchedules.length <= 2) {
+                          setShowMultipleSchedulesModal(false);
+                        }
+                        setMultipleSchedules(multipleSchedules.filter(s => s.scheduleId !== schedule.scheduleId));
+                      }}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
-                )}
+                </div>
+                <div className="mt-2">
+                  <div className="font-medium text-sm">{schedule.title || 'Untitled Collection'}</div>
+                  <div className="text-sm">Time: {schedule.pickupTime}</div>
+                  <div className="text-sm">Location: {getLocationName(schedule.locationId)}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="flex justify-end space-x-3 pt-4">
+          <button
+            className="px-4 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+            onClick={() => setShowMultipleSchedulesModal(false)}
+          >
+            Close
+          </button>
+          <button
+            className="px-4 py-2 bg-green-600 rounded-md text-sm font-medium text-white hover:bg-green-700"
+            onClick={() => {
+              setShowMultipleSchedulesModal(false);
+              setShowAddScheduleModal(true);
+            }}
+          >
+            Add Another
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
                 {/* Scheduler Body - Time Slots */}
                 <div className="relative">
                   {generateTimeSlots().map((timeSlot, timeIndex) => (
@@ -1340,9 +1341,7 @@ export default function VermigoSchedule() {
                 >
                   Close
                 </button>
-                <button className="px-4 py-2 bg-green-600 rounded-md text-sm font-medium text-white hover:bg-green-700">
-                  Edit Profile
-                </button>
+            
               </div>
             </div>
           </div>

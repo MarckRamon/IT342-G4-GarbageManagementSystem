@@ -3,7 +3,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recha
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:8080/api';
+const API_BASE_URL = 'https://it342-g4-garbagemanagementsystem-kflf.onrender.com/api';
 
 // Create axios instance with default config
 const api = axios.create({
@@ -1015,6 +1015,12 @@ function VermigoComplaints() {
                       {selectedComplaint.user}
                     </div>
                   </div>
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-slate-700 mb-1">User ID</label>
+                    <div className="p-2 bg-slate-50 rounded-md text-slate-800">
+                      {selectedComplaint.userAddress}
+                    </div>
+                  </div>
                   {/*
                   <div className="mb-4">
                     <label className="block text-sm font-medium text-slate-700 mb-1">Response</label>
@@ -1224,9 +1230,7 @@ function VermigoComplaints() {
                 >
                   Close
                 </button>
-                <button className="px-4 py-2 bg-green-600 rounded-md text-sm font-medium text-white hover:bg-green-700">
-                  Edit Profile
-                </button>
+             
               </div>
             </div>
           </div>
