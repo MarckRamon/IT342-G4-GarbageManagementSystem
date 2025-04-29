@@ -41,6 +41,10 @@ class SessionManager private constructor(context: Context) {
         private const val SESSION_TIMEOUT = 3600L // 5 seconds for testing
         private const val KEY_USER_EMAIL = "user_email"
         private const val KEY_FCM_TOKEN = "fcm_token"
+        private const val KEY_IN_APP_NOTIFICATIONS = "in_app_notifications_enabled"
+        private const val KEY_PUSH_NOTIFICATIONS = "push_notifications_enabled"
+        private const val KEY_UNREAD_NOTIFICATION_COUNT = "unread_notification_count"
+        private const val KEY_LAST_NOTIFICATION_COUNT_UPDATE = "last_notification_count_update"
         
         // Keep a single instance to avoid multiple timers
         @Volatile
@@ -99,8 +103,8 @@ class SessionManager private constructor(context: Context) {
         Log.d(TAG, "UserId saved: $userId")
     }
     
-    fun getUserId(): String? {
-        return prefs.getString(USER_ID_KEY, null)
+    fun getUserId(): String {
+        return prefs.getString(USER_ID_KEY, "") ?: ""
     }
     
     fun saveUserType(userType: String) {
@@ -149,6 +153,60 @@ class SessionManager private constructor(context: Context) {
         
         sessionTimeoutDialogShown = false
         stopExpiryTimer()
+    }
+    
+    // Notification preferences
+    fun setInAppNotificationsEnabled(enabled: Boolean) {
+        editor.putBoolean(KEY_IN_APP_NOTIFICATIONS, enabled)
+        editor.apply()
+    }
+    
+    fun getInAppNotificationsEnabled(): Boolean {
+        return prefs.getBoolean(KEY_IN_APP_NOTIFICATIONS, true)
+    }
+    
+    fun setPushNotificationsEnabled(enabled: Boolean) {
+        editor.putBoolean(KEY_PUSH_NOTIFICATIONS, enabled)
+        editor.apply()
+    }
+    
+    fun getPushNotificationsEnabled(): Boolean {
+        return prefs.getBoolean(KEY_PUSH_NOTIFICATIONS, true)
+    }
+    
+    fun saveFCMToken(token: String) {
+        editor.putString(KEY_FCM_TOKEN, token)
+        editor.apply()
+        Log.d(TAG, "FCM token saved")
+    }
+    
+    fun getFCMToken(): String? {
+        return prefs.getString(KEY_FCM_TOKEN, null)
+    }
+    
+    // Notification count methods
+    fun setUnreadNotificationCount(count: Int) {
+        editor.putInt(KEY_UNREAD_NOTIFICATION_COUNT, count)
+        editor.putLong(KEY_LAST_NOTIFICATION_COUNT_UPDATE, System.currentTimeMillis())
+        editor.apply()
+        Log.d(TAG, "Updated unread notification count: $count")
+    }
+    
+    fun getUnreadNotificationCount(): Int {
+        return prefs.getInt(KEY_UNREAD_NOTIFICATION_COUNT, -1)
+    }
+    
+    fun getLastNotificationCountUpdateTime(): Long {
+        return prefs.getLong(KEY_LAST_NOTIFICATION_COUNT_UPDATE, 0)
+    }
+    
+    fun incrementUnreadNotificationCount() {
+        val currentCount = getUnreadNotificationCount()
+        if (currentCount >= 0) {
+            setUnreadNotificationCount(currentCount + 1)
+        } else {
+            setUnreadNotificationCount(1)
+        }
     }
     
     // Session timeout handling
@@ -471,19 +529,22 @@ class SessionManager private constructor(context: Context) {
         Log.d(TAG, "User email saved")
     }
 
-    fun setFCMToken(token: String) {
-        editor.putString(KEY_FCM_TOKEN, token)
-        editor.apply()
-        Log.d(TAG, "FCM token saved")
-    }
-
-    fun getFCMToken(): String? {
-        return prefs.getString(KEY_FCM_TOKEN, null)
-    }
-
     fun clearSession() {
         editor.clear()
         editor.apply()
         Log.d(TAG, "Session cleared")
+    }
+
+    // For backward compatibility with existing code
+    fun setFCMToken(token: String) {
+        saveFCMToken(token)
+    }
+    
+    fun isInAppNotificationsEnabled(): Boolean {
+        return getInAppNotificationsEnabled()
+    }
+    
+    fun isPushNotificationsEnabled(): Boolean {
+        return getPushNotificationsEnabled()
     }
 } 

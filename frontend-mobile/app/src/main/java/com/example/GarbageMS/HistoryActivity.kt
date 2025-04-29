@@ -3,7 +3,6 @@ package com.example.GarbageMS
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
-import android.view.MenuItem
 import android.view.View
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -11,11 +10,9 @@ import com.example.GarbageMS.adapters.HistoryAdapter
 import com.example.GarbageMS.databinding.ActivityHistoryBinding
 import com.example.GarbageMS.models.History
 import com.example.GarbageMS.models.HistoryRequest
-import com.example.GarbageMS.models.Schedule
 import com.example.GarbageMS.services.HistoryService
 import com.example.GarbageMS.services.ScheduleService
 import com.example.GarbageMS.utils.ToastUtils
-import com.google.android.material.bottomnavigation.BottomNavigationView
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -59,9 +56,6 @@ class HistoryActivity : BaseActivity() {
         // Setup listeners
         setupListeners()
 
-        // Setup bottom navigation
-        setupBottomNavigation()
-
         // Check if we received a completed schedule from an intent
         intent.getStringExtra("COMPLETED_SCHEDULE_ID")?.let { scheduleId ->
             createHistoryFromSchedule(scheduleId)
@@ -77,51 +71,11 @@ class HistoryActivity : BaseActivity() {
             onBackPressed()
         }
 
-        // Set up notification button
-        binding.btnNotifications.setOnClickListener {
-            startActivity(Intent(this, NotificationsActivity::class.java))
-        }
-
         // Set up profile image
         binding.profileImage.setOnClickListener {
             startActivity(Intent(this, ProfileActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
             })
-        }
-    }
-
-    /**
-     * Setup bottom navigation
-     */
-    private fun setupBottomNavigation() {
-        binding.bottomNavigation.selectedItemId = R.id.navigation_history // Highlight the history icon
-
-        binding.bottomNavigation.setOnItemSelectedListener { item ->
-            when (item.itemId) {
-                R.id.navigation_home -> {
-                    val intent = Intent(this, HomeActivity::class.java)
-                    intent.flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
-                    startActivity(intent)
-                    true
-                }
-                R.id.navigation_schedule -> {
-                    val intent = Intent(this, ScheduleActivity::class.java)
-                    intent.flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
-                    startActivity(intent)
-                    true
-                }
-                R.id.navigation_history -> {
-                    // Already on this screen
-                    true
-                }
-                R.id.navigation_map -> {
-                    val intent = Intent(this, MapActivity::class.java)
-                    intent.flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
-                    startActivity(intent)
-                    true
-                }
-                else -> false
-            }
         }
     }
 
@@ -162,10 +116,10 @@ class HistoryActivity : BaseActivity() {
         
         // Show empty state if no history records
         if (histories.isEmpty()) {
-            binding.tvNoHistory.visibility = View.VISIBLE
+            binding.emptyStateLayout.visibility = View.VISIBLE
             binding.recyclerView.visibility = View.GONE
         } else {
-            binding.tvNoHistory.visibility = View.GONE
+            binding.emptyStateLayout.visibility = View.GONE
             binding.recyclerView.visibility = View.VISIBLE
         }
         

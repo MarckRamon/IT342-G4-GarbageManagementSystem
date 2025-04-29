@@ -11,8 +11,11 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.GarbageMS.adapters.ScheduleAdapter
 import com.example.GarbageMS.databinding.ActivityScheduleBinding
 import com.example.GarbageMS.models.Schedule
+import com.example.GarbageMS.services.HistoryService
+import com.example.GarbageMS.services.MissedService
 import com.example.GarbageMS.services.ReminderService
 import com.example.GarbageMS.services.ScheduleService
+import com.example.GarbageMS.ui.ReportMissedDialog
 import com.example.GarbageMS.utils.DateConverter
 import com.kizitonwose.calendar.core.CalendarDay
 import com.kizitonwose.calendar.core.DayPosition
@@ -34,6 +37,7 @@ class ScheduleActivity : BaseActivity() {
     private lateinit var binding: ActivityScheduleBinding
     private val scheduleService = ScheduleService.getInstance()
     private val reminderService = ReminderService.getInstance()
+    private val missedService = MissedService.getInstance()
     private lateinit var scheduleAdapter: ScheduleAdapter
     private val TAG = "ScheduleActivity"
     
@@ -53,6 +57,7 @@ class ScheduleActivity : BaseActivity() {
         // BaseActivity handles authentication checks
         scheduleService.initialize(sessionManager)
         reminderService.initialize(sessionManager)
+        missedService.initialize(sessionManager)
 
         // Setup RecyclerView and adapter
         setupRecyclerView()
@@ -76,6 +81,7 @@ class ScheduleActivity : BaseActivity() {
         
         // Create and set the adapter
         scheduleAdapter = ScheduleAdapter()
+        scheduleAdapter.initialize(sessionManager, this)
         binding.schedulesRecyclerView.adapter = scheduleAdapter
         
         // Set up click listener
@@ -94,6 +100,11 @@ class ScheduleActivity : BaseActivity() {
         scheduleAdapter.setOnCompleteClickListener { schedule ->
             // Log when complete button is clicked, actual completion is handled in adapter
             Log.d(TAG, "Complete button clicked for schedule: ${schedule.scheduleId}")
+        }
+        
+        // Set up Report button click listener
+        scheduleAdapter.setOnReportClickListener { schedule ->
+            showReportMissedDialog(schedule)
         }
     }
     
@@ -281,7 +292,7 @@ class ScheduleActivity : BaseActivity() {
                 }
                 
                 // Check if history record already exists for this schedule
-                val historyService = com.example.GarbageMS.services.HistoryService.getInstance().apply {
+                val historyService = HistoryService.getInstance().apply {
                     initialize(sessionManager)
                 }
                 
@@ -431,6 +442,20 @@ class ScheduleActivity : BaseActivity() {
             })
         }
         
+        binding.btnHistory.setOnClickListener {
+            // Navigate to history page
+            startActivity(Intent(this, HistoryActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT // Bring existing HistoryActivity to front if it exists
+            })
+        }
+        
+        binding.btnReports.setOnClickListener {
+            // Navigate to missed reports page
+            startActivity(Intent(this, MissedReportsActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+            })
+        }
+        
         binding.refreshLayout.setOnRefreshListener {
             // Reload schedules when user performs pull-to-refresh
             loadSchedules()
@@ -451,12 +476,6 @@ class ScheduleActivity : BaseActivity() {
                 }
                 R.id.navigation_schedule -> {
                     // Already on this screen, do nothing
-                    true // Consume the event
-                }
-                R.id.navigation_history -> {
-                    val intent = Intent(this, HistoryActivity::class.java)
-                    intent.flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
-                    startActivity(intent)
                     true // Consume the event
                 }
                 R.id.navigation_map -> {
@@ -587,6 +606,31 @@ class ScheduleActivity : BaseActivity() {
                 "Could not create reminder: ${e.message}",
                 Toast.LENGTH_SHORT
             ).show()
+        }
+    }
+
+    private fun showReportMissedDialog(schedule: Schedule) {
+        // Only show the dialog for past schedules that are not completed
+        val scheduleDate = DateConverter.stringToLocalDate(schedule.pickupDate)
+        val today = LocalDate.now()
+        
+        if (scheduleDate != null && (scheduleDate.isBefore(today) || scheduleDate.isEqual(today))) {
+            if (schedule.status?.equals("COMPLETED", ignoreCase = true) == true) {
+                Toast.makeText(this, "This pickup was already completed", Toast.LENGTH_SHORT).show()
+                return
+            }
+            
+            ReportMissedDialog(
+                this,
+                schedule,
+                onReportSubmitted = {
+                    // Refresh data after report is submitted
+                    Toast.makeText(this, "Report submitted successfully", Toast.LENGTH_SHORT).show()
+                    loadSchedules()
+                }
+            ).show()
+        } else {
+            Toast.makeText(this, "You can only report missed pickups for past or today's schedules", Toast.LENGTH_LONG).show()
         }
     }
 }

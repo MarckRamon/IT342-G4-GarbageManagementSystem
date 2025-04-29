@@ -44,4 +44,11 @@
 
     <!-- Custom Colors -->
     <color name="schedule_card_purple">#8A2BE2</color> <!-- Color for the schedule card background -->
+    
+    <!-- Missing colors -->
+    <color name="colorAccent">#1A73E8</color> <!-- Using same as primary for consistency -->
+    <color name="light_gray">#E0E0E0</color>
+
+    <color name="notification_read_bg">#F5F5F5</color>
+    <color name="notification_unread_bg">#FFFFFF</color>
 </resources>

@@ -1,264 +1,282 @@
 package com.example.GarbageMS
 
-import android.Manifest
-import android.content.pm.PackageManager
-import android.os.Build
 import android.os.Bundle
 import android.util.Log
-import android.widget.ImageButton
+import android.view.View
 import android.widget.Toast
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.core.content.ContextCompat
+import androidx.recyclerview.widget.LinearLayoutManager
+import com.example.GarbageMS.adapters.NotificationAdapter
 import com.example.GarbageMS.databinding.ActivityNotificationsBinding
-import com.google.firebase.messaging.FirebaseMessaging
+import com.example.GarbageMS.models.Notification
+import com.example.GarbageMS.models.NotificationType
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
-import com.example.GarbageMS.BuildConfig
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.RequestBody.Companion.toRequestBody
-import org.json.JSONObject
-import okhttp3.OkHttpClient
-import okhttp3.Request
+import java.util.Date
+import java.util.UUID
 
 class NotificationsActivity : BaseActivity() {
     private lateinit var binding: ActivityNotificationsBinding
+    private lateinit var adapter: NotificationAdapter
     private val TAG = "NotificationsActivity"
+    private val db = FirebaseFirestore.getInstance()
     
-    // Track the state of notifications
-    private var inAppNotificationsEnabled = true
-    private var pushNotificationsEnabled = true
-
-    // Request notification permission launcher
-    private val requestPermissionLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { isGranted: Boolean ->
-        if (isGranted) {
-            // Permission granted, enable FCM
-            enableFCM()
-        } else {
-            // Permission denied, update UI accordingly
-            pushNotificationsEnabled = false
-            updatePushToggleUI()
-            Toast.makeText(this, "Notification permission denied", Toast.LENGTH_SHORT).show()
-        }
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityNotificationsBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        // sessionManager is already initialized in BaseActivity
 
-        // Set up back button
-        findViewById<ImageButton>(R.id.backButton).setOnClickListener {
-            onBackPressed()
-        }
-
-        // Initialize toggle UI
-        updateInAppToggleUI()
-        updatePushToggleUI()
-
-        // Set up click listeners for toggle containers
-        setupToggleListeners()
+        // Hide the support action bar
+        supportActionBar?.hide()
         
-        // Set up save button
-        binding.saveButton.setOnClickListener {
-            saveNotificationPreferences()
+        // Set up recycler view
+        setupRecyclerView()
+        
+        // Load notifications
+        loadNotifications()
+        
+        // Set up mark all as read button
+        binding.markAllReadFab.setOnClickListener {
+            markAllNotificationsAsRead()
         }
-
-        // Check notification permission
-        checkNotificationPermission()
-    }
-
-    private fun setupToggleListeners() {
-        // In-app notifications toggle
-        binding.inAppSwitchContainer.setOnClickListener {
-            // Toggle the state
-            inAppNotificationsEnabled = !inAppNotificationsEnabled
-            updateInAppToggleUI()
-            Log.d(TAG, "In-app notifications toggled: $inAppNotificationsEnabled")
-        }
-
-        // Push notifications toggle
-        binding.pushSwitchContainer.setOnClickListener {
-            if (!pushNotificationsEnabled) {
-                // If notifications are disabled, request permission
-                checkNotificationPermission()
-            } else {
-                // Toggle the state
-                pushNotificationsEnabled = !pushNotificationsEnabled
-                updatePushToggleUI()
-                if (!pushNotificationsEnabled) {
-                    // Disable FCM
-                    disableFCM()
-                } else {
-                    // Enable FCM
-                    enableFCM()
-                }
-                Log.d(TAG, "Push notifications toggled: $pushNotificationsEnabled")
-            }
-        }
-    }
-
-    private fun updateInAppToggleUI() {
-        binding.inAppOnLabel.isSelected = inAppNotificationsEnabled
-        binding.inAppOffLabel.isSelected = !inAppNotificationsEnabled
-        binding.inAppSwitch.isChecked = inAppNotificationsEnabled
-    }
-
-    private fun updatePushToggleUI() {
-        binding.pushOnLabel.isSelected = pushNotificationsEnabled
-        binding.pushOffLabel.isSelected = !pushNotificationsEnabled
-        binding.pushSwitch.isChecked = pushNotificationsEnabled
-    }
-
-    private fun checkNotificationPermission() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            when {
-                ContextCompat.checkSelfPermission(
-                    this,
-                    Manifest.permission.POST_NOTIFICATIONS
-                ) == PackageManager.PERMISSION_GRANTED -> {
-                    // Permission already granted, enable FCM
-                    enableFCM()
-                }
-                shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS) -> {
-                    // Show rationale if needed
-                    Toast.makeText(
-                        this,
-                        "Notification permission is required for push notifications",
-                        Toast.LENGTH_LONG
-                    ).show()
-                    requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                }
-                else -> {
-                    // Request permission
-                    requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                }
-            }
-        } else {
-            // For Android < 13, notification permission is granted by default
-            enableFCM()
-        }
-    }
-
-    private fun enableFCM() {
-        Log.d(TAG, "Enabling FCM")
-        FirebaseMessaging.getInstance().token.addOnCompleteListener { task ->
-            if (task.isSuccessful) {
-                val token = task.result
-                Log.d(TAG, "FCM Token: $token")
-                sessionManager.setFCMToken(token)
-                
-                // Force token refresh to ensure it's up to date
-                FirebaseMessaging.getInstance().isAutoInitEnabled = true
-                
-                // Test if the token is being sent correctly
-                logTokenToServer(token)
-                
-                pushNotificationsEnabled = true
-                updatePushToggleUI()
-            } else {
-                Log.e(TAG, "Failed to get FCM token", task.exception)
-                pushNotificationsEnabled = false
-                updatePushToggleUI()
-            }
-        }
-    }
-
-    private fun disableFCM() {
-        FirebaseMessaging.getInstance().deleteToken().addOnCompleteListener { task ->
-            if (task.isSuccessful) {
-                Log.d(TAG, "FCM token deleted")
-                sessionManager.setFCMToken("")
-            } else {
-                Log.e(TAG, "Failed to delete FCM token", task.exception)
-            }
+        
+        // Set up back button
+        binding.backButton.setOnClickListener {
+            finish()
         }
     }
     
-    private fun logTokenToServer(token: String) {
-        Log.d(TAG, "FCM Token to send to server: $token")
-        
-        // Get user ID
-        val userId = sessionManager.getUserId()
-        if (userId.isNullOrEmpty()) {
-            Log.w(TAG, "Cannot update FCM token: user ID is null or empty")
-            return
+    // Refresh the notifications when the activity comes to the foreground
+    override fun onResume() {
+        super.onResume()
+        // Reload notifications to show the newly added ones
+        loadNotifications()
+    }
+    
+    // Method for NotificationsListFragment to call
+    fun showMarkAllReadButton(show: Boolean) {
+        binding.markAllReadFab.visibility = if (show) View.VISIBLE else View.GONE
+    }
+    
+    private fun setupRecyclerView() {
+        adapter = NotificationAdapter(mutableListOf()) { notification ->
+            // Mark notification as read when clicked
+            if (!notification.isRead) {
+                markNotificationAsRead(notification.id)
+            }
+            
+            // Handle notification click based on type
+            when (notification.type) {
+                NotificationType.PICKUP -> {
+                    // Navigate to schedule view
+                    Toast.makeText(this, "Opening schedule for pickup details", Toast.LENGTH_SHORT).show()
+                }
+                NotificationType.REPORT -> {
+                    // Navigate to reports view
+                    Toast.makeText(this, "Opening report details", Toast.LENGTH_SHORT).show()
+                }
+                NotificationType.SCHEDULE_CHANGE -> {
+                    // Navigate to schedule view
+                    Toast.makeText(this, "Opening schedule for changes", Toast.LENGTH_SHORT).show()
+                }
+                NotificationType.REMINDER -> {
+                    // Navigate to relevant view
+                    Toast.makeText(this, "Opening reminder details", Toast.LENGTH_SHORT).show()
+                }
+                NotificationType.SYSTEM, NotificationType.GENERAL -> {
+                    // Just show toast
+                    Toast.makeText(this, notification.message, Toast.LENGTH_LONG).show()
+                }
+            }
         }
         
-        // Get auth token
-        val authToken = sessionManager.getToken()
-        if (authToken.isNullOrEmpty()) {
-            Log.w(TAG, "Cannot update FCM token: auth token is null or empty")
-            return
+        binding.notificationsRecyclerView.apply {
+            layoutManager = LinearLayoutManager(this@NotificationsActivity)
+            adapter = this@NotificationsActivity.adapter
         }
+    }
+    
+    private fun loadNotifications() {
+        // Show loading state
+        binding.progressBar.visibility = View.VISIBLE
+        binding.notificationsRecyclerView.visibility = View.GONE
+        binding.emptyNotificationsText.visibility = View.GONE
         
-        // Use coroutines to make the API call
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                // Create a client for the HTTP request
-                val client = OkHttpClient.Builder().build()
+                val userId = sessionManager.getUserId() ?: throw Exception("User ID not available")
                 
-                // Create the request body with the token
-                val jsonBody = JSONObject()
-                jsonBody.put("fcmToken", token)
+                // Query notifications for this user
+                val notificationsSnapshot = db.collection("notifications")
+                    .whereEqualTo("userId", userId)
+                    .orderBy("timestamp", Query.Direction.DESCENDING)
+                    .get()
+                    .await()
                 
-                val requestBody = jsonBody.toString().toRequestBody("application/json".toMediaType())
-                
-                // Get the API base URL
-                val apiBaseUrl = if (BuildConfig.DEBUG) {
-                    BuildConfig.DEBUG_API_URL
-                } else {
-                    BuildConfig.RELEASE_API_URL
-                }
-                
-                // Build the request
-                val request = Request.Builder()
-                    .url("$apiBaseUrl/api/users/$userId/fcm-token")
-                    .put(requestBody)
-                    .header("Authorization", "Bearer $authToken")
-                    .header("Content-Type", "application/json")
-                    .build()
-                
-                // Execute the request
-                val response = client.newCall(request).execute()
-                
-                withContext(Dispatchers.Main) {
-                    if (response.isSuccessful) {
-                        Log.d(TAG, "FCM token successfully updated on server")
-                        Toast.makeText(this@NotificationsActivity, 
-                            "Push notifications enabled", Toast.LENGTH_SHORT).show()
-                    } else {
-                        val errorBody = response.body?.string() ?: "No error body"
-                        Log.e(TAG, "Failed to update FCM token: ${response.code} - $errorBody")
-                        Toast.makeText(this@NotificationsActivity, 
-                            "Failed to enable push notifications", Toast.LENGTH_SHORT).show()
+                val notifications = notificationsSnapshot.documents.mapNotNull { doc ->
+                    try {
+                        Notification(
+                            id = doc.id,
+                            title = doc.getString("title") ?: "",
+                            message = doc.getString("message") ?: "",
+                            timestamp = doc.getTimestamp("timestamp")?.toDate() ?: Date(),
+                            isRead = doc.getBoolean("isRead") ?: false,
+                            type = try {
+                                NotificationType.valueOf(doc.getString("type") ?: "SYSTEM")
+                            } catch (e: Exception) {
+                                NotificationType.SYSTEM
+                            },
+                            userId = doc.getString("userId") ?: "",
+                            referenceId = doc.getString("referenceId") ?: ""
+                        )
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error parsing notification", e)
+                        null
                     }
                 }
-            } catch (e: Exception) {
-                Log.e(TAG, "Error updating FCM token: ${e.message}", e)
+                
                 withContext(Dispatchers.Main) {
-                    Toast.makeText(this@NotificationsActivity, 
-                        "Error enabling push notifications", Toast.LENGTH_SHORT).show()
+                    // Update UI with notifications
+                    if (notifications.isEmpty()) {
+                        binding.emptyNotificationsText.visibility = View.VISIBLE
+                        binding.notificationsRecyclerView.visibility = View.GONE
+                        binding.emptyNotificationsText.text = "No notifications yet"
+                    } else {
+                        binding.notificationsRecyclerView.visibility = View.VISIBLE
+                        binding.emptyNotificationsText.visibility = View.GONE
+                        adapter.updateNotifications(notifications)
+                    }
+                    binding.progressBar.visibility = View.GONE
+                    
+                    // Update badge count
+                    updateNotificationBadgeCount()
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error loading notifications: ${e.message}", e)
+                Log.d(TAG, "userId: ${sessionManager.getUserId()}")
+                
+                withContext(Dispatchers.Main) {
+                    // Handle specific error types
+                    val errorMessage = when {
+                        e.message?.contains("PERMISSION_DENIED") == true -> 
+                            "Firestore permission denied. Please check your database rules."
+                        e.message?.contains("NULL_VALUE") == true ->
+                            "Error with data format. Please try again later."
+                        e.message?.contains("UNAUTHENTICATED") == true ->
+                            "Authentication error. Please log in again."
+                        e.message?.contains("UNAVAILABLE") == true ->
+                            "Service unavailable. Please check your internet connection."
+                        e.message?.contains("FAILED_PRECONDITION") == true ->
+                            "Database not properly configured. Please contact support."
+                        else -> "Error loading notifications: ${e.message}"
+                    }
+                    
+                    Toast.makeText(
+                        this@NotificationsActivity,
+                        errorMessage,
+                        Toast.LENGTH_LONG
+                    ).show()
+                    
+                    binding.progressBar.visibility = View.GONE
+                    binding.emptyNotificationsText.visibility = View.VISIBLE
+                    binding.notificationsRecyclerView.visibility = View.GONE
+                    binding.emptyNotificationsText.text = "Unable to load notifications.\nTry again later."
                 }
             }
         }
     }
     
-    private fun saveNotificationPreferences() {
-        // Log the values
-        Log.d(TAG, "Saving notification preferences - In-App: $inAppNotificationsEnabled, Push: $pushNotificationsEnabled")
-        
-        // Save preferences to shared preferences
-        getSharedPreferences("notification_prefs", MODE_PRIVATE).edit().apply {
-            putBoolean("in_app_notifications", inAppNotificationsEnabled)
-            putBoolean("push_notifications", pushNotificationsEnabled)
-            apply()
+    private fun markNotificationAsRead(notificationId: String) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                // Update in Firestore
+                db.collection("notifications")
+                    .document(notificationId)
+                    .update("isRead", true)
+                    .await()
+                
+                // Update locally
+                adapter.markAsRead(notificationId)
+                
+                // Update badge count
+                updateNotificationBadgeCount()
+            } catch (e: Exception) {
+                Log.e(TAG, "Error marking notification as read", e)
+            }
         }
+    }
+    
+    private fun markAllNotificationsAsRead() {
+        val userId = sessionManager.getUserId()
         
-        Toast.makeText(this, "Notification preferences saved", Toast.LENGTH_SHORT).show()
-        finish()
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                // Get all unread notifications
+                val unreadNotificationsSnapshot = db.collection("notifications")
+                    .whereEqualTo("userId", userId)
+                    .whereEqualTo("isRead", false)
+                    .get()
+                    .await()
+                
+                // Create a batch
+                val batch = db.batch()
+                
+                // Add update operations to batch
+                for (doc in unreadNotificationsSnapshot.documents) {
+                    batch.update(doc.reference, "isRead", true)
+                }
+                
+                // Commit batch
+                batch.commit().await()
+                
+                withContext(Dispatchers.Main) {
+                    // Update locally
+                    adapter.markAllAsRead()
+                    Toast.makeText(
+                        this@NotificationsActivity,
+                        "All notifications marked as read",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    
+                    // Update badge count
+                    updateNotificationBadgeCount()
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error marking all notifications as read", e)
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(
+                        this@NotificationsActivity,
+                        "Error marking notifications as read",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+        }
+    }
+    
+    private fun updateNotificationBadgeCount() {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val userId = sessionManager.getUserId()
+                
+                // Query unread notifications count
+                val unreadCount = db.collection("notifications")
+                    .whereEqualTo("userId", userId)
+                    .whereEqualTo("isRead", false)
+                    .get()
+                    .await()
+                    .size()
+                
+                // Update session manager with new count
+                sessionManager.setUnreadNotificationCount(unreadCount)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error updating notification badge count", e)
+            }
+        }
     }
 } 

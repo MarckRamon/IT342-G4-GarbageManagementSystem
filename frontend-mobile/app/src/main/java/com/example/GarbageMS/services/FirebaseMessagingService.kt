@@ -4,15 +4,22 @@ import android.content.Context
 import android.util.Log
 import com.example.GarbageMS.BuildConfig
 import com.example.GarbageMS.models.NotificationRequest
+import com.example.GarbageMS.models.NotificationType
 import com.example.GarbageMS.utils.SessionManager
+import com.google.firebase.Timestamp
+import com.google.firebase.firestore.FirebaseFirestore
 import com.google.gson.Gson
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
+import java.util.Date
+import java.util.UUID
 import java.util.concurrent.TimeUnit
 
 /**
@@ -29,9 +36,10 @@ class FirebaseMessagingService(private val context: Context) {
         .build()
     
     private val gson = Gson()
+    private val db = FirebaseFirestore.getInstance()
 
     // API base URLs - try different options for troubleshooting
-    private val API_BASE_URL = "http://10.0.2.2:8080" // Emulator localhost
+    private val API_BASE_URL = "https://it342-g4-garbagemanagementsystem-kflf.onrender.com" // Production server
     // private val API_BASE_URL = "http://localhost:8080" // Direct localhost
     // private val API_BASE_URL = "http://127.0.0.1:8080" // Alternative localhost
 
@@ -41,15 +49,24 @@ class FirebaseMessagingService(private val context: Context) {
      * @param token FCM token of the target device
      * @param title Notification title
      * @param body Notification message body
+     * @param type Notification type (defaults to SYSTEM)
+     * @param relatedItemId Optional ID of a related item
      * @return The message ID if successful, null otherwise
      */
-    fun sendNotification(token: String, title: String, body: String): String? {
+    fun sendNotification(
+        token: String, 
+        title: String, 
+        body: String, 
+        type: NotificationType = NotificationType.SYSTEM,
+        relatedItemId: String? = null
+    ): String? {
         try {
             Log.d(TAG, "Sending notification - Token: $token, Title: $title, Body: $body")
             
             // Get JWT token from SessionManager
             val sessionManager = SessionManager.getInstance(context)
             val jwtToken = sessionManager.getToken()
+            val userId = sessionManager.getUserId()
             
             if (jwtToken.isNullOrEmpty()) {
                 Log.e(TAG, "Authentication token (JWT) is missing or empty")
@@ -107,6 +124,10 @@ class FirebaseMessagingService(private val context: Context) {
                     
                     if (status == "success" && messageId.isNotEmpty()) {
                         Log.d(TAG, "Notification sent successfully with ID: $messageId")
+                        
+                        // Store notification in Firestore
+                        storeNotification(userId, title, body, type, relatedItemId)
+                        
                         return messageId
                     } else {
                         Log.e(TAG, "Notification status not successful or no messageId returned")
@@ -123,7 +144,7 @@ class FirebaseMessagingService(private val context: Context) {
                 Log.e(TAG, "Network error cause: ${e.cause?.message}")
                 
                 // Try alternative API URL if the primary one fails
-                return tryAlternativeEndpoint(token, title, body, jwtToken)
+                return tryAlternativeEndpoint(token, title, body, jwtToken, userId, type, relatedItemId)
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error preparing notification: ${e.message}", e)
@@ -134,7 +155,15 @@ class FirebaseMessagingService(private val context: Context) {
     /**
      * Try an alternative endpoint if the primary one fails
      */
-    private fun tryAlternativeEndpoint(token: String, title: String, body: String, jwtToken: String): String? {
+    private fun tryAlternativeEndpoint(
+        token: String, 
+        title: String, 
+        body: String, 
+        jwtToken: String,
+        userId: String,
+        type: NotificationType = NotificationType.SYSTEM,
+        relatedItemId: String? = null
+    ): String? {
         try {
             Log.d(TAG, "Trying alternative endpoint...")
             
@@ -147,7 +176,7 @@ class FirebaseMessagingService(private val context: Context) {
             val requestBody = jsonBody.toString().toRequestBody("application/json".toMediaType())
             
             // Try a different URL
-            val alternativeUrl = "http://127.0.0.1:8080/api/notifications/send"
+            val alternativeUrl = "https://it342-g4-garbagemanagementsystem-kflf.onrender.com/api/notifications/send"
             Log.d(TAG, "Alternative API URL: $alternativeUrl")
             
             val request = Request.Builder()
@@ -166,7 +195,14 @@ class FirebaseMessagingService(private val context: Context) {
             if (response.isSuccessful && responseBody != null) {
                 try {
                     val jsonResponse = JSONObject(responseBody ?: "")
-                    return jsonResponse.optString("messageId")
+                    val messageId = jsonResponse.optString("messageId")
+                    
+                    if (messageId.isNotEmpty()) {
+                        // Store notification in Firestore
+                        storeNotification(userId, title, body, type, relatedItemId)
+                    }
+                    
+                    return messageId
                 } catch (e: Exception) {
                     Log.e(TAG, "Error parsing alternative response: ${e.message}")
                     return null
@@ -187,15 +223,24 @@ class FirebaseMessagingService(private val context: Context) {
      * @param tokens Array of FCM tokens for target devices
      * @param title Notification title
      * @param body Notification message body
+     * @param type Notification type (defaults to SYSTEM)
+     * @param relatedItemId Optional ID of a related item
      * @return The number of successful deliveries
      */
-    fun sendMulticastNotification(tokens: Array<String>, title: String, body: String): Int {
+    fun sendMulticastNotification(
+        tokens: Array<String>, 
+        title: String, 
+        body: String,
+        type: NotificationType = NotificationType.SYSTEM,
+        relatedItemId: String? = null
+    ): Int {
         try {
             Log.d(TAG, "Sending multicast notification - Tokens: ${tokens.size}, Title: $title, Body: $body")
             
             // Get JWT token from SessionManager
             val sessionManager = SessionManager.getInstance(context)
             val jwtToken = sessionManager.getToken()
+            val userId = sessionManager.getUserId()
             
             if (jwtToken.isNullOrEmpty()) {
                 Log.e(TAG, "Authentication token (JWT) is missing or empty")
@@ -240,6 +285,12 @@ class FirebaseMessagingService(private val context: Context) {
             
             if (status == "success") {
                 Log.d(TAG, "Multicast notification sent successfully to $successCount devices")
+                
+                // Store notification in Firestore for each successful delivery
+                if (successCount > 0) {
+                    storeNotification(userId, title, body, type, relatedItemId)
+                }
+                
                 return successCount
             } else {
                 Log.e(TAG, "Multicast notification failed")
@@ -248,6 +299,79 @@ class FirebaseMessagingService(private val context: Context) {
         } catch (e: Exception) {
             Log.e(TAG, "Error sending multicast notification: ${e.message}", e)
             return 0
+        }
+    }
+    
+    /**
+     * Store a notification in Firestore
+     */
+    private fun storeNotification(
+        userId: String,
+        title: String,
+        message: String,
+        type: NotificationType = NotificationType.SYSTEM,
+        relatedItemId: String? = null
+    ) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                // Create notification document
+                val notificationId = UUID.randomUUID().toString()
+                val notification = hashMapOf(
+                    "userId" to userId,
+                    "title" to title,
+                    "message" to message,
+                    "timestamp" to Timestamp.now(),
+                    "isRead" to false,
+                    "type" to type.toString()
+                )
+                
+                // Add related item ID if provided
+                if (relatedItemId != null) {
+                    notification["relatedItemId"] = relatedItemId
+                }
+                
+                // Add to Firestore
+                db.collection("notifications")
+                    .document(notificationId)
+                    .set(notification)
+                    .addOnSuccessListener {
+                        Log.d(TAG, "Notification stored in Firestore: $notificationId")
+                        
+                        // Update unread count in session manager
+                        updateUnreadNotificationCount(userId)
+                    }
+                    .addOnFailureListener { e ->
+                        Log.e(TAG, "Error storing notification in Firestore", e)
+                    }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error creating notification document", e)
+            }
+        }
+    }
+    
+    /**
+     * Update the unread notification count in SessionManager
+     */
+    private fun updateUnreadNotificationCount(userId: String) {
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                // Query unread notifications count
+                db.collection("notifications")
+                    .whereEqualTo("userId", userId)
+                    .whereEqualTo("isRead", false)
+                    .get()
+                    .addOnSuccessListener { documents ->
+                        val count = documents.size()
+                        val sessionManager = SessionManager.getInstance(context)
+                        sessionManager.setUnreadNotificationCount(count)
+                        Log.d(TAG, "Updated unread notification count: $count")
+                    }
+                    .addOnFailureListener { e ->
+                        Log.e(TAG, "Error querying unread notifications", e)
+                    }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error updating unread notification count", e)
+            }
         }
     }
 } 

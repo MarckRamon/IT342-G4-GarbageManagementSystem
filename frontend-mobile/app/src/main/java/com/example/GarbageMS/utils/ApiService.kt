@@ -148,6 +148,53 @@ interface ApiService {
         @Header("Authorization") authToken: String,
         @Body historyRequest: Map<String, String>
     ): Response<HistoryResponse>
+    
+    // Missed Pickup endpoints
+    @GET("/api/missed")
+    suspend fun getAllMissed(): Response<List<MissedResponse>>
+    
+    @GET("/api/missed/{missedId}")
+    suspend fun getMissedById(
+        @Path("missedId") missedId: String
+    ): Response<MissedResponse>
+    
+    @POST("/api/missed")
+    suspend fun createMissed(
+        @Header("Authorization") authToken: String,
+        @Body missedRequest: MissedRequest
+    ): Response<MissedResponse>
+    
+    @PUT("/api/missed/{missedId}")
+    suspend fun updateMissed(
+        @Path("missedId") missedId: String,
+        @Header("Authorization") authToken: String,
+        @Body missedRequest: MissedRequest
+    ): Response<MissedResponse>
+    
+    @DELETE("/api/missed/{missedId}")
+    suspend fun deleteMissed(
+        @Path("missedId") missedId: String,
+        @Header("Authorization") authToken: String
+    ): Response<MissedResponse>
+    
+    @GET("/api/missed/schedule/{scheduleId}")
+    suspend fun getMissedByScheduleId(
+        @Path("scheduleId") scheduleId: String
+    ): Response<List<MissedResponse>>
+    
+    @GET("/api/missed/user/{userId}")
+    suspend fun getMissedByUserId(
+        @Path("userId") userId: String
+    ): Response<List<MissedResponse>>
+
+    // Tip endpoints
+    @GET("/api/tip")
+    suspend fun getAllTips(): Response<List<Tip>>
+    
+    @GET("/api/tip/{tipId}")
+    suspend fun getTipById(
+        @Path("tipId") tipId: String
+    ): Response<Tip>
 
     companion object {
         private const val TAG = "ApiService"
@@ -155,7 +202,7 @@ interface ApiService {
         // For Android Emulator use 10.0.2.2 (special alias to your host loopback interface)
         // For real device testing on same WiFi network, use your computer's actual IP address
         // Change this to your backend server's address
-        private const val BASE_URL = "http://10.0.2.2:8080/" // Android emulator localhost
+        const val BASE_URL = "https://it342-g4-garbagemanagementsystem-kflf.onrender.com/" // Android emulator localhost
         // private const val BASE_URL = "http://192.168.1.100:8080/" // Example for real device testing
 
         fun create(): ApiService {

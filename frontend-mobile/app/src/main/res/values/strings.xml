@@ -279,4 +279,7 @@
 
     <!-- Loading States -->
     <string name="loading_login">Signing in…</string>
+
+    <!-- New notifications string -->
+    <string name="notifications">Notifications</string>
 </resources>

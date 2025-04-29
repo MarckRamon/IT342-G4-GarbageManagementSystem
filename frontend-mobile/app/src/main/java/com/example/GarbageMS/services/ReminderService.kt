@@ -106,7 +106,7 @@ class ReminderService private constructor() {
         .create()
     
     // Add direct API URL
-    private val API_BASE_URL = "http://10.0.2.2:8080" // Use this for emulator
+    private val API_BASE_URL = "https://it342-g4-garbagemanagementsystem-kflf.onrender.com" // Production server
     private val client = OkHttpClient()
     
     // Add FirebaseMessagingService

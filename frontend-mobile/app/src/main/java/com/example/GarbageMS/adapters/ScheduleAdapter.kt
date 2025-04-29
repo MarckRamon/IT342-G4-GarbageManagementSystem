@@ -32,6 +32,7 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import java.time.LocalDate
 
 class ScheduleAdapter : RecyclerView.Adapter<ScheduleAdapter.ScheduleViewHolder>() {
 
@@ -39,11 +40,13 @@ class ScheduleAdapter : RecyclerView.Adapter<ScheduleAdapter.ScheduleViewHolder>
     private var onItemClickListener: ((Schedule) -> Unit)? = null
     private var onRemindMeClickListener: ((Schedule) -> Unit)? = null
     private var onCompleteClickListener: ((Schedule) -> Unit)? = null
+    private var onReportClickListener: ((Schedule) -> Unit)? = null
     private val reminderService = ReminderService.getInstance()
     private val scheduleService = ScheduleService.getInstance()
     private val TAG = "ScheduleAdapter"
     private var sessionManager: SessionManager? = null
     private var isServiceInitialized = false
+    private var context: Context? = null
 
     fun updateSchedules(newScheduleList: List<Schedule>) {
         scheduleList = newScheduleList
@@ -61,6 +64,21 @@ class ScheduleAdapter : RecyclerView.Adapter<ScheduleAdapter.ScheduleViewHolder>
     fun setOnCompleteClickListener(listener: (Schedule) -> Unit) {
         onCompleteClickListener = listener
     }
+    
+    fun setOnReportClickListener(listener: (Schedule) -> Unit) {
+        onReportClickListener = listener
+    }
+    
+    fun initialize(sessionManager: SessionManager, context: Context) {
+        this.sessionManager = sessionManager
+        this.context = context
+        reminderService.initialize(sessionManager)
+        reminderService.setContext(context)
+        scheduleService.initialize(sessionManager)
+        scheduleService.setContext(context)
+        isServiceInitialized = true
+        Log.d(TAG, "ScheduleAdapter initialized with SessionManager and Context")
+    }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ScheduleViewHolder {
         val view = LayoutInflater.from(parent.context)
@@ -75,13 +93,15 @@ class ScheduleAdapter : RecyclerView.Adapter<ScheduleAdapter.ScheduleViewHolder>
     }
     
     private fun initializeServices(context: Context) {
-        sessionManager = SessionManager.getInstance(context)
-        sessionManager?.let {
-            reminderService.initialize(it)
-            reminderService.setContext(context)
-            scheduleService.initialize(it)
-            Log.d(TAG, "Initialized ReminderService and ScheduleService with SessionManager")
-            isServiceInitialized = true
+        if (sessionManager == null) {
+            sessionManager = SessionManager.getInstance(context)
+            sessionManager?.let {
+                reminderService.initialize(it)
+                reminderService.setContext(context)
+                scheduleService.initialize(it)
+                Log.d(TAG, "Initialized ReminderService and ScheduleService with SessionManager")
+                isServiceInitialized = true
+            }
         }
     }
 
@@ -98,6 +118,7 @@ class ScheduleAdapter : RecyclerView.Adapter<ScheduleAdapter.ScheduleViewHolder>
         private val timeText: TextView = itemView.findViewById(R.id.timeText)
         private val statusText: TextView = itemView.findViewById(R.id.statusText)
         private val btnRemindMe: Button = itemView.findViewById(R.id.btnRemindMe)
+        private val btnReport: Button = itemView.findViewById(R.id.btnReport)
         private val btnComplete: Button = itemView.findViewById(R.id.btnComplete)
 
         fun bind(schedule: Schedule) {
@@ -136,35 +157,53 @@ class ScheduleAdapter : RecyclerView.Adapter<ScheduleAdapter.ScheduleViewHolder>
                     "date: ${schedule.pickupDate}, " +
                     "time: ${schedule.pickupTime}, " +
                     "status: ${schedule.status}")
+                    
+            // Check if the schedule is past or today's date for Report button
+            val scheduleDate = DateConverter.stringToLocalDate(schedule.pickupDate)
+            val today = LocalDate.now()
+            val isPastOrToday = scheduleDate != null && 
+                              (scheduleDate.isBefore(today) || scheduleDate.isEqual(today))
+            val isCompleted = schedule.status.equals("COMPLETED", ignoreCase = true)
 
             // Set color based on status
             when (schedule.status.uppercase()) {
                 "PENDING" -> {
                     statusText.setTextColor(ContextCompat.getColor(itemView.context, R.color.orange))
-                    // Show only Remind Me button for PENDING schedules
+                    // Show Remind Me button for PENDING schedules
                     btnRemindMe.visibility = View.VISIBLE
                     btnComplete.visibility = View.GONE // Always hide Complete button as only admins can complete
+                    
+                    // Show Report button for past or today's PENDING schedules
+                    btnReport.visibility = if (isPastOrToday) View.VISIBLE else View.GONE
                 }
                 "COMPLETED" -> {
                     statusText.setTextColor(ContextCompat.getColor(itemView.context, R.color.secondary))
                     btnRemindMe.visibility = View.GONE
                     btnComplete.visibility = View.GONE
+                    btnReport.visibility = View.GONE // Don't show report button for COMPLETED schedules
                 }
                 "CANCELLED" -> {
                     statusText.setTextColor(ContextCompat.getColor(itemView.context, R.color.error))
                     btnRemindMe.visibility = View.GONE
                     btnComplete.visibility = View.GONE
+                    btnReport.visibility = View.GONE
                 }
                 else -> {
                     statusText.setTextColor(ContextCompat.getColor(itemView.context, R.color.text_secondary))
                     btnRemindMe.visibility = View.GONE
                     btnComplete.visibility = View.GONE
+                    btnReport.visibility = View.GONE
                 }
             }
 
             // Set click listener for the entire item
             itemView.setOnClickListener {
                 onItemClickListener?.invoke(schedule)
+            }
+            
+            // Set click listener for the Report button
+            btnReport.setOnClickListener {
+                onReportClickListener?.invoke(schedule)
             }
             
             // Set click listener for the Remind Me button

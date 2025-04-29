@@ -60,10 +60,24 @@
             android:name="com.example.GarbageMS.MapActivity"
             android:exported="false"
             android:theme="@style/Theme.Vermigo"/>
-        <activity android:name="com.example.GarbageMS.NotificationsActivity" />
-        <activity android:name="com.example.GarbageMS.SecurityQuestionsActivity" />
+        <activity
+            android:name="com.example.GarbageMS.SettingsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Vermigo"/>
         <activity
             android:name="com.example.GarbageMS.HistoryActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Vermigo"/>
+        <activity
+            android:name="com.example.GarbageMS.MissedReportsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Vermigo"/>
+        <activity
+            android:name="com.example.GarbageMS.NotificationsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Vermigo"/>
+        <activity
+            android:name="com.example.garbagemanagement.activities.NotificationsActivity"
             android:exported="false"
             android:theme="@style/Theme.Vermigo"/>
 
