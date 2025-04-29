@@ -94,6 +94,15 @@ export default function VermigoSchedule() {
     lastName: '',
     phoneNumber: ''
   });
+  const [filters, setFilters] = useState({
+    search: '',
+    status: 'ALL',
+    location: 'ALL',
+    dateFrom: '',
+    dateTo: ''
+  });
+  const [showFilters, setShowFilters] = useState(false);
+  const [filteredSchedules, setFilteredSchedules] = useState([]);  
   const [isLoading, setIsLoading] = useState(true);
   const [multipleSchedules, setMultipleSchedules] = useState([]);
   const [showMultipleSchedulesModal, setShowMultipleSchedulesModal] = useState(false);
@@ -696,7 +705,65 @@ export default function VermigoSchedule() {
       handleApiError(err);
     }
   };
-
+  useEffect(() => {
+    applyFilters();
+  }, [schedules, filters]);
+  
+  // Add this function to handle filter changes
+  const handleFilterChange = (e) => {
+    const { name, value } = e.target;
+    setFilters(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+  
+  // Add this function to apply filters
+  const applyFilters = () => {
+    let result = [...schedules];
+    
+    // Apply search filter (case insensitive)
+    if (filters.search) {
+      const searchLower = filters.search.toLowerCase();
+      result = result.filter(schedule => 
+        schedule.title?.toLowerCase().includes(searchLower) ||
+        schedule.scheduleId?.toLowerCase().includes(searchLower) ||
+        getLocationName(schedule.locationId).toLowerCase().includes(searchLower)
+      );
+    }
+    
+    // Apply status filter
+    if (filters.status !== 'ALL') {
+      result = result.filter(schedule => schedule.status === filters.status);
+    }
+    
+    // Apply location filter
+    if (filters.location !== 'ALL') {
+      result = result.filter(schedule => schedule.locationId === filters.location);
+    }
+    
+    // Apply date range filter
+    if (filters.dateFrom) {
+      result = result.filter(schedule => new Date(schedule.pickupDate) >= new Date(filters.dateFrom));
+    }
+    
+    if (filters.dateTo) {
+      result = result.filter(schedule => new Date(schedule.pickupDate) <= new Date(filters.dateTo));
+    }
+    
+    setFilteredSchedules(result);
+  };
+  
+  // Add this function to reset filters
+  const resetFilters = () => {
+    setFilters({
+      search: '',
+      status: 'ALL',
+      location: 'ALL',
+      dateFrom: '',
+      dateTo: ''
+    });
+  };
   return (
     <div className="flex min-h-screen bg-gray-50">
       {/* Sidebar */}
@@ -1030,54 +1097,224 @@ export default function VermigoSchedule() {
         <br></br>
         {/* Schedule List */}
         <div className="bg-white p-6 rounded-lg shadow-sm mb-6">
-          <h2 className="text-lg font-semibold mb-4">Upcoming Collections</h2>
-
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="text-left py-3 px-4 text-gray-500 font-medium">Title</th>
-                  <th className="text-left py-3 px-4 text-gray-500 font-medium">Schedule ID</th>
-                  <th className="text-left py-3 px-4 text-gray-500 font-medium">Location ID</th>
-                  <th className="text-left py-3 px-4 text-gray-500 font-medium">Date</th>
-                  <th className="text-left py-3 px-4 text-gray-500 font-medium">Time</th>
-                  <th className="text-left py-3 px-4 text-gray-500 font-medium">Status</th>
-                  <th className="text-right py-3 px-4 text-gray-500 font-medium">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {schedules.map(schedule => (
-                  <tr key={schedule.scheduleId} className="border-b border-gray-100 hover:bg-gray-50">
-                    <td className="py-3 px-4">{schedule.title}</td>
-                    <td className="py-3 px-4">{schedule.scheduleId}</td>
-                    <td className="py-3 px-4">{schedule.locationId}</td>
-                    <td className="py-3 px-4">{new Date(schedule.pickupDate).toLocaleDateString()}</td>
-                    <td className="py-3 px-4">{schedule.pickupTime}</td>
-                    <td className="py-3 px-4">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusClass(schedule.status)}`}>
-                        {schedule.status}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-right">
-                      <button className="text-gray-500 hover:text-gray-700 mr-2"
-                        onClick={() => handleEditSchedule(schedule)}>
-                        <Edit className="w-4 h-4" />
-
-                      </button>
-                      <button
-                        className="text-red-500 hover:text-red-700"
-                        onClick={() => handleDeleteSchedule(schedule.scheduleId)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
+  <div className="flex justify-between items-center mb-4">
+    <h2 className="text-lg font-semibold">Upcoming Collections</h2>
+    <div className="flex items-center space-x-2">
+      <div className="relative">
+        <input
+          type="text"
+          name="search"
+          value={filters.search}
+          onChange={handleFilterChange}
+          placeholder="Search..."
+          className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+        />
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-500 absolute right-3 top-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+      </div>
+      <button 
+        onClick={() => setShowFilters(!showFilters)}
+        className="flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50 focus:outline-none"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+        </svg>
+        Filter
+        {(filters.status !== 'ALL' || filters.location !== 'ALL' || filters.dateFrom || filters.dateTo) && (
+          <span className="ml-1 w-2 h-2 bg-green-500 rounded-full"></span>
+        )}
+      </button>
+    </div>
+  </div>
+  {/* Advanced Filters */}
+  {showFilters && (
+    <div className="mb-6 p-4 border border-gray-200 rounded-lg bg-gray-50 transition-all duration-300">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+          <select
+            name="status"
+            value={filters.status}
+            onChange={handleFilterChange}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+          >
+            <option value="ALL">All Statuses</option>
+            <option value="PENDING">Pending</option>
+            <option value="COMPLETED">Completed</option>
+            <option value="CANCELLED">Cancelled</option>
+          </select>
         </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+          <select
+            name="location"
+            value={filters.location}
+            onChange={handleFilterChange}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+          >
+            <option value="ALL">All Locations</option>
+            {locations.map(location => (
+              <option key={location.locationId} value={location.locationId}>
+                {location.siteName}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">From Date</label>
+          <input
+            type="date"
+            name="dateFrom"
+            value={filters.dateFrom}
+            onChange={handleFilterChange}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">To Date</label>
+          <input
+            type="date"
+            name="dateTo"
+            value={filters.dateTo}
+            onChange={handleFilterChange}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+          />
+        </div>
+      </div>
+      <div className="flex justify-end mt-4">
+        <button
+          onClick={resetFilters}
+          className="px-4 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 mr-2"
+        >
+          Reset
+        </button>
+        <button
+          onClick={() => setShowFilters(false)}
+          className="px-4 py-2 bg-green-600 rounded-md text-sm font-medium text-white hover:bg-green-700"
+        >
+          Apply Filters
+        </button>
+      </div>
+    </div>
+  )}
+  
+  {/* Filter Stats */}
+  {(filters.status !== 'ALL' || filters.location !== 'ALL' || filters.dateFrom || filters.dateTo || filters.search) && (
+    <div className="mb-4 p-3 bg-green-50 border border-green-100 rounded-md flex justify-between items-center">
+      <div className="flex flex-wrap gap-2 items-center">
+        <span className="text-sm text-gray-600">Showing {filteredSchedules.length} of {schedules.length} collections</span>
+        
+        {filters.search && (
+          <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full flex items-center">
+            Search: {filters.search}
+            <button className="ml-1 text-green-600 hover:text-green-800" onClick={() => setFilters({...filters, search: ''})}>
+              <X className="w-3 h-3" />
+            </button>
+          </span>
+        )}
+        
+        {filters.status !== 'ALL' && (
+          <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full flex items-center">
+            Status: {filters.status}
+            <button className="ml-1 text-green-600 hover:text-green-800" onClick={() => setFilters({...filters, status: 'ALL'})}>
+              <X className="w-3 h-3" />
+            </button>
+          </span>
+        )}
+        
+        {filters.location !== 'ALL' && (
+          <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full flex items-center">
+            Location: {getLocationName(filters.location)}
+            <button className="ml-1 text-green-600 hover:text-green-800" onClick={() => setFilters({...filters, location: 'ALL'})}>
+              <X className="w-3 h-3" />
+            </button>
+          </span>
+        )}
+        
+        {(filters.dateFrom || filters.dateTo) && (
+          <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full flex items-center">
+            Date Range: {filters.dateFrom ? new Date(filters.dateFrom).toLocaleDateString() : 'Any'} - {filters.dateTo ? new Date(filters.dateTo).toLocaleDateString() : 'Any'}
+            <button className="ml-1 text-green-600 hover:text-green-800" onClick={() => setFilters({...filters, dateFrom: '', dateTo: ''})}>
+              <X className="w-3 h-3" />
+            </button>
+          </span>
+        )}
+      </div>
+      
+      <button
+        onClick={resetFilters}
+        className="text-sm text-gray-600 hover:text-gray-800"
+      >
+        Clear All
+      </button>
+    </div>
+  )}
+
+  <div className="overflow-x-auto">
+    <table className="w-full">
+      <thead>
+        <tr className="border-b border-gray-200">
+          <th className="text-left py-3 px-4 text-gray-500 font-medium">Title</th>
+          <th className="text-left py-3 px-4 text-gray-500 font-medium">Schedule ID</th>
+          <th className="text-left py-3 px-4 text-gray-500 font-medium">Location ID</th>
+          <th className="text-left py-3 px-4 text-gray-500 font-medium">Date</th>
+          <th className="text-left py-3 px-4 text-gray-500 font-medium">Time</th>
+          <th className="text-left py-3 px-4 text-gray-500 font-medium">Status</th>
+          <th className="text-right py-3 px-4 text-gray-500 font-medium">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {filteredSchedules.length > 0 ? (
+          filteredSchedules.map(schedule => (
+            <tr key={schedule.scheduleId} className="border-b border-gray-100 hover:bg-gray-50">
+              <td className="py-3 px-4">{schedule.title}</td>
+              <td className="py-3 px-4">{schedule.scheduleId}</td>
+              <td className="py-3 px-4">{getLocationName(schedule.locationId)}</td>
+              <td className="py-3 px-4">{new Date(schedule.pickupDate).toLocaleDateString()}</td>
+              <td className="py-3 px-4">{schedule.pickupTime}</td>
+              <td className="py-3 px-4">
+                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusClass(schedule.status)}`}>
+                  {schedule.status}
+                </span>
+              </td>
+              <td className="py-3 px-4 text-right">
+                <button className="text-gray-500 hover:text-gray-700 mr-2"
+                  onClick={() => handleEditSchedule(schedule)}>
+                  <Edit className="w-4 h-4" />
+                </button>
+                <button
+                  className="text-red-500 hover:text-red-700"
+                  onClick={() => handleDeleteSchedule(schedule.scheduleId)}
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </td>
+            </tr>
+          ))
+        ) : (
+          <tr>
+            <td colSpan="7" className="py-8 text-center text-gray-500">
+              <div className="flex flex-col items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-gray-300 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p className="text-lg font-medium">No collections found</p>
+                <p className="text-sm mt-1">Try adjusting your filters or adding a new collection.</p>
+                <button 
+                  onClick={resetFilters}
+                  className="mt-3 px-4 py-2 bg-green-600 rounded-md text-sm font-medium text-white hover:bg-green-700"
+                >
+                  Reset Filters
+                </button>
+              </div>
+            </td>
+          </tr>
+        )}
+      </tbody>
+    </table>
+  </div>
+</div>
 
       </div>
 
@@ -1182,6 +1419,7 @@ export default function VermigoSchedule() {
           </div>
         </div>
       )}
+      
       {/* Add Schedule Modal */}
       {showAddScheduleModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50" onClick={() => setShowAddScheduleModal(false)}>
