@@ -17,10 +17,10 @@ const DashboardHistoryWidget = () => {
     const fetchRecentHistory = async () => {
       setLoading(true);
       try {
-        const response = await axios.get('http://localhost:8080/api/history', {
+        const response = await axios.get('https://it342-g4-garbagemanagementsystem-kflf.onrender.com/api/history', {
           headers: getAuthHeader()
         });
-        
+
         // Handle different response formats
         let records = [];
         if (Array.isArray(response.data)) {
@@ -33,12 +33,12 @@ const DashboardHistoryWidget = () => {
           // If API returns {data: [...]}
           records = response.data.data;
         }
-        
+
         // Sort by date (newest first) and take the 5 most recent
         const sortedRecords = records
           .sort((a, b) => new Date(b.collectionDate) - new Date(a.collectionDate))
           .slice(0, 5);
-        
+
         setRecentHistory(sortedRecords);
       } catch (err) {
         console.error('Error fetching history:', err);
@@ -82,7 +82,7 @@ const DashboardHistoryWidget = () => {
 
   return (
     <div className="bg-white rounded-lg shadow p-4">
-      
+
       {recentHistory.length > 0 ? (
         <div className="space-y-3">
           {recentHistory.map((record) => (
@@ -113,7 +113,7 @@ const DashboardHistoryWidget = () => {
           <span>No recent collections found</span>
         </div>
       )}
-      
+
       <div className="mt-4 text-right">
         <a href="/history" className="text-[#5da646] hover:text-[#4c8a3a] text-sm font-medium flex items-center justify-end">
           View all collections

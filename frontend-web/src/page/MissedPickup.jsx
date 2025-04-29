@@ -2,42 +2,49 @@ import React, { useState, useEffect } from 'react';
 import { format, parseISO } from 'date-fns';
 import axios from 'axios';
 import { Link, useNavigate } from 'react-router-dom';
-const API_BASE_URL = 'http://localhost:8080/api';
+const API_BASE_URL = 'https://it342-g4-garbagemanagementsystem-kflf.onrender.com/api';
 
 // Create axios instance with default config
 const api = axios.create({
   baseURL: API_BASE_URL
 });
 const fetchUserProfile = async (userId, authToken) => {
-    try {
-      const response = await api.get(`/users/${userId}/profile`, {
-        headers: {
-          'Authorization': `Bearer ${authToken}`
-        }
-      });
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching profile:', error);
-      throw error;
-    }
-  };
-  
-  const fetchUserEmail = async (userId, authToken) => {
-    try {
-      const response = await api.get(`/users/${userId}/profile/email`, {
-        headers: {
-          'Authorization': `Bearer ${authToken}`
-        }
-      });
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching profile:', error);
-      throw error;
-    }
-  };
+  try {
+    const response = await api.get(`/users/${userId}/profile`, {
+      headers: {
+        'Authorization': `Bearer ${authToken}`
+      }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching profile:', error);
+    throw error;
+  }
+};
+
+const fetchUserEmail = async (userId, authToken) => {
+  try {
+    const response = await api.get(`/users/${userId}/profile/email`, {
+      headers: {
+        'Authorization': `Bearer ${authToken}`
+      }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching profile:', error);
+    throw error;
+  }
+};
 const MissedPickupPage = () => {
-    const [showProfilePopup, setShowProfilePopup] = useState(false);
-    const [showProfileModal, setShowProfileModal] = useState(false);   
+  const navigate = useNavigate();
+  const [userEmails, setUserEmails] = useState({});
+
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [selectedSchedule, setSelectedSchedule] = useState(null);
+  const [scheduleSearchTerm, setScheduleSearchTerm] = useState('');
+  const [useScheduleDateTime, setUseScheduleDateTime] = useState(false);
+  const [showProfilePopup, setShowProfilePopup] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
   const [missedPickups, setMissedPickups] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -72,6 +79,34 @@ const MissedPickupPage = () => {
     firstName: "",
     lastName: ""
   });
+  useEffect(() => {
+    // Fetch emails for all unique userIds in missed pickups
+    if (missedPickups.length > 0) {
+      const uniqueUserIds = [...new Set(missedPickups.map(pickup => pickup.userId).filter(Boolean))];
+      uniqueUserIds.forEach(userId => {
+        fetchUserEmail1(userId);
+      });
+    }
+  }, [missedPickups]);
+  const fetchUserEmail1 = async (userId) => {
+    if (!userId || userEmails[userId]) return; // Skip if no userId or already fetched
+    
+    try {
+      const response = await api.get(`/users/${userId}/profile/email`, {
+        headers: getAuthHeader()
+      });
+      
+      if (response.data && response.data.success) {
+        setUserEmails(prev => ({
+          ...prev,
+          [userId]: response.data.email
+        }));
+      }
+    } catch (err) {
+      console.error(`Failed to fetch email for user ${userId}:`, err);
+      // Don't set error state here to avoid disrupting the UI
+    }
+  };
   const handleApiError = (err) => {
     if (err.response) {
       // The request was made and the server responded with a status code
@@ -92,13 +127,13 @@ const MissedPickupPage = () => {
     setTimeout(() => {
       setPageLoaded(true);
     }, 100);
-    
+
     const authToken = localStorage.getItem('authToken');
     const userId = localStorage.getItem('userId');
-    
+
     console.log('Auth Token:', authToken);
     console.log('User ID:', userId);
-    
+
     if (!authToken || !userId) {
       console.log('Authentication information missing');
       setIsLoading(false);
@@ -115,53 +150,53 @@ const MissedPickupPage = () => {
         return Promise.reject(error);
       }
     );
-  const loadAllData = async () => {
-    try {
-      setIsLoading(true);
-      
-      // Fetch user profile and email
-      const profilePromise = fetchUserProfile(userId, authToken);
-      const emailPromise = fetchUserEmail(userId, authToken);
- 
-      const [profileResponse, emailResponse] = await Promise.all([
-        profilePromise,
-        emailPromise
-      ]);
-      
-      console.log('Profile data received:', profileResponse);
-      console.log('Email data received:', emailResponse);
-      
-      // Update profile data
-      if (profileResponse && profileResponse.success) {
-        setProfileData({
-          ...profileData,
-          name: `${profileResponse.firstName} ${profileResponse.lastName}`,
-          phone: profileResponse.phoneNumber,
-          firstName: profileResponse.firstName,
-          lastName: profileResponse.lastName
-        });
+    const loadAllData = async () => {
+      try {
+        setIsLoading(true);
+
+        // Fetch user profile and email
+        const profilePromise = fetchUserProfile(userId, authToken);
+        const emailPromise = fetchUserEmail(userId, authToken);
+
+        const [profileResponse, emailResponse] = await Promise.all([
+          profilePromise,
+          emailPromise
+        ]);
+
+        console.log('Profile data received:', profileResponse);
+        console.log('Email data received:', emailResponse);
+
+        // Update profile data
+        if (profileResponse && profileResponse.success) {
+          setProfileData({
+            ...profileData,
+            name: `${profileResponse.firstName} ${profileResponse.lastName}`,
+            phone: profileResponse.phoneNumber,
+            firstName: profileResponse.firstName,
+            lastName: profileResponse.lastName
+          });
+        }
+
+        // Update email data
+        if (emailResponse && emailResponse.success) {
+          setProfileEmail({
+            email: emailResponse.email
+          });
+        }
+
+        // Update schedules
+
+
+        setIsLoading(false);
+      } catch (err) {
+        handleApiError(err);
+        setIsLoading(false);
       }
-      
-      // Update email data
-      if (emailResponse && emailResponse.success) {
-        setProfileEmail({
-          email: emailResponse.email
-        });
-      }
-      
-      // Update schedules
-     
-      
-      setIsLoading(false);
-    } catch (err) {
-      handleApiError(err);
-      setIsLoading(false);
-    }
-  };
-  loadAllData();   return () => {
-    api.interceptors.request.eject(interceptor);
-  };
-}, []);
+    };
+    loadAllData(); return () => {
+      api.interceptors.request.eject(interceptor);
+    };
+  }, []);
   // Stats for dashboard
   const [stats, setStats] = useState({
     total: 0,
@@ -203,7 +238,7 @@ const MissedPickupPage = () => {
       const response = await api.get('/missed', {
         headers: getAuthHeader()
       });
-      
+
       // Handle various response formats
       let pickups = [];
       if (Array.isArray(response.data)) {
@@ -213,14 +248,14 @@ const MissedPickupPage = () => {
       } else if (response.data && response.data.success && Array.isArray(response.data.missedPickups)) {
         pickups = response.data.missedPickups;
       }
-      
+
       // Add status for demonstration if not present
       pickups = pickups.map(pickup => ({
         ...pickup,
         status: pickup.status || 'pending',
         urgency: pickup.urgency || (Math.random() > 0.7 ? 'high' : 'normal')
       }));
-      
+
       setMissedPickups(pickups);
       setError(null);
     } catch (err) {
@@ -239,14 +274,14 @@ const MissedPickupPage = () => {
       const response = await api.get('/schedule', {
         headers: getAuthHeader()
       });
-      
+
       let scheduleData = [];
       if (Array.isArray(response.data)) {
         scheduleData = response.data;
       } else if (response.data && response.data.success && Array.isArray(response.data.schedules)) {
         scheduleData = response.data.schedules;
       }
-      
+
       setSchedules(scheduleData);
     } catch (err) {
       console.error('Error fetching schedules:', err);
@@ -263,45 +298,81 @@ const MissedPickupPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     try {
       setLoading(true);
-      
+
+      // Create the payload - if using schedule datetime, use the schedule's data
       const payload = {
         ...formData,
         userId: localStorage.getItem('userId') || 'current-user',
         status: 'pending'
       };
-      
+
+      if (useScheduleDateTime && selectedSchedule) {
+        // Convert schedule's date and time to ISO format for reportDateTime
+        const dateStr = selectedSchedule.pickupDate;
+        const timeStr = selectedSchedule.pickupTime;
+        
+        // Parse the date and time strings to create a Date object
+        const [year, month, day] = dateStr.split('-').map(num => parseInt(num, 10));
+        let hours = 0;
+        let minutes = 0;
+        
+        // Parse time - handle both 12-hour and 24-hour formats
+        if (timeStr.includes('AM') || timeStr.includes('PM')) {
+          const timeParts = timeStr.replace(/\s*(AM|PM)/i, '').split(':');
+          hours = parseInt(timeParts[0], 10);
+          minutes = parseInt(timeParts[1], 10);
+          
+          // Adjust hours for PM
+          if (timeStr.includes('PM') && hours < 12) {
+            hours += 12;
+          }
+          // Adjust for 12 AM
+          if (timeStr.includes('AM') && hours === 12) {
+            hours = 0;
+          }
+        } else {
+          const timeParts = timeStr.split(':');
+          hours = parseInt(timeParts[0], 10);
+          minutes = parseInt(timeParts[1], 10);
+        }
+        
+        // Create the date object and convert to ISO string
+        const date = new Date(year, month - 1, day, hours, minutes);
+        payload.reportDateTime = date.toISOString().substring(0, 16);
+      }
+
       let response;
-      
+
       if (isEditing && currentMissedId) {
         response = await api.put(`/missed/${currentMissedId}`, payload, {
           headers: getAuthHeader()
         });
-        
+
         // Update state with edited item
-        setMissedPickups(missedPickups.map(pickup => 
+        setMissedPickups(missedPickups.map(pickup =>
           pickup.missedId === currentMissedId ? { ...payload, missedId: currentMissedId } : pickup
         ));
       } else {
         response = await api.post('/missed', payload, {
           headers: getAuthHeader()
         });
-        
+
         // Get the new ID from response or generate temporary one
         const newId = response.data?.missedId || `temp-${Date.now()}`;
-        
+
         // Add new item to state
         setMissedPickups([...missedPickups, { ...payload, missedId: newId }]);
       }
-      
+
       // Close modal and reset form
       setShowModal(false);
       resetForm();
       setIsEditing(false);
       setCurrentMissedId(null);
-      
+
     } catch (err) {
       console.error('Error submitting form:', err);
       setError('Failed to save data. Please try again.');
@@ -314,15 +385,40 @@ const MissedPickupPage = () => {
     if (selectedPickup) {
       const updatedPickup = { ...selectedPickup, status: e.target.value };
       setSelectedPickup(updatedPickup);
-      
+
       // Update in the main list too
-      setMissedPickups(missedPickups.map(pickup => 
+      setMissedPickups(missedPickups.map(pickup =>
         pickup.missedId === selectedPickup.missedId ? updatedPickup : pickup
       ));
-      
+
       // In a real app, you would also make an API call to update the status
     }
   };
+  const openScheduleSelector = () => {
+    setShowScheduleModal(true);
+    setScheduleSearchTerm('');
+  };
+  const filteredSchedules = schedules.filter(schedule => {
+    if (!scheduleSearchTerm) return true;
+    
+    const searchLower = scheduleSearchTerm.toLowerCase();
+    return (
+      (schedule.title && schedule.title.toLowerCase().includes(searchLower)) ||
+      (schedule.locationId && schedule.locationId.toLowerCase().includes(searchLower)) ||
+      (schedule.pickupDate && schedule.pickupDate.includes(searchLower)) ||
+      (schedule.pickupTime && schedule.pickupTime.toLowerCase().includes(searchLower))
+    );
+  });
+  const handleScheduleSelect = (schedule) => {
+    setSelectedSchedule(schedule);
+    setFormData({
+      ...formData,
+      scheduleId: schedule.scheduleId,
+      title: formData.title || schedule.title || ''
+    });
+    setShowScheduleModal(false);
+  };
+
   const handleLogout = () => {
     localStorage.removeItem('authToken');
     localStorage.removeItem('userId');
@@ -335,7 +431,16 @@ const MissedPickupPage = () => {
       scheduleId: pickup.scheduleId || '',
       reportDateTime: pickup.reportDateTime ? pickup.reportDateTime.substring(0, 16) : new Date().toISOString().substring(0, 16)
     });
+
+    // Find the corresponding schedule if exists
+    const schedule = schedules.find(s => s.scheduleId === pickup.scheduleId);
+    if (schedule) {
+      setSelectedSchedule(schedule);
+    } else {
+      setSelectedSchedule(null);
+    }
     
+    setUseScheduleDateTime(false);
     setIsEditing(true);
     setCurrentMissedId(pickup.missedId);
     setShowModal(true);
@@ -349,18 +454,18 @@ const MissedPickupPage = () => {
   const confirmDelete = async () => {
     try {
       setLoading(true);
-      
+
       await api.delete(`/missed/${deleteId}`, {
         headers: getAuthHeader()
       });
-      
+
       setMissedPickups(missedPickups.filter(pickup => pickup.missedId !== deleteId));
       if (selectedPickup && selectedPickup.missedId === deleteId) {
         setSelectedPickup(null);
       }
       setShowDeleteConfirm(false);
       setDeleteId(null);
-      
+
     } catch (err) {
       console.error('Error deleting record:', err);
       setError('Failed to delete record. Please try again.');
@@ -376,6 +481,8 @@ const MissedPickupPage = () => {
       scheduleId: '',
       reportDateTime: new Date().toISOString().substring(0, 16)
     });
+    setSelectedSchedule(null);
+    setUseScheduleDateTime(false);
   };
 
   const handlePickupClick = (pickup) => {
@@ -405,8 +512,8 @@ const MissedPickupPage = () => {
     }
   };
 
-  const mainContentAnimationClass = pageLoaded 
-    ? 'opacity-100 translate-y-0' 
+  const mainContentAnimationClass = pageLoaded
+    ? 'opacity-100 translate-y-0'
     : 'opacity-0 translate-y-6';
 
   return (
@@ -431,7 +538,7 @@ const MissedPickupPage = () => {
             </li>
             <li className="flex items-center px-5 py-3 text-gray-500 font-medium cursor-pointer transition duration-300 hover:bg-[rgba(93,166,70,0.05)]">
               <Link to="/complaints" className="flex items-center no-underline text-inherit">
-              <span className="mr-3">
+                <span className="mr-3">
                   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
                   </svg>
@@ -442,16 +549,16 @@ const MissedPickupPage = () => {
             <li className="flex items-center px-5 py-3 text-green-600 font-medium cursor-pointer transition-all duration-300 bg-green-50/30">
               <Link to="/missedPickup" className="flex items-center no-underline text-inherit">
                 <span className="mr-3">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-  <rect x="3" y="4" width="18" height="16" rx="2" ry="2"></rect>
-  <path d="M3 8h18"></path>
-  <line x1="8" y1="2" x2="8" y2="6"></line>
-  <line x1="16" y1="2" x2="16" y2="6"></line>
-  <line x1="12" y1="12" x2="12" y2="16"></line>
-  <line x1="10" y1="14" x2="14" y2="14"></line>
-  <line x1="18" y1="6" x2="6" y2="18"></line>
-  <line x1="6" y1="6" x2="18" y2="18"></line>
-</svg>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="4" width="18" height="16" rx="2" ry="2"></rect>
+                    <path d="M3 8h18"></path>
+                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                    <line x1="12" y1="12" x2="12" y2="16"></line>
+                    <line x1="10" y1="14" x2="14" y2="14"></line>
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                  </svg>
                 </span>
                 Missed Pickups
               </Link>
@@ -492,49 +599,49 @@ const MissedPickupPage = () => {
               </Link>
             </li>
           </ul>
-     </div>
-     
-     
-     <div className="absolute bottom-0 left-0 w-full p-4 flex items-center border-t border-gray-200 bg-white cursor-pointer" onClick={() => setShowProfilePopup(!showProfilePopup)}>
-        <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-800 font-medium text-sm">{profileData.lastName.charAt(0).toUpperCase()}</div>          <div className="ml-3">
-                        <div className="text-sm font-medium">{profileData.name}</div>
-                        <div className="text-xs text-gray-500">{profileEmail.email}</div>
-                    </div>
         </div>
-        
+
+
+        <div className="absolute bottom-0 left-0 w-full p-4 flex items-center border-t border-gray-200 bg-white cursor-pointer" onClick={() => setShowProfilePopup(!showProfilePopup)}>
+          <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-800 font-medium text-sm">{profileData.lastName.charAt(0).toUpperCase()}</div>          <div className="ml-3">
+            <div className="text-sm font-medium">{profileData.name}</div>
+            <div className="text-xs text-gray-500">{profileEmail.email}</div>
+          </div>
+        </div>
+
         {/* Profile Popup */}
         {showProfilePopup && (
-                    <div className="profile-popup absolute bottom-[70px] left-[10px] w-[220px] bg-white shadow-md rounded-lg z-30 border border-gray-200 overflow-hidden">
-                        <div className="py-3 px-4 flex items-center cursor-pointer hover:bg-[rgba(93,166,70,0.05)]" onClick={openProfileModal}>
-                            <div className="mr-3 text-gray-500">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                                    <circle cx="12" cy="7" r="4"></circle>
-                                </svg>
-                            </div>
-                            <div className="text-sm text-gray-800">View Profile</div>
-                        </div>
-                        <div className="h-px bg-gray-200"></div>
-                        <div className="py-3 px-4 flex items-center cursor-pointer hover:bg-[rgba(93,166,70,0.05)]" onClick={handleLogout}>
-                            <div className="mr-3 text-gray-500">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                                    <polyline points="16 17 21 12 16 7"></polyline>
-                                    <line x1="21" y1="12" x2="9" y2="12"></line>
-                                </svg>
-                            </div>
-                            <div className="text-sm text-gray-800">Logout</div>
-                        </div>
-                    </div>
-                )}
-     </div>
+          <div className="profile-popup absolute bottom-[70px] left-[10px] w-[220px] bg-white shadow-md rounded-lg z-30 border border-gray-200 overflow-hidden">
+            <div className="py-3 px-4 flex items-center cursor-pointer hover:bg-[rgba(93,166,70,0.05)]" onClick={openProfileModal}>
+              <div className="mr-3 text-gray-500">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+              </div>
+              <div className="text-sm text-gray-800">View Profile</div>
+            </div>
+            <div className="h-px bg-gray-200"></div>
+            <div className="py-3 px-4 flex items-center cursor-pointer hover:bg-[rgba(93,166,70,0.05)]" onClick={handleLogout}>
+              <div className="mr-3 text-gray-500">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                  <polyline points="16 17 21 12 16 7"></polyline>
+                  <line x1="21" y1="12" x2="9" y2="12"></line>
+                </svg>
+              </div>
+              <div className="text-sm text-gray-800">Logout</div>
+            </div>
+          </div>
+        )}
+      </div>
       {/* Main Content */}
       <div className={`flex-1 ml-60 p-6 transition-all duration-700 ease-out ${mainContentAnimationClass}`}>
         <div className="mb-6">
           <h1 className="text-2xl font-semibold text-slate-800">Missed Collections</h1>
           <p className="text-slate-500">Manage and respond to reported missed waste collection incidents</p>
         </div>
-        
+
         {/* Error Message */}
         {error && (
           <div className="bg-red-50 text-red-700 p-4 rounded-md mb-4 flex items-start">
@@ -551,8 +658,8 @@ const MissedPickupPage = () => {
           <div className="col-span-2">
             {/* Filter Controls */}
             <div className="bg-white rounded-lg shadow-sm border border-slate-100 p-4 mb-6 flex flex-wrap justify-between items-center">
-            <h2 className="text-lg font-semibold mb-4"> Missed Pickup Reports</h2>
-              <button 
+              <h2 className="text-lg font-semibold mb-4"> Missed Pickup Reports</h2>
+              <button
                 className="flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50"
                 onClick={() => {
                   resetForm();
@@ -568,11 +675,11 @@ const MissedPickupPage = () => {
                 Report Missed Collection
               </button>
             </div>
-            
+
             {/* Missed Collections List */}
             <div className="bg-white rounded-lg shadow-sm border border-slate-100 overflow-hidden">
-                
-              
+
+
               {loading && missedPickups.length === 0 ? (
                 <div className="flex justify-center items-center p-12">
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-700"></div>
@@ -584,7 +691,7 @@ const MissedPickupPage = () => {
                     <polyline points="9 22 9 12 15 12 15 22"></polyline>
                   </svg>
                   <p className="mt-4 text-slate-500">No missed pickups reported</p>
-                  <button 
+                  <button
                     className="mt-3 px-4 py-2 bg-green-50 text-green-700 rounded-md text-sm font-medium"
                     onClick={() => {
                       resetForm();
@@ -599,8 +706,8 @@ const MissedPickupPage = () => {
               ) : (
                 <ul className="divide-y divide-slate-100">
                   {filterPickups().map((pickup) => (
-                    <li 
-                      key={pickup.missedId} 
+                    <li
+                      key={pickup.missedId}
                       className={`p-4 transition-colors duration-200 hover:bg-slate-50 cursor-pointer ${selectedPickup && selectedPickup.missedId === pickup.missedId ? 'bg-slate-50' : ''}`}
                       onClick={() => handlePickupClick(pickup)}
                     >
@@ -608,8 +715,8 @@ const MissedPickupPage = () => {
                         <div className="flex-1">
                           <div className="flex items-center mb-1">
                             <h3 className="font-medium text-slate-900">{pickup.title}</h3>
-                        
-                          
+
+
                           </div>
                           <p className="text-sm text-slate-500 line-clamp-2">{pickup.description || 'No description provided'}</p>
                           <div className="flex items-center mt-1 text-xs text-slate-400">
@@ -622,21 +729,26 @@ const MissedPickupPage = () => {
                           </div>
                         </div>
                         <div className="flex items-center mt-2 md:mt-0">
-                          <div className="text-xs text-slate-500 mr-6">
-                            <div className="flex items-center">
-                              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1">
-                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                                <circle cx="12" cy="7" r="4"></circle>
-                              </svg>
-                              {pickup.userId || 'Anonymous User'}
-                            </div>
-                          </div>
-                          <button className="text-slate-400 hover:text-slate-600">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <polyline points="9 18 15 12 9 6"></polyline>
-                            </svg>
-                          </button>
-                        </div>
+  <div className="text-xs text-slate-500 mr-6">
+    <div className="flex items-center">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+        <circle cx="12" cy="7" r="4"></circle>
+      </svg>
+      {pickup.userId && userEmails[pickup.userId] ? (
+        <span title={pickup.userId}>{userEmails[pickup.userId]}</span>
+      ) : (
+        <span>{pickup.userId || 'Anonymous User'}</span>
+      )}
+    </div>
+  </div>
+  <button className="text-slate-400 hover:text-slate-600">
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </button>
+</div>
+
                       </div>
                     </li>
                   ))}
@@ -644,14 +756,14 @@ const MissedPickupPage = () => {
               )}
             </div>
           </div>
-          
+
           {/* Stats and Detail View */}
           <div className="col-span-1">
             {selectedPickup ? (
               <div className="bg-white rounded-lg shadow-sm border border-slate-100 overflow-hidden sticky top-4">
                 <div className="p-4 border-b border-slate-100 flex justify-between items-center">
                   <h2 className="text-lg font-semibold">Report Details</h2>
-                  <button 
+                  <button
                     className="text-slate-400 hover:text-slate-600"
                     onClick={handleClosePickupDetail}
                   >
@@ -662,7 +774,7 @@ const MissedPickupPage = () => {
                   </button>
                 </div>
                 <div className="p-4">
-               
+
                   <div className="mb-4">
                     <label className="block text-sm font-medium text-slate-700 mb-1">Title</label>
                     <div className="p-2 bg-slate-50 rounded-md text-slate-800">
@@ -675,36 +787,36 @@ const MissedPickupPage = () => {
                       {selectedPickup.description || 'No description provided'}
                     </div>
                   </div>
-             
+
                   <div className="mb-4">
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Schedule ID</label>
-                      <div className="p-2 bg-slate-50 rounded-md text-slate-800">
-                        {selectedPickup.scheduleId || 'Not specified'}
-                      </div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Schedule ID</label>
+                    <div className="p-2 bg-slate-50 rounded-md text-slate-800">
+                      {selectedPickup.scheduleId || 'Not specified'}
                     </div>
-        
-                    <div className="mb-4">
+                  </div>
+
+                  <div className="mb-4">
                     <label className="block text-sm font-medium text-slate-700 mb-1">Report Date</label>
-                      <div className="p-2 bg-slate-50 rounded-md text-slate-800">
-                        {selectedPickup.reportDateTime ? format(parseISO(selectedPickup.reportDateTime), 'MMM d, yyyy h:mm a') : 'N/A'}
-                      </div>
+                    <div className="p-2 bg-slate-50 rounded-md text-slate-800">
+                      {selectedPickup.reportDateTime ? format(parseISO(selectedPickup.reportDateTime), 'MMM d, yyyy h:mm a') : 'N/A'}
                     </div>
-           
+                  </div>
+
                   <div className="mb-4">
                     <label className="block text-sm font-medium text-slate-700 mb-1">User ID</label>
                     <div className="p-2 bg-slate-50 rounded-md text-slate-800">
                       {selectedPickup.userId || 'Anonymous User'}
                     </div>
                   </div>
-                 
+
                   <div className="flex space-x-2">
-                    <button 
+                    <button
                       className="flex-1 py-2 px-4 bg-green-600 rounded-md text-sm font-medium text-white hover:bg-green-700 transition-all duration-200"
                       onClick={() => handleEdit(selectedPickup)}
                     >
                       Edit Report
                     </button>
-                    <button 
+                    <button
                       className="py-2 px-4 bg-red-50 text-red-700 rounded-md text-sm font-medium hover:bg-red-100 transition-all duration-200"
                       onClick={() => initiateDelete(selectedPickup.missedId)}
                     >
@@ -718,7 +830,7 @@ const MissedPickupPage = () => {
                 <div className="p-4 border-b border-slate-100">
                   <h2 className="text-lg font-semibold">Click a list to view in detail</h2>
                 </div>
-               
+
                 <div className="flex flex-col items-center justify-center p-8 bg-slate-50 border-t border-slate-100">
                   <svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
                     <circle cx="12" cy="12" r="10"></circle>
@@ -741,7 +853,7 @@ const MissedPickupPage = () => {
                 <h2 className="text-xl font-semibold text-slate-800">
                   {isEditing ? 'Edit Missed Collection Report' : 'Report Missed Collection'}
                 </h2>
-                <button 
+                <button
                   onClick={() => setShowModal(false)}
                   className="text-slate-400 hover:text-slate-600"
                 >
@@ -752,7 +864,7 @@ const MissedPickupPage = () => {
                 </button>
               </div>
             </div>
-            
+
             <form onSubmit={handleSubmit}>
               <div className="p-6 space-y-4">
                 <div>
@@ -767,7 +879,7 @@ const MissedPickupPage = () => {
                     required
                   />
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
                   <textarea
@@ -780,38 +892,76 @@ const MissedPickupPage = () => {
                     required
                   />
                 </div>
-                
+
                 <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Schedule</label>
-                  <select
-                    name="scheduleId"
-                    value={formData.scheduleId}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 rounded-md border border-slate-300 focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500"
-                    required
-                  >
-                    <option value="">Select a schedule</option>
-                    {schedules.map((schedule) => (
-                      <option key={schedule.id} value={schedule.id}>
-                        {schedule.location || schedule.id}
-                      </option>
-                    ))}
-                  </select>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Schedule</label>
+                  <div className="flex items-center space-x-2">
+                    <div className="flex-1 relative">
+                      <input
+                        type="text"
+                        readOnly
+                        value={selectedSchedule ? `${selectedSchedule.title} (${selectedSchedule.pickupDate}, ${selectedSchedule.pickupTime})` : 'No schedule selected'}
+                        className="w-full px-3 py-2 rounded-md border border-slate-300 bg-slate-50 cursor-pointer"
+                        onClick={openScheduleSelector}
+                      />
+                      <input
+                        type="hidden"
+                        name="scheduleId"
+                        value={formData.scheduleId}
+                        required
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={openScheduleSelector}
+                      className="px-3 py-2 rounded-md bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors duration-200"
+                    >
+                      Select
+                    </button>
+                  </div>
+                  {selectedSchedule && (
+                    <div className="mt-2 text-sm text-slate-500">
+                      Location ID: {selectedSchedule.locationId} | Status: {selectedSchedule.status}
+                    </div>
+                  )}
                 </div>
-                
+
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Date & Time of Missed Collection</label>
-                  <input
-                    type="datetime-local"
-                    name="reportDateTime"
-                    value={formData.reportDateTime}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 rounded-md border border-slate-300 focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500"
-                    required
-                  />
+                  <div className="flex items-center mb-2">
+                    <input
+                      type="checkbox"
+                      id="useScheduleDateTime"
+                      checked={useScheduleDateTime}
+                      onChange={() => setUseScheduleDateTime(!useScheduleDateTime)}
+                      className="h-4 w-4 text-green-600 focus:ring-green-500 border-slate-300 rounded"
+                      disabled={!selectedSchedule}
+                    />
+                    <label htmlFor="useScheduleDateTime" className="ml-2 block text-sm font-medium text-slate-700">
+                      Use schedule date and time
+                    </label>
+                  </div>
+                  
+                  <div className={useScheduleDateTime ? "opacity-50 pointer-events-none" : ""}>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Date & Time of Missed Collection</label>
+                    <input
+                      type="datetime-local"
+                      name="reportDateTime"
+                      value={formData.reportDateTime}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 rounded-md border border-slate-300 focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500"
+                      required={!useScheduleDateTime}
+                      disabled={useScheduleDateTime}
+                    />
+                  </div>
+                  
+                  {useScheduleDateTime && selectedSchedule && (
+                    <div className="mt-2 p-2 bg-green-50 border border-green-100 rounded-md text-sm text-green-700">
+                      Using schedule datetime: {selectedSchedule.pickupDate} at {selectedSchedule.pickupTime}
+                    </div>
+                  )}
                 </div>
               </div>
-              
+
               <div className="p-6 bg-slate-50 border-t border-slate-200 flex justify-end space-x-3">
                 <button
                   type="button"
@@ -823,7 +973,7 @@ const MissedPickupPage = () => {
                 <button
                   type="submit"
                   className="px-4 py-2 rounded-md bg-green-600 text-white hover:bg-green-700 transition-colors duration-200"
-                  disabled={loading}
+                  disabled={loading || (!formData.scheduleId)}
                 >
                   {loading ? 'Saving...' : isEditing ? 'Update Report' : 'Submit Report'}
                 </button>
@@ -832,7 +982,7 @@ const MissedPickupPage = () => {
           </div>
         </div>
       )}
-      
+
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -845,7 +995,7 @@ const MissedPickupPage = () => {
               </svg>
               <h3 className="text-lg font-bold text-slate-900 mb-2">Delete Confirmation</h3>
               <p className="text-slate-600 mb-6">Are you sure you want to delete this report? This action cannot be undone.</p>
-              
+
               <div className="flex justify-center space-x-3">
                 <button
                   onClick={() => setShowDeleteConfirm(false)}
@@ -865,14 +1015,14 @@ const MissedPickupPage = () => {
           </div>
         </div>
       )}
-      
-            {/* Profile Modal */}
-            {showProfileModal && (
+
+      {/* Profile Modal */}
+      {showProfileModal && (
         <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-50">
           <div className="bg-white rounded-lg shadow-lg w-11/12 max-w-xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex justify-between items-center p-5 border-b border-slate-200">
               <h3 className="text-xl font-semibold">Profile</h3>
-              <button 
+              <button
                 className="bg-transparent border-none cursor-pointer flex items-center justify-center p-2 rounded text-slate-500 hover:bg-slate-100 hover:text-slate-800"
                 onClick={() => setShowProfileModal(false)}
               >
@@ -882,11 +1032,11 @@ const MissedPickupPage = () => {
                 </svg>
               </button>
             </div>
-            
+
             <div className="p-5">
               <div className="flex items-center mb-6">
                 <div className="w-20 h-20 rounded-full bg-slate-100 flex items-center justify-center text-slate-800 font-medium text-2xl mr-5">
-                {profileData.lastName.charAt(0).toUpperCase()}
+                  {profileData.lastName.charAt(0).toUpperCase()}
                 </div>
                 <div>
                   <div className="text-xl font-semibold">{profileData.name}</div>
@@ -894,7 +1044,7 @@ const MissedPickupPage = () => {
                   <div className="text-xs text-slate-400 mt-1">Member since {profileData.joinDate}</div>
                 </div>
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 <div>
                   <div className="text-xs text-slate-500 mb-1">Email</div>
@@ -913,16 +1063,126 @@ const MissedPickupPage = () => {
                   <div className="text-sm">{profileData.address}</div>
                 </div>
               </div>
-              
+
               <div className="flex justify-end space-x-3 pt-4 border-t border-slate-200">
-                <button 
+                <button
                   className="px-4 py-2 bg-white border border-slate-200 rounded-md text-sm font-medium text-slate-700 hover:bg-slate-50"
                   onClick={() => setShowProfileModal(false)}
                 >
                   Close
                 </button>
-                <button className="px-4 py-2 bg-green-600 rounded-md text-sm font-medium text-white hover:bg-green-700">
-                  Edit Profile
+     
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+       {/* Schedule Selection Modal */}
+       {showScheduleModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-2xl max-h-[80vh] flex flex-col">
+            <div className="p-4 border-b border-slate-200 flex justify-between items-center">
+              <h2 className="text-lg font-semibold text-slate-800">Select Schedule</h2>
+              <button
+                onClick={() => setShowScheduleModal(false)}
+                className="text-slate-400 hover:text-slate-600"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            </div>
+            
+            <div className="p-4 border-b border-slate-200">
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Search schedules by title, date, time..."
+                  className="w-full pl-10 pr-4 py-2 rounded-md border border-slate-300 focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500"
+                  value={scheduleSearchTerm}
+                  onChange={(e) => setScheduleSearchTerm(e.target.value)}
+                />
+                <div className="absolute left-3 top-2.5 text-slate-400">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                  </svg>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto">
+              {loading ? (
+                <div className="flex justify-center items-center p-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-700"></div>
+                </div>
+              ) : filteredSchedules.length === 0 ? (
+                <div className="flex flex-col items-center justify-center p-8 text-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="8" x2="12" y2="12"></line>
+                    <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                  </svg>
+                  <p className="mt-2 text-slate-500">No matching schedules found</p>
+                </div>
+              ) : (
+                <ul className="divide-y divide-slate-100">
+                  {filteredSchedules.map((schedule) => (
+                    <li 
+                      key={schedule.scheduleId}
+                      className="p-4 hover:bg-slate-50 cursor-pointer transition-colors duration-150"
+                      onClick={() => handleScheduleSelect(schedule)}
+                    >
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h3 className="font-medium text-slate-900">{schedule.title || 'Untitled Schedule'}</h3>
+                          <div className="mt-1 text-sm text-slate-500">
+                            <div className="flex items-center space-x-4">
+                              <span className="flex items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1">
+                                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                  <line x1="16" y1="2" x2="16" y2="6"></line>
+                                  <line x1="8" y1="2" x2="8" y2="6"></line>
+                                  <line x1="3" y1="10" x2="21" y2="10"></line>
+                                </svg>
+                                {schedule.pickupDate}
+                              </span>
+                              <span className="flex items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1">
+                                  <circle cx="12" cy="12" r="10"></circle>
+                                  <polyline points="12 6 12 12 16 14"></polyline>
+                                </svg>
+                                {schedule.pickupTime}
+                              </span>
+                            </div>
+                            <div className="mt-1">
+                              <span className="text-xs">Location ID: {schedule.locationId}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <span className={`px-2 py-1 text-xs rounded-full uppercase ${
+                          schedule.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
+                          schedule.status === 'COMPLETED' ? 'bg-green-100 text-green-800' :
+                          'bg-blue-100 text-blue-800'
+                        }`}>
+                          {schedule.status}
+                        </span>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            
+            <div className="p-4 border-t border-slate-200">
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setShowScheduleModal(false)}
+                  className="px-4 py-2 rounded-md border border-slate-300 text-slate-700 hover:bg-slate-100 transition-colors duration-200"
+                >
+                  Cancel
                 </button>
               </div>
             </div>
@@ -930,7 +1190,7 @@ const MissedPickupPage = () => {
         </div>
       )}
     </div>
-    
+
   );
 };
 
