@@ -11,6 +11,35 @@ const api = axios.create({
   baseURL: API_BASE_URL
 });
 
+// New API function for pickup locations
+const fetchPickupLocations = async (authToken) => {
+  try {
+    const response = await api.get('/pickup-locations', {
+      headers: {
+        'Authorization': `Bearer ${authToken}`
+      }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching pickup locations:', error);
+    throw error;
+  }
+};
+
+// New API function for complaints/feedback
+const fetchComplaints = async (authToken) => {
+  try {
+    const response = await api.get('/feedback', {
+      headers: {
+        'Authorization': `Bearer ${authToken}`
+      }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching complaints:', error);
+    throw error;
+  }
+};
 const fetchUserProfile = async (userId, authToken) => {
   try {
     const response = await api.get(`/users/${userId}/profile`, {
@@ -116,6 +145,10 @@ function VermigoDashboard() {
     phoneNumber: ''
   });
   // State for profile popup and modal
+  const [pickupLocations, setPickupLocations] = useState([]);
+const [complaints, setComplaints] = useState([]);
+const [pendingComplaints, setPendingComplaints] = useState(0);
+const [monthlyPickupCounts, setMonthlyPickupCounts] = useState([]);
   const [showProfilePopup, setShowProfilePopup] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [schedules, setSchedules] = useState([]);
@@ -125,7 +158,6 @@ function VermigoDashboard() {
   const [error, setError] = useState(null);
   const [editMode, setEditMode] = useState(false);
   const [pageLoaded, setPageLoaded] = useState(false);
-
   const [selectedDay, setSelectedDay] = useState(null);
   const [showTimeModal, setShowTimeModal] = useState(false);
   const [daySchedules, setDaySchedules] = useState([]);
@@ -144,7 +176,15 @@ function VermigoDashboard() {
     loading: false,
     error: null
   });
-
+  const countPickupLocations = (locationData) => {
+    // Check if locationData exists and has a locations property that is an array
+    if (locationData && locationData.locations && Array.isArray(locationData.locations)) {
+      return locationData.locations.length;
+    }
+    
+    // Return 0 if the data structure doesn't match what we expect
+    return 0;
+  };
   useEffect(() => {
     setTimeout(() => {
       setPageLoaded(true);
@@ -172,24 +212,30 @@ function VermigoDashboard() {
     const loadAllData = async () => {
       try {
         setIsLoading(true);
-
+  
         // Fetch user profile and email
         const profilePromise = fetchUserProfile(userId, authToken);
         const emailPromise = fetchUserEmail(userId, authToken);
         const schedulesPromise = fetchSchedules(authToken);
         const tipsPromise = fetchTips();
-
-        const [profileResponse, emailResponse, schedulesResponse, tipsResponse] = await Promise.all([
+        const locationsPromise = fetchPickupLocations(authToken);
+        const complaintsPromise = fetchComplaints(authToken);
+  
+        const [profileResponse, emailResponse, schedulesResponse, tipsResponse, locationsResponse, complaintsResponse] = await Promise.all([
           profilePromise,
           emailPromise,
           schedulesPromise,
-          tipsPromise
+          tipsPromise,
+          locationsPromise,
+          complaintsPromise
         ]);
-
+  
         console.log('Profile data received:', profileResponse);
         console.log('Email data received:', emailResponse);
         console.log('Schedules data received:', schedulesResponse);
         console.log('Tips data received:', tipsResponse);
+        console.log('Pickup locations received:', locationsResponse);
+        console.log('Complaints data received:', complaintsResponse);
 
         // Update profile data
         if (profileResponse && profileResponse.success) {
@@ -208,17 +254,28 @@ function VermigoDashboard() {
             email: emailResponse.email
           });
         }
-
-        // Update schedules
         if (schedulesResponse) {
           setSchedules(schedulesResponse);
+          // Process schedules to get monthly counts
+          const monthlyCounts = processSchedulesForChart(schedulesResponse);
+          setMonthlyPickupCounts(monthlyCounts);
+        }
+        
+        if (locationsResponse) {
+          setPickupLocations(locationsResponse);
         }
 
+        
         // Update tips
         if (tipsResponse) {
           setTips(tipsResponse);
         }
-
+        if (complaintsResponse) {
+          setComplaints(complaintsResponse);
+          // Count pending complaints
+          const pendingCount = complaintsResponse.filter(complaint => complaint.status === 'PENDING').length;
+          setPendingComplaints(pendingCount);
+        }
         setIsLoading(false);
       } catch (err) {
         handleApiError(err);
@@ -247,6 +304,22 @@ function VermigoDashboard() {
         })
       }
     }
+    const processSchedulesForChart = (schedules) => {
+      const monthCounts = Array(12).fill(0);
+      
+      schedules.forEach(schedule => {
+        if (schedule.pickupDate) {
+          const date = new Date(schedule.pickupDate);
+          const month = date.getMonth();
+          monthCounts[month]++;
+        }
+      });
+      
+      return monthNames.map((name, index) => ({
+        name: name.substring(0, 3),
+        value: monthCounts[index]
+      }));
+    };
     // Fetch user profile data
     const loadUserProfile = async () => {
       try {
@@ -684,7 +757,20 @@ function VermigoDashboard() {
 
     return 'bg-green-100 text-green-700'; // Default
   };
-
+  const getLocationName = (locationId) => {
+    if (!pickupLocations || !pickupLocations.locations) return 'Unknown Location';
+    
+    const location = pickupLocations.locations.find(loc => loc.locationId === locationId);
+    return location ? location.siteName : 'Unknown Location';
+  };
+  
+  const getLocationAddress = (locationId) => {
+    if (!pickupLocations || !pickupLocations.locations) return 'Unknown Address';
+    
+    const location = pickupLocations.locations.find(loc => loc.locationId === locationId);
+    return location ? location.address : 'Unknown Address';
+  };
+  
   return (
     <div className="flex min-h-screen bg-gray-50">
 
@@ -855,9 +941,7 @@ function VermigoDashboard() {
             <div className="text-xs text-gray-500">{profileEmail.email}</div>
           </div>
         </div>
-      </div>
-      {/* Profile Popup */}
-      {/* Profile Popup */}
+         {/* Profile Popup */}
       {showProfilePopup && (
         <div className="absolute bottom-16 left-2.5 w-56 bg-white shadow-md rounded-lg z-30 border border-slate-200 overflow-hidden">
           <div className="p-3 flex items-center cursor-pointer hover:bg-green-50/20 transition-all duration-200" onClick={openProfileModal}>
@@ -882,6 +966,9 @@ function VermigoDashboard() {
           </div>
         </div>
       )}
+      </div>
+
+     
 
 
       {/* Main Content */}
@@ -891,60 +978,46 @@ function VermigoDashboard() {
           <h1 className="text-2xl font-semibold text-gray-800">Reports</h1>
         </div>
 
-        {/* Timeline Filter */}
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <span className="text-gray-500 mr-2">Timeline:</span>
-            <select className="bg-white border border-gray-200 rounded px-3 py-2 pr-8 font-sans text-gray-800 cursor-pointer focus:outline-none focus:border-[#5da646] focus:ring-2 focus:ring-[rgba(93,166,70,0.2)] appearance-none bg-no-repeat bg-[right_0.5rem_center] bg-[length:1.25rem]">
-              <option>All-time</option>
-              <option>This year</option>
-              <option>This quarter</option>
-              <option>This month</option>
-              <option>This week</option>
-            </select>
-          </div>
-        </div>
-
-        {/* Metrics Section */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-          <div className="bg-white p-6 rounded-lg shadow-sm">
-            <div className="text-sm text-gray-500 mb-2">Active Users</div>
-            <div className="text-3xl font-bold">121</div>
-          </div>
-          <div className="bg-white p-6 rounded-lg shadow-sm">
-            <div className="text-sm text-gray-500 mb-2">Total Pickup Trash</div>
-            <div className="text-3xl font-bold">3,298</div>
-          </div>
-          <div className="bg-white p-6 rounded-lg shadow-sm">
-            <div className="text-sm text-gray-500 mb-2">Total Collection Points</div>
-            <div className="text-3xl font-bold">10,689</div>
-          </div>
-        </div>
+      
+ {/* Metrics Section */}
+<div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+  <div className="bg-white p-6 rounded-lg shadow-sm">
+    <div className="text-sm text-gray-500 mb-2">Active Users</div>
+    <div className="text-3xl font-bold">121</div>
+  </div>
+  <div className="bg-white p-6 rounded-lg shadow-sm">
+    <div className="text-sm text-gray-500 mb-2">Pending Complaints</div>
+    <div className="text-3xl font-bold">{isLoading ? '...' : pendingComplaints}</div>
+  </div>
+  <div className="bg-white p-6 rounded-lg shadow-sm">
+  <div className="text-sm text-gray-500 mb-2">Total Collection Points</div>
+  <div className="text-3xl font-bold">
+    {isLoading ? '...' : countPickupLocations(pickupLocations)}
+  </div>
+  </div>
+</div>
 
         {/* Charts Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
           {/* Top Locations */}
-          <div className="bg-white p-6 rounded-lg shadow-sm">
-            <h3 className="text-lg font-semibold mb-4">Recent Collections                        </h3>
-            <div>
+      
               <div><HistoryWidget /></div>
-            </div>
-          </div>
+            
 
-          {/* Activity Chart */}
-          <div className="bg-white p-6 rounded-lg shadow-sm">
-            <h3 className="text-lg font-semibold mb-4">Activity</h3>
-            <div className="h-60">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData}>
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} />
-                  <YAxis hide={true} />
-                  <Tooltip />
-                  <Bar dataKey="value" fill="var(--chart-color)" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
+        {/* Activity Chart */}
+<div className="bg-white p-6 rounded-lg shadow-sm">
+  <h3 className="text-lg font-semibold mb-4">Activity</h3>
+  <div className="h-60">
+    <ResponsiveContainer width="100%" height="100%">
+      <BarChart data={monthlyPickupCounts.length > 0 ? monthlyPickupCounts : chartData}>
+        <XAxis dataKey="name" axisLine={false} tickLine={false} />
+        <YAxis hide={true} />
+        <Tooltip />
+        <Bar dataKey="value" fill="var(--chart-color)" radius={[4, 4, 0, 0]} />
+      </BarChart>
+    </ResponsiveContainer>
+  </div>
+</div>
         </div>
 
         {showTimeModal && (
@@ -960,24 +1033,23 @@ function VermigoDashboard() {
                 <div className="max-h-64 overflow-y-auto">
                   {daySchedules.length > 0 ? (
                     <div>
-                      {daySchedules.map((schedule, index) => (
-                        <div key={index} className="mb-4 p-4 border border-gray-100 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center">
-                              <Clock className="w-5 h-5 mr-2 text-green-600" />
-                              <span className="font-medium">{schedule.pickupTime}</span>
-                            </div>
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusClass(schedule.status)}`}>
-                              {schedule.status}
-                            </span>
-                          </div>
-                          <div className="mt-2 flex items-center text-gray-500 text-sm">
-                            <MapPin className="w-4 h-4 mr-1" />
-                            <span>Location ID: {schedule.locationId}</span>
-                          </div>
-                        
-                        </div>
-                      ))}
+                {daySchedules.map((schedule, index) => (
+  <div key={index} className="mb-4 p-4 border border-gray-100 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
+    <div className="flex items-center justify-between">
+      <div className="flex items-center">
+        <Clock className="w-5 h-5 mr-2 text-green-600" />
+        <span className="font-medium">{schedule.pickupTime}</span>
+      </div>
+      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusClass(schedule.status)}`}>
+        {schedule.status}
+      </span>
+    </div>
+    <div className="mt-2 flex items-center text-gray-500 text-sm">
+      <MapPin className="w-4 h-4 mr-1" />
+      <span>{getLocationAddress(schedule.locationId)}</span>
+    </div>
+  </div>
+))}
                     </div>
                   ) : (
                     <div className="text-center py-8 text-gray-500">

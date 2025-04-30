@@ -283,6 +283,11 @@ export default function VermigoSchedule() {
     const location = locations.find(loc => loc.locationId === locationId);
     return location ? location.siteName : locationId;
   };
+
+  const getAddressName = (locationId) => {
+    const location = locations.find(loc => loc.locationId === locationId);
+    return location ? location.address : locationId;
+  }
   const handleApiError = (err) => {
     if (err.response) {
       // The request was made and the server responded with a status code
@@ -728,7 +733,8 @@ export default function VermigoSchedule() {
       result = result.filter(schedule => 
         schedule.title?.toLowerCase().includes(searchLower) ||
         schedule.scheduleId?.toLowerCase().includes(searchLower) ||
-        getLocationName(schedule.locationId).toLowerCase().includes(searchLower)
+        getLocationName(schedule.locationId).toLowerCase().includes(searchLower) ||
+        getAddressName(schedule.locationId).toLowerCase().includes(searchLower) 
       );
     }
     
@@ -958,6 +964,7 @@ export default function VermigoSchedule() {
                   <div className="font-medium text-sm">{schedule.title || 'Untitled Collection'}</div>
                   <div className="text-sm">Time: {schedule.pickupTime}</div>
                   <div className="text-sm">Location: {getLocationName(schedule.locationId)}</div>
+                  <div className="text-sm">Address: {getAddressName(schedule.locationId)}</div>
                 </div>
               </div>
             ))}
@@ -1226,6 +1233,7 @@ export default function VermigoSchedule() {
         {filters.location !== 'ALL' && (
           <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full flex items-center">
             Location: {getLocationName(filters.location)}
+            
             <button className="ml-1 text-green-600 hover:text-green-800" onClick={() => setFilters({...filters, location: 'ALL'})}>
               <X className="w-3 h-3" />
             </button>
@@ -1256,8 +1264,8 @@ export default function VermigoSchedule() {
       <thead>
         <tr className="border-b border-gray-200">
           <th className="text-left py-3 px-4 text-gray-500 font-medium">Title</th>
-          <th className="text-left py-3 px-4 text-gray-500 font-medium">Schedule ID</th>
-          <th className="text-left py-3 px-4 text-gray-500 font-medium">Location ID</th>
+          <th className="text-left py-3 px-4 text-gray-500 font-medium">Site Name</th>
+          <th className="text-left py-3 px-4 text-gray-500 font-medium">Address</th>
           <th className="text-left py-3 px-4 text-gray-500 font-medium">Date</th>
           <th className="text-left py-3 px-4 text-gray-500 font-medium">Time</th>
           <th className="text-left py-3 px-4 text-gray-500 font-medium">Status</th>
@@ -1269,8 +1277,8 @@ export default function VermigoSchedule() {
           filteredSchedules.map(schedule => (
             <tr key={schedule.scheduleId} className="border-b border-gray-100 hover:bg-gray-50">
               <td className="py-3 px-4">{schedule.title}</td>
-              <td className="py-3 px-4">{schedule.scheduleId}</td>
               <td className="py-3 px-4">{getLocationName(schedule.locationId)}</td>
+              <td className="py-3 px-4 text-xs">{getAddressName(schedule.locationId)}</td>
               <td className="py-3 px-4">{new Date(schedule.pickupDate).toLocaleDateString()}</td>
               <td className="py-3 px-4">{schedule.pickupTime}</td>
               <td className="py-3 px-4">

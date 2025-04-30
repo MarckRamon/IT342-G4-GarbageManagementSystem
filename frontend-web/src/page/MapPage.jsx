@@ -27,6 +27,7 @@ const fetchUserProfile = async (userId, authToken) => {
     throw error;
   }
 };
+
 const fetchUserEmail = async (userId, authToken) => {
   try {
     const response = await api.get(`/users/${userId}/profile/email`, {
@@ -97,6 +98,10 @@ function MapInteraction({ onPinPlace }) {
 }
 
 const MapPage = () => {
+  const [pickupLocations, setPickupLocations] = useState([]);
+const [complaints, setComplaints] = useState([]);
+const [pendingComplaints, setPendingComplaints] = useState(0);
+const [monthlyPickupCounts, setMonthlyPickupCounts] = useState([]);
   const navigate = useNavigate();
   const [showProfilePopup, setShowProfilePopup] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
