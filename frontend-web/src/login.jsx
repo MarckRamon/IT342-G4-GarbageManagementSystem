@@ -41,11 +41,19 @@
           if (response.data && response.data.success) {
               const token = response.data.token || '';
               const userData = response.data.userId || {};
-
+              const userRole= response.data.role || '';
               const storage = localStorage;
               storage.setItem('authToken', token);
               storage.setItem('userId',userData);
-
+             
+    
+              // ✅ Check for ADMIN role only
+              if (userRole !== 'ADMIN') {
+                console.log('role response:', userRole);
+                showSnackbar('Access denied. Admins only.', 'error');
+                setIsLoading(false);
+                return;
+              }
               // Store userId if available
               if (userData.id) {
                   storage.setItem('userId', userData.id);
