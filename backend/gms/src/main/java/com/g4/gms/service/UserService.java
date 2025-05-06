@@ -20,6 +20,9 @@ import org.springframework.stereotype.Service;
 import java.util.concurrent.ExecutionException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.List;
+import java.util.ArrayList;
+import com.google.cloud.firestore.QueryDocumentSnapshot;
 
 @Service
 public class UserService {
@@ -307,5 +310,24 @@ public class UserService {
         }
         logger.info("Retrieved notification settings for user ID: {}: {}", userId, user.isNotificationsEnabled());
         return user.isNotificationsEnabled();
+    }
+
+    /**
+     * Retrieves all users from Firestore
+     * @return List<User> List of all users
+     * @throws ExecutionException
+     * @throws InterruptedException
+     */
+    public List<User> getAllUsers() throws ExecutionException, InterruptedException {
+        List<User> users = new ArrayList<>();
+        ApiFuture<com.google.cloud.firestore.QuerySnapshot> future = 
+            firestore.collection(COLLECTION_NAME).get();
+            
+        List<QueryDocumentSnapshot> documents = future.get().getDocuments();
+        for (QueryDocumentSnapshot document : documents) {
+            users.add(document.toObject(User.class));
+        }
+        
+        return users;
     }
 } 

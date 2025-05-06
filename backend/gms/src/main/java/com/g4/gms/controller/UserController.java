@@ -1,16 +1,14 @@
 package com.g4.gms.controller;
 
-import com.g4.gms.dto.EmailRequest;
-import com.g4.gms.dto.EmailResponse;
-import com.g4.gms.dto.ProfileRequest;
-import com.g4.gms.dto.ProfileResponse;
-import com.g4.gms.dto.UpdateNotificationSettingsDto;
+import com.g4.gms.dto.*;
 import com.g4.gms.model.User;
 import com.g4.gms.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
@@ -20,6 +18,197 @@ public class UserController {
 
     @Autowired
     private UserService userService;
+
+    /**
+     * Get all users
+     * @return List of UserResponse containing all users' data
+     */
+    @GetMapping
+    public ResponseEntity<?> getAllUsers() {
+        try {
+            List<User> users = userService.getAllUsers();
+            List<UserResponse> responses = new ArrayList<>();
+            
+            for (User user : users) {
+                UserResponse response = new UserResponse(
+                    user.getUserId(),
+                    user.getUsername(),
+                    user.getFirstName(),
+                    user.getLastName(),
+                    user.getEmail(),
+                    user.getRole(),
+                    user.getLocation(),
+                    user.getPhoneNumber(),
+                    user.isNotificationsEnabled(),
+                    user.getCreatedAt(),
+                    true,
+                    null
+                );
+                responses.add(response);
+            }
+            
+            return ResponseEntity.ok(responses);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("message", "Error retrieving users: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * Create a new user
+     * @param request UserRequest containing user data
+     * @return UserResponse containing the created user data
+     */
+    @PostMapping
+    public ResponseEntity<UserResponse> createUser(@RequestBody UserRequest request) {
+        try {
+            User user = new User();
+            user.setUsername(request.getUsername());
+            user.setFirstName(request.getFirstName());
+            user.setLastName(request.getLastName());
+            user.setEmail(request.getEmail());
+            user.setPassword(request.getPassword());
+            user.setRole(request.getRole());
+            user.setLocation(request.getLocation());
+            user.setPhoneNumber(request.getPhoneNumber());
+            user.setNotificationsEnabled(request.isNotificationsEnabled());
+            
+            User createdUser = userService.createUser(user);
+            
+            UserResponse response = new UserResponse(
+                createdUser.getUserId(),
+                createdUser.getUsername(),
+                createdUser.getFirstName(),
+                createdUser.getLastName(),
+                createdUser.getEmail(),
+                createdUser.getRole(),
+                createdUser.getLocation(),
+                createdUser.getPhoneNumber(),
+                createdUser.isNotificationsEnabled(),
+                createdUser.getCreatedAt(),
+                true,
+                "User created successfully"
+            );
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            UserResponse response = new UserResponse(false, "Error creating user: " + e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+    
+    /**
+     * Get a user by ID
+     * @param userId User ID
+     * @return UserResponse containing the user data
+     */
+    @GetMapping("/{userId}")
+    public ResponseEntity<UserResponse> getUserById(@PathVariable String userId) {
+        try {
+            User user = userService.getUserById(userId);
+            
+            if (user == null) {
+                return ResponseEntity.notFound().build();
+            }
+            
+            UserResponse response = new UserResponse(
+                user.getUserId(),
+                user.getUsername(),
+                user.getFirstName(),
+                user.getLastName(),
+                user.getEmail(),
+                user.getRole(),
+                user.getLocation(),
+                user.getPhoneNumber(),
+                user.isNotificationsEnabled(),
+                user.getCreatedAt(),
+                true,
+                "User retrieved successfully"
+            );
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            UserResponse response = new UserResponse(false, "Error retrieving user: " + e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+    
+    /**
+     * Update a user
+     * @param userId User ID
+     * @param request UserRequest containing updated user data
+     * @return UserResponse containing the updated user data
+     */
+    @PutMapping("/{userId}")
+    public ResponseEntity<UserResponse> updateUser(
+            @PathVariable String userId,
+            @RequestBody UserRequest request) {
+        try {
+            User user = userService.getUserById(userId);
+            
+            if (user == null) {
+                return ResponseEntity.notFound().build();
+            }
+            
+            user.setUsername(request.getUsername());
+            user.setFirstName(request.getFirstName());
+            user.setLastName(request.getLastName());
+            user.setEmail(request.getEmail());
+            if (request.getPassword() != null && !request.getPassword().isEmpty()) {
+                user.setPassword(request.getPassword());
+            }
+            user.setRole(request.getRole());
+            user.setLocation(request.getLocation());
+            user.setPhoneNumber(request.getPhoneNumber());
+            user.setNotificationsEnabled(request.isNotificationsEnabled());
+            
+            User updatedUser = userService.updateUser(user);
+            
+            UserResponse response = new UserResponse(
+                updatedUser.getUserId(),
+                updatedUser.getUsername(),
+                updatedUser.getFirstName(),
+                updatedUser.getLastName(),
+                updatedUser.getEmail(),
+                updatedUser.getRole(),
+                updatedUser.getLocation(),
+                updatedUser.getPhoneNumber(),
+                updatedUser.isNotificationsEnabled(),
+                updatedUser.getCreatedAt(),
+                true,
+                "User updated successfully"
+            );
+            
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            UserResponse response = new UserResponse(false, e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        } catch (Exception e) {
+            UserResponse response = new UserResponse(false, "Error updating user: " + e.getMessage());
+            return ResponseEntity.badRequest().body(response);
+        }
+    }
+    
+    /**
+     * Delete a user
+     * @param userId User ID
+     * @return ResponseEntity indicating success or failure
+     */
+    @DeleteMapping("/{userId}")
+    public ResponseEntity<?> deleteUser(@PathVariable String userId) {
+        try {
+            User user = userService.getUserById(userId);
+            
+            if (user == null) {
+                return ResponseEntity.notFound().build();
+            }
+            
+            userService.deleteUser(userId);
+            
+            return ResponseEntity.ok().body(Map.of("message", "User deleted successfully"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Error deleting user: " + e.getMessage()));
+        }
+    }
 
     /**
      * Get user profile data (firstName, lastName, phoneNumber)

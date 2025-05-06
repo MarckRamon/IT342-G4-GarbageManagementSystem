@@ -47,45 +47,51 @@ public class SecurityConfig {
                 // Auth endpoints
                 .requestMatchers(HttpMethod.POST, "/api/auth/register", "/api/auth/login", "/api/auth/request-password-reset").permitAll()
                 
-                // Pickup location endpoints - GET is public, others need authentication
-                .requestMatchers(HttpMethod.GET, "/api/pickup-locations", "/api/pickup-locations/**").permitAll()
+                // Pickup location endpoints - All need authentication
+                .requestMatchers(HttpMethod.GET, "/api/pickup-locations", "/api/pickup-locations/**").authenticated()
                 .requestMatchers(HttpMethod.POST, "/api/pickup-locations").authenticated()
                 .requestMatchers(HttpMethod.PUT, "/api/pickup-locations/**").authenticated()
                 .requestMatchers(HttpMethod.DELETE, "/api/pickup-locations/**").authenticated()
                 
-                // Feedback endpoints - GET is public, others need authentication
-                .requestMatchers(HttpMethod.GET, "/api/feedback", "/api/feedback/**").permitAll()
+                // Feedback endpoints - All need authentication
+                .requestMatchers(HttpMethod.GET, "/api/feedback", "/api/feedback/**").authenticated()
                 .requestMatchers(HttpMethod.POST, "/api/feedback").authenticated()
                 .requestMatchers(HttpMethod.PUT, "/api/feedback/**").authenticated()
                 .requestMatchers(HttpMethod.DELETE, "/api/feedback/**").authenticated()
                 
-                // Schedule endpoints - GET is public, others need authentication
-                .requestMatchers(HttpMethod.GET, "/api/schedule", "/api/schedule/**").permitAll()
+                // Schedule endpoints - All need authentication
+                .requestMatchers(HttpMethod.GET, "/api/schedule", "/api/schedule/**").authenticated()
                 .requestMatchers(HttpMethod.POST, "/api/schedule").authenticated()
                 .requestMatchers(HttpMethod.PUT, "/api/schedule/**").authenticated()
                 .requestMatchers(HttpMethod.DELETE, "/api/schedule/**").authenticated()
                 
-                // Tip endpoints - GET is public, others need authentication
-                .requestMatchers(HttpMethod.GET, "/api/tip", "/api/tip/**").permitAll()
+                // Tip endpoints - All need authentication
+                .requestMatchers(HttpMethod.GET, "/api/tip", "/api/tip/**").authenticated()
                 .requestMatchers(HttpMethod.POST, "/api/tip").authenticated()
                 .requestMatchers(HttpMethod.PUT, "/api/tip/**").authenticated()
                 .requestMatchers(HttpMethod.DELETE, "/api/tip/**").authenticated()
                 
-                // History endpoints - GET is public, POST needs authentication
-                .requestMatchers(HttpMethod.GET, "/api/history", "/api/history/**").permitAll()
+                // History endpoints - All need authentication
+                .requestMatchers(HttpMethod.GET, "/api/history", "/api/history/**").authenticated()
                 .requestMatchers(HttpMethod.POST, "/api/history").authenticated()
                 
-                // Missed endpoints - GET is public, others need authentication
-                .requestMatchers(HttpMethod.GET, "/api/missed", "/api/missed/**").permitAll()
+                // Missed endpoints - All need authentication
+                .requestMatchers(HttpMethod.GET, "/api/missed", "/api/missed/**").authenticated()
                 .requestMatchers(HttpMethod.POST, "/api/missed").authenticated()
                 .requestMatchers(HttpMethod.PUT, "/api/missed/**").authenticated()
                 .requestMatchers(HttpMethod.DELETE, "/api/missed/**").authenticated()
                 
-                // Reminder endpoints - GET is public, others need authentication
-                .requestMatchers(HttpMethod.GET, "/api/reminder", "/api/reminder/**").permitAll()
+                // Reminder endpoints - All need authentication
+                .requestMatchers(HttpMethod.GET, "/api/reminder", "/api/reminder/**").authenticated()
                 .requestMatchers(HttpMethod.POST, "/api/reminder").authenticated()
                 .requestMatchers(HttpMethod.PUT, "/api/reminder/**").authenticated()
                 .requestMatchers(HttpMethod.DELETE, "/api/reminder/**").authenticated()
+                
+                // User endpoints - Explicitly authenticate all, including the new CRUD endpoints
+                .requestMatchers(HttpMethod.GET, "/api/users", "/api/users/**").authenticated()
+                .requestMatchers(HttpMethod.POST, "/api/users").authenticated()
+                .requestMatchers(HttpMethod.PUT, "/api/users/**").authenticated()
+                .requestMatchers(HttpMethod.DELETE, "/api/users/**").authenticated()
                 
                 // User profile endpoints
                 .requestMatchers(HttpMethod.GET, "/api/users/{userId}/profile", "/api/users/{userId}/profile/email", "/api/users/{userId}/profile/notifications").authenticated()
