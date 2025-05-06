@@ -5,6 +5,7 @@ import com.g4.gms.model.User;
 import com.g4.gms.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
@@ -18,6 +19,9 @@ public class UserController {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private BCryptPasswordEncoder passwordEncoder;
 
     /**
      * Get all users
@@ -66,7 +70,7 @@ public class UserController {
             user.setFirstName(request.getFirstName());
             user.setLastName(request.getLastName());
             user.setEmail(request.getEmail());
-            user.setPassword(request.getPassword());
+            user.setPassword(passwordEncoder.encode(request.getPassword()));
             user.setRole(request.getRole());
             user.setLocation(request.getLocation());
             user.setPhoneNumber(request.getPhoneNumber());
@@ -154,7 +158,7 @@ public class UserController {
             user.setLastName(request.getLastName());
             user.setEmail(request.getEmail());
             if (request.getPassword() != null && !request.getPassword().isEmpty()) {
-                user.setPassword(request.getPassword());
+                user.setPassword(passwordEncoder.encode(request.getPassword()));
             }
             user.setRole(request.getRole());
             user.setLocation(request.getLocation());

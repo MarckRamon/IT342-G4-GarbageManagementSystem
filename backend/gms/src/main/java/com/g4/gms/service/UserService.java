@@ -47,6 +47,13 @@ public class UserService {
             user.setRole("USER");
         }
         
+        // Generate a document ID if user ID is not provided
+        if (user.getUserId() == null || user.getUserId().isEmpty()) {
+            // Generate a UUID for the new user
+            String userId = java.util.UUID.randomUUID().toString();
+            user.setUserId(userId);
+        }
+        
         // Save to Firestore
         DocumentReference docRef = firestore.collection(COLLECTION_NAME).document(user.getUserId());
         ApiFuture<WriteResult> result = docRef.set(user);
