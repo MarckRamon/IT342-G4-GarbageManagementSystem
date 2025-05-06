@@ -7,21 +7,33 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.UserRecord;
+import com.google.firebase.auth.FirebaseAuthException;
+import com.google.firebase.auth.AuthErrorCode;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
+import java.util.HashMap;
 
 @RestController
 @RequestMapping("/api/users")
 public class UserController {
+
+    private static final Logger logger = LoggerFactory.getLogger(UserController.class);
 
     @Autowired
     private UserService userService;
 
     @Autowired
     private BCryptPasswordEncoder passwordEncoder;
+
+    @Autowired
+    private FirebaseAuth firebaseAuth;
 
     /**
      * Get all users
@@ -65,17 +77,39 @@ public class UserController {
     @PostMapping
     public ResponseEntity<UserResponse> createUser(@RequestBody UserRequest request) {
         try {
+            logger.info("Attempting to create user with email: {}", request.getEmail());
+            
+            // First, create the user in Firebase Auth
+            UserRecord.CreateRequest createRequest = new UserRecord.CreateRequest()
+                    .setEmail(request.getEmail())
+                    .setPassword(request.getPassword())
+                    .setDisplayName(request.getFirstName() + " " + request.getLastName())
+                    .setEmailVerified(false);
+
+            UserRecord userRecord = firebaseAuth.createUser(createRequest);
+            logger.info("Successfully created user in Firebase Auth with UID: {}", userRecord.getUid());
+            
+            // Set custom claims (role) in Firebase Auth
+            String role = request.getRole() != null ? request.getRole() : "USER";
+            Map<String, Object> claims = new HashMap<>();
+            claims.put("role", role);
+            firebaseAuth.setCustomUserClaims(userRecord.getUid(), claims);
+            logger.debug("Set custom claims in Firebase for UID: {}", userRecord.getUid());
+            
+            // Create user object for Firestore
             User user = new User();
+            user.setUserId(userRecord.getUid());
             user.setUsername(request.getUsername());
             user.setFirstName(request.getFirstName());
             user.setLastName(request.getLastName());
             user.setEmail(request.getEmail());
             user.setPassword(passwordEncoder.encode(request.getPassword()));
-            user.setRole(request.getRole());
+            user.setRole(role);
             user.setLocation(request.getLocation());
             user.setPhoneNumber(request.getPhoneNumber());
             user.setNotificationsEnabled(request.isNotificationsEnabled());
             
+            // Store in Firestore
             User createdUser = userService.createUser(user);
             
             UserResponse response = new UserResponse(
@@ -94,7 +128,25 @@ public class UserController {
             );
             
             return ResponseEntity.ok(response);
+        } catch (FirebaseAuthException e) {
+            logger.error("Firebase user creation failed for email {}: {}", request.getEmail(), e.getMessage(), e);
+            String message = "User creation failed. ";
+            AuthErrorCode errorCode = e.getAuthErrorCode();
+            
+            if (errorCode != null) {
+                if (errorCode == AuthErrorCode.EMAIL_ALREADY_EXISTS) {
+                    message += "Email already in use.";
+                } else {
+                    message += "An unexpected authentication error occurred (";
+                    message += errorCode.toString();
+                    message += "). Please try again.";
+                }
+            } else {
+                message += "An unexpected error occurred. Please try again.";
+            }
+            return ResponseEntity.badRequest().body(new UserResponse(false, message));
         } catch (Exception e) {
+            logger.error("User creation failed: {}", e.getMessage(), e);
             UserResponse response = new UserResponse(false, "Error creating user: " + e.getMessage());
             return ResponseEntity.badRequest().body(response);
         }
@@ -206,10 +258,27 @@ public class UserController {
                 return ResponseEntity.notFound().build();
             }
             
+            // First delete from Firebase Auth
+            try {
+                firebaseAuth.deleteUser(userId);
+                logger.info("Successfully deleted user from Firebase Auth with UID: {}", userId);
+            } catch (FirebaseAuthException e) {
+                // If the user doesn't exist in Firebase Auth but exists in Firestore
+                if (e.getAuthErrorCode() == AuthErrorCode.USER_NOT_FOUND) {
+                    logger.warn("User {} exists in Firestore but not in Firebase Auth. Proceeding with Firestore deletion only.", userId);
+                } else {
+                    logger.error("Failed to delete user from Firebase Auth: {}", e.getMessage(), e);
+                    return ResponseEntity.status(500).body(Map.of("message", "Error deleting user from authentication system: " + e.getMessage()));
+                }
+            }
+            
+            // Then delete from Firestore
             userService.deleteUser(userId);
+            logger.info("Successfully deleted user from Firestore with ID: {}", userId);
             
             return ResponseEntity.ok().body(Map.of("message", "User deleted successfully"));
         } catch (Exception e) {
+            logger.error("Error deleting user: {}", e.getMessage(), e);
             return ResponseEntity.badRequest().body(Map.of("message", "Error deleting user: " + e.getMessage()));
         }
     }
