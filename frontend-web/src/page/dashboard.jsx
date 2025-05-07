@@ -152,6 +152,7 @@ const [monthlyPickupCounts, setMonthlyPickupCounts] = useState([]);
   const [showProfilePopup, setShowProfilePopup] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [schedules, setSchedules] = useState([]);
+  const [activeUsers, setActiveUsers] = useState(0);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -194,7 +195,7 @@ const [monthlyPickupCounts, setMonthlyPickupCounts] = useState([]);
     const userId = localStorage.getItem('userId');
 
     // Log the values to the console
-    console.log('Auth Token:', authToken);
+   console.log('Auth Token:', authToken);
     console.log('User ID:', userId);
 
     // Check if both values are present
@@ -220,20 +221,25 @@ const [monthlyPickupCounts, setMonthlyPickupCounts] = useState([]);
         const tipsPromise = fetchTips();
         const locationsPromise = fetchPickupLocations(authToken);
         const complaintsPromise = fetchComplaints(authToken);
-  
-        const [profileResponse, emailResponse, schedulesResponse, tipsResponse, locationsResponse, complaintsResponse] = await Promise.all([
+        const usersPromise = api.get('/users', {
+          headers: {
+            'Authorization': `Bearer ${authToken}`
+          }
+        });
+        const [profileResponse, emailResponse, schedulesResponse, tipsResponse, locationsResponse, complaintsResponse,usersResponse] = await Promise.all([
           profilePromise,
           emailPromise,
           schedulesPromise,
           tipsPromise,
           locationsPromise,
-          complaintsPromise
+          complaintsPromise,
+          usersPromise
         ]);
   
-        console.log('Profile data received:', profileResponse);
-        console.log('Email data received:', emailResponse);
-        console.log('Schedules data received:', schedulesResponse);
-        console.log('Tips data received:', tipsResponse);
+       console.log('Profile data received:', profileResponse);
+       console.log('Email data received:', emailResponse);
+       console.log('Schedules data received:', schedulesResponse);
+       console.log('Tips data received:', tipsResponse);
         console.log('Pickup locations received:', locationsResponse);
         console.log('Complaints data received:', complaintsResponse);
 
@@ -247,7 +253,13 @@ const [monthlyPickupCounts, setMonthlyPickupCounts] = useState([]);
             lastName: profileResponse.lastName
           });
         }
-
+     console.log('Users data received:', usersResponse.data);
+      
+        // Set the active users count
+        if (usersResponse.data && Array.isArray(usersResponse.data)) {
+          setActiveUsers(usersResponse.data.length);
+        }
+        
         // Update email data
         if (emailResponse && emailResponse.success) {
           setProfileEmail({
@@ -296,7 +308,7 @@ const [monthlyPickupCounts, setMonthlyPickupCounts] = useState([]);
     );
     const loadUserEmail = async () => {
       const profileEmailResponse = await fetchUserEmail(userId, authToken);
-      console.log('Profile email received:', profileEmailResponse);
+     console.log('Profile email received:', profileEmailResponse);
 
       if (profileEmailResponse && profileEmailResponse.success) {
         setProfileEmail({
@@ -326,7 +338,7 @@ const [monthlyPickupCounts, setMonthlyPickupCounts] = useState([]);
         setIsLoading(true);
         const profileResponse = await fetchUserProfile(userId, authToken);
 
-        console.log('Profile data received:', profileResponse);
+    console.log('Profile data received:', profileResponse);
 
         if (profileResponse && profileResponse.success) {
           // Update the profileData state
@@ -968,7 +980,7 @@ const [monthlyPickupCounts, setMonthlyPickupCounts] = useState([]);
         {/* Collection Schedule */}
         <li>
           <Link 
-            to="/schedule" 
+            to="/users" 
             className="flex items-center px-4 py-2.5 text-gray-700 font-medium hover:bg-gray-50 rounded-lg transition-all duration-200"
           >
            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1103,10 +1115,10 @@ const [monthlyPickupCounts, setMonthlyPickupCounts] = useState([]);
       
  {/* Metrics Section */}
 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-  <div className="bg-white p-6 rounded-lg shadow-sm">
-    <div className="text-sm text-gray-500 mb-2">Active Users</div>
-    <div className="text-3xl font-bold">121</div>
-  </div>
+<div className="bg-white p-6 rounded-lg shadow-sm">
+  <div className="text-sm text-gray-500 mb-2">Active Users</div>
+  <div className="text-3xl font-bold">{isLoading ? '...' : activeUsers}</div>
+</div>
   <div className="bg-white p-6 rounded-lg shadow-sm">
     <div className="text-sm text-gray-500 mb-2">Pending Complaints</div>
     <div className="text-3xl font-bold">{isLoading ? '...' : pendingComplaints}</div>

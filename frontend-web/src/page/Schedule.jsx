@@ -890,7 +890,7 @@ export default function VermigoSchedule() {
         {/* Collection Schedule */}
         <li>
           <Link 
-            to="/schedule" 
+           to="/users" 
             className="flex items-center px-4 py-2.5 text-gray-700 font-medium hover:bg-gray-50 rounded-lg transition-all duration-200"
           >
            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1017,7 +1017,7 @@ export default function VermigoSchedule() {
   </div>
 
       {/* Main Content */}
-      <div className="flex-1 ml-60 p-6">
+      <div className={`flex-1 ml-60 p-6 transition-all duration-700 ease-out ${mainContentAnimationClass}`}>
         {/* Header */}
         <div className="flex justify-between items-center mb-6 pb-4 border-b border-gray-200">
         
