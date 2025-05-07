@@ -12,6 +12,7 @@ import VermigoComplaints from './page/complaints.jsx';
 import MapPage from './page/MapPage.jsx';
 import HistoryList from './page/HistoryList.jsx';
 import MissedPickup from './page/MissedPickup.jsx';
+import UserManagement from './page/UserManagement.jsx';
 import { useEffect } from 'react';
 
 function RequireAuth({ children }) {
@@ -37,6 +38,11 @@ function App() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
    
         {/* Private routes */}
+        <Route path="/users" element={
+          <RequireAuth>
+            <UserManagement />
+          </RequireAuth>
+        } />
         <Route path="/dashboard" element={
           <RequireAuth>
             <VermigoDashboard />

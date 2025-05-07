@@ -759,7 +759,7 @@ const [showFilters, setShowFilters] = useState(false);
         {/* Collection Schedule */}
         <li>
           <Link 
-            to="/schedule" 
+            to="/users"  
             className="flex items-center px-4 py-2.5 text-gray-700 font-medium hover:bg-gray-50 rounded-lg transition-all duration-200"
           >
            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1051,101 +1051,7 @@ const [showFilters, setShowFilters] = useState(false);
 
   
 </div>
-          {showScheduleModal && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-              <div className="bg-white rounded-lg shadow-lg w-full max-w-2xl">
-                <div className="p-4 border-b border-gray-200 flex justify-between items-center">
-                  <h3 className="text-lg font-medium text-gray-800">Select Schedule</h3>
-                  <button
-                    onClick={() => setShowScheduleModal(false)}
-                    className="text-gray-400 hover:text-gray-600"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <line x1="18" y1="6" x2="6" y2="18"></line>
-                      <line x1="6" y1="6" x2="18" y2="18"></line>
-                    </svg>
-                  </button>
-                </div>
-
-                <div className="p-4">
-                  <div className="mb-4">
-                    <div className="relative">
-                      <input
-                        type="text"
-                        value={scheduleFilter}
-                        onChange={handleScheduleSearch}
-                        placeholder="Search schedules..."
-                        className="w-full px-3 py-2 pl-10 rounded-md border border-gray-300 focus:outline-none focus:ring-1 focus:ring-[#5da646] focus:border-[#5da646]"
-                      />
-                      <div className="absolute left-3 top-2.5 text-gray-400">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <circle cx="11" cy="11" r="8"></circle>
-                          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                        </svg>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="max-h-80 overflow-y-auto">
-                    {filteredSchedules.length > 0 ? (
-                      <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
-                          <tr>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                          </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                          {filteredSchedules.map((schedule) => (
-                            <tr
-                              key={schedule.scheduleId}
-                              className="hover:bg-gray-50 cursor-pointer"
-                              onClick={() => selectSchedule(schedule)}
-                            >
-                              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-800">
-                                {getSiteNameFromLocationId(schedule.locationId) || schedule.siteName || 'Unknown Location'}
-                              </td>
-                              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-800">
-                                {schedule.pickupDate || schedule.day || 'N/A'}
-                              </td>
-                              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-800">
-                                {schedule.pickupTime || 'N/A'}
-                              </td>
-                              <td className="px-4 py-3 whitespace-nowrap text-sm">
-                                {schedule.status ? (
-                                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                          ${schedule.status === 'COMPLETED' ? 'bg-green-100 text-green-800' :
-                                      schedule.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
-                                        'bg-gray-100 text-gray-800'}`}>
-                                    {schedule.status}
-                                  </span>
-                                ) : 'N/A'}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    ) : (
-                      <div className="py-6 text-center text-gray-500">
-                        No schedules found matching your search.
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="p-4 bg-gray-50 border-t border-gray-200 flex justify-end">
-                  <button
-                    onClick={() => setShowScheduleModal(false)}
-                    className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
+         
           
           {/* Form for Add/Edit */}
           {(isAdding || isEditing) && (
@@ -1298,7 +1204,101 @@ const [showFilters, setShowFilters] = useState(false);
   )}</div>
         </div>
       </div>
-      
+      {showScheduleModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-lg shadow-lg w-full max-w-2xl">
+                <div className="p-4 border-b border-gray-200 flex justify-between items-center">
+                  <h3 className="text-lg font-medium text-gray-800">Select Schedule</h3>
+                  <button
+                    onClick={() => setShowScheduleModal(false)}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="18" y1="6" x2="6" y2="18"></line>
+                      <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                  </button>
+                </div>
+
+                <div className="p-4">
+                  <div className="mb-4">
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={scheduleFilter}
+                        onChange={handleScheduleSearch}
+                        placeholder="Search schedules..."
+                        className="w-full px-3 py-2 pl-10 rounded-md border border-gray-300 focus:outline-none focus:ring-1 focus:ring-[#5da646] focus:border-[#5da646]"
+                      />
+                      <div className="absolute left-3 top-2.5 text-gray-400">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <circle cx="11" cy="11" r="8"></circle>
+                          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="max-h-80 overflow-y-auto">
+                    {filteredSchedules.length > 0 ? (
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {filteredSchedules.map((schedule) => (
+                            <tr
+                              key={schedule.scheduleId}
+                              className="hover:bg-gray-50 cursor-pointer"
+                              onClick={() => selectSchedule(schedule)}
+                            >
+                              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-800">
+                                {getSiteNameFromLocationId(schedule.locationId) || schedule.siteName || 'Unknown Location'}
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-800">
+                                {schedule.pickupDate || schedule.day || 'N/A'}
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-800">
+                                {schedule.pickupTime || 'N/A'}
+                              </td>
+                              <td className="px-4 py-3 whitespace-nowrap text-sm">
+                                {schedule.status ? (
+                                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                          ${schedule.status === 'COMPLETED' ? 'bg-green-100 text-green-800' :
+                                      schedule.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
+                                        'bg-gray-100 text-gray-800'}`}>
+                                    {schedule.status}
+                                  </span>
+                                ) : 'N/A'}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    ) : (
+                      <div className="py-6 text-center text-gray-500">
+                        No schedules found matching your search.
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="p-4 bg-gray-50 border-t border-gray-200 flex justify-end">
+                  <button
+                    onClick={() => setShowScheduleModal(false)}
+                    className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
             {/* Profile Modal */}
 {showProfileModal && (
   <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-50">

@@ -96,8 +96,10 @@ function MapInteraction({ onPinPlace }) {
 
   return null;
 }
-
 const MapPage = () => {
+  const [showListView, setShowListView] = useState(false);
+const [filterWasteType, setFilterWasteType] = useState('');
+const [searchTerm, setSearchTerm] = useState('');
   const [pickupLocations, setPickupLocations] = useState([]);
 const [complaints, setComplaints] = useState([]);
 const [pendingComplaints, setPendingComplaints] = useState(0);
@@ -136,6 +138,34 @@ const [monthlyPickupCounts, setMonthlyPickupCounts] = useState([]);
     firstName: "",
     lastName: ""
   });
+
+  const toggleListView = () => {
+    setShowListView(!showListView);
+  };
+
+  useEffect(() => {
+    // Configure axios instance with interceptor for all requests
+    const authToken = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+    
+    if (authToken) {
+      // Apply token to all requests
+      api.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
+      axios.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
+      setIsLoading(false);
+    } else {
+      console.warn('No auth token found');
+      setIsLoading(false);
+    }
+  }, []);
+  const filteredMarkers = markers.filter(marker => {
+  const matchesWasteType = filterWasteType ? marker.wasteType === filterWasteType : true;
+  const matchesSearch = searchTerm 
+    ? marker.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      marker.address.toLowerCase().includes(searchTerm.toLowerCase())
+    : true;
+  return matchesWasteType && matchesSearch;
+});
+
   useEffect(() => {
     // Retrieve authToken and userId from localStorage
     const authToken = localStorage.getItem('authToken');
@@ -237,6 +267,8 @@ const [monthlyPickupCounts, setMonthlyPickupCounts] = useState([]);
     setTimeout(() => {
       setPageLoaded(true);
     }, 100);
+
+
     const fetchPickupLocations = async () => {
       setLoading(true);
       setError(null);
@@ -602,7 +634,7 @@ const [monthlyPickupCounts, setMonthlyPickupCounts] = useState([]);
         {/* Collection Schedule */}
         <li>
           <Link 
-            to="/schedule" 
+            to="/users" 
             className="flex items-center px-4 py-2.5 text-gray-700 font-medium hover:bg-gray-50 rounded-lg transition-all duration-200"
           >
            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -734,59 +766,89 @@ const [monthlyPickupCounts, setMonthlyPickupCounts] = useState([]);
 
 
       {/* Main Content */}
-      <div className={`flex-1 p-3 ml-60 transition-all duration-700 ease-out ${mainContentAnimationClass}`}>
+      <div className={`flex-1 p-5 ml-60 transition-all duration-700 ease-out ${mainContentAnimationClass}`}>
         <br></br><br></br>
         <div className="map-page">
+ 
           <div className="map-header">
             <h1 className="text-2xl font-semibold text-gray-800">Garbage Collection Sites</h1>
+            <div className="flex justify-between items-center mb-4 mt-2">
+  {/* Left side: List/Map Toggle Button */}
+  <div className="flex gap-2">
+  <button 
+  className={`mr-2 flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+    showListView 
+      ? 'bg-green-100 text-green-800 border border-green-300' 
+      : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+  }`}
+      onClick={toggleListView}
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
+        {showListView ? (
+          <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
+        ) : (
+          <path fillRule="evenodd" d="M5 4a1 1 0 011-1h8a1 1 0 011 1v1a1 1 0 01-1 1H6a1 1 0 01-1-1V4zm0 5a1 1 0 011-1h8a1 1 0 011 1v1a1 1 0 01-1 1H6a1 1 0 01-1-1V9zm0 5a1 1 0 011-1h8a1 1 0 011 1v1a1 1 0 01-1 1H6a1 1 0 01-1-1v-1z" clipRule="evenodd" />
+        )}
+      </svg>
+      {showListView ? 'Map View' : 'List View'}
+    </button>
+  </div>
 
-            {(!isAdding && !isEditing) ? (
-              <button className="flex items-center px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+  {/* Right side: Add Collection Site Button */}
+  <div className="flex gap-2">
+    {(!isAdding && !isEditing) ? (
+      <button 
+        className="flex items-center px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+        onClick={handleAddPin}
+      >
+        Add Collection Site
+      </button>
+    ) : (
+      <div className="pin-form">
+        <input
+          type="text"
+          name="name"
+          placeholder="Site Name"
+          value={formData.name}
+          onChange={handleInputChange}
+          required
+        />
+        <select
+          name="wasteType"
+          value={formData.wasteType}
+          onChange={handleInputChange}
+          required
+        >
+          <option value="">Select Waste Type</option>
+          <option value="General Waste">General Waste</option>
+          <option value="Recyclables">Recyclables</option>
+          <option value="Organic Waste">Organic Waste</option>
+          <option value="Hazardous Waste">Hazardous Waste</option>
+        </select>
+        <input
+          type="text"
+          name="address"
+          placeholder="Address"
+          value={formData.address}
+          onChange={handleInputChange}
+          readOnly
+        />
+        <div className="form-buttons">
+          <button
+            onClick={handleSavePin}
+            disabled={!newPin || !formData.name || !formData.wasteType || loading}
+          >
+            {loading ? 'Saving...' : isEditing ? 'Update' : 'Save'}
+          </button>
+          <button onClick={handleCancelAdd}>Cancel</button>
+        </div>
+      </div>
+    )}
+  </div>
+</div>
 
-                onClick={handleAddPin}>Add Collection Site</button>
-            ) : (
-              <div className="pin-form">
-                <input
-                  type="text"
-                  name="name"
-                  placeholder="Site Name"
-                  value={formData.name}
-                  onChange={handleInputChange}
-                  required
-                />
-                <select
-                  name="wasteType"
-                  value={formData.wasteType}
-                  onChange={handleInputChange}
-                  required
-                >
-                  <option value="">Select Waste Type</option>
-                  <option value="General Waste">General Waste</option>
-                  <option value="Recyclables">Recyclables</option>
-                  <option value="Organic Waste">Organic Waste</option>
-                  <option value="Hazardous Waste">Hazardous Waste</option>
-                </select>
-                <input
-                  type="text"
-                  name="address"
-                  placeholder="Address"
-                  value={formData.address}
-                  onChange={handleInputChange}
-                  readOnly
-                />
-                <div className="form-buttons">
-                  <button
-                    onClick={handleSavePin}
-                    disabled={!newPin || !formData.name || !formData.wasteType || loading}
-                  >
-                    {loading ? 'Saving...' : isEditing ? 'Update' : 'Save'}
-                  </button>
-                  <button onClick={handleCancelAdd}>Cancel</button>
-                </div>
-              </div>
-            )}
-          </div>
-
+        </div>
+      
           {error && (
             <div className="error-message">
               {error}
@@ -823,32 +885,6 @@ const [monthlyPickupCounts, setMonthlyPickupCounts] = useState([]);
               {(isAdding || isEditing) && <MapInteraction onPinPlace={handlePinPlace} />}
 
               {/* Display existing markers */}
-              {markers.map((marker) => (
-                <Marker key={marker.id} position={marker.position}>
-                  <Popup>
-                    <div className="marker-popup">
-                      <h3>{marker.name}</h3>
-                      <p><strong>Waste Type:</strong> {marker.wasteType}</p>
-                      <p><strong>Address:</strong> {marker.address}</p>
-                      <div className="marker-actions">
-                        <button
-                          className="edit-btn"
-                          onClick={() => handleEditPin(marker)}
-                        >
-                          Edit
-                        </button>
-
-                        <button
-                          className="delete-btn"
-                          onClick={() => handleDeletePin(marker.locationId)}>Delete</button>
-
-                      </div>
-                    </div>
-                  </Popup>
-                </Marker>
-              ))}
-
-              {/* Display new pin being placed */}
               {newPin && (
                 <Marker position={newPin.position}>
                   <Popup>
@@ -861,7 +897,160 @@ const [monthlyPickupCounts, setMonthlyPickupCounts] = useState([]);
                   </Popup>
                 </Marker>
               )}
+              {markers.map((marker) => (
+                <Marker key={marker.id} position={marker.position}>
+                <Popup>
+  <div className="marker-popup">
+    <h3 className="text-lg font-semibold text-gray-800">{marker.name}</h3>
+    <p className="mt-1"><span className="font-medium text-gray-600">Waste Type:</span> 
+      <span className={`ml-1 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+        marker.wasteType === 'Hazardous Waste' ? 'bg-red-100 text-red-800' :
+        marker.wasteType === 'Recyclables' ? 'bg-blue-100 text-blue-800' :
+        marker.wasteType === 'Organic Waste' ? 'bg-green-100 text-green-800' :
+        'bg-gray-100 text-gray-800'
+      }`}>
+        {marker.wasteType}
+      </span>
+    </p>
+    <p className="mt-1"><span className="font-medium text-gray-600">Address:</span> <span className="text-gray-700">{marker.address}</span></p>
+    <p className="mt-1"><span className="font-medium text-gray-600">Coordinates:</span> <span className="text-gray-700">{marker.position[0].toFixed(6)}, {marker.position[1].toFixed(6)}</span></p>
+    <div className="flex mt-3 pt-3 border-t border-gray-100">
+      <button
+        className="flex-1 px-3 py-1.5 bg-indigo-50 text-indigo-600 text-sm font-medium rounded mr-2 hover:bg-indigo-100 transition-colors"
+        onClick={() => handleEditPin(marker)}
+      >
+        Edit
+      </button>
+      <button
+        className="flex-1 px-3 py-1.5 bg-red-50 text-red-600 text-sm font-medium rounded hover:bg-red-100 transition-colors"
+        onClick={() => handleDeletePin(marker.locationId)}
+      >
+        Delete
+      </button>
+    </div>
+  </div>
+</Popup>
+                </Marker>
+              ))}
+
+              {/* Display new pin being placed */}
+              {newPin && (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Latitude</label>
+        <input
+          type="text"
+          className="w-full p-2 border border-gray-300 rounded-md shadow-sm bg-gray-50"
+          value={newPin.position[0].toFixed(6)}
+          readOnly
+        />
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Longitude</label>
+        <input
+          type="text"
+          className="w-full p-2 border border-gray-300 rounded-md shadow-sm bg-gray-50"
+          value={newPin.position[1].toFixed(6)}
+          readOnly
+        />
+      </div>
+    </div>
+  )}
             </MapContainer>
+            {showListView && (
+  <div className="bg-white rounded-lg shadow-md mt-4 overflow-hidden">
+    <div className="p-4 border-b border-gray-200 bg-gray-50">
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="flex-grow">
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <input 
+              type="text" 
+              placeholder="Search by name or address..."
+              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md text-sm placeholder-gray-500"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+        </div>
+        <div>
+          <select
+            className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm text-sm"
+            value={filterWasteType}
+            onChange={(e) => setFilterWasteType(e.target.value)}
+          >
+            <option value="">All Waste Types</option>
+            <option value="General Waste">General Waste</option>
+            <option value="Recyclables">Recyclables</option>
+            <option value="Organic Waste">Organic Waste</option>
+            <option value="Hazardous Waste">Hazardous Waste</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    
+    <div className="overflow-x-auto">
+      <table className="min-w-full divide-y divide-gray-200">
+        <thead className="bg-gray-50">
+          <tr>
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Site Name</th>
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Waste Type</th>
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Address</th>
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Coordinates</th>
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+          </tr>
+        </thead>
+        <tbody className="bg-white divide-y divide-gray-200">
+          {filteredMarkers.length === 0 ? (
+            <tr>
+              <td colSpan="5" className="px-6 py-4 text-center text-sm text-gray-500">
+                No collection sites found.
+              </td>
+            </tr>
+          ) : (
+            filteredMarkers.map((marker) => (
+              <tr key={marker.locationId} className="hover:bg-gray-50">
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{marker.name}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                    marker.wasteType === 'Hazardous Waste' ? 'bg-red-100 text-red-800' :
+                    marker.wasteType === 'Recyclables' ? 'bg-blue-100 text-blue-800' :
+                    marker.wasteType === 'Organic Waste' ? 'bg-green-100 text-green-800' :
+                    'bg-gray-100 text-gray-800'
+                  }`}>
+                    {marker.wasteType}
+                  </span>
+                </td>
+                <td className="px-6 py-4 text-sm text-gray-500">{marker.address}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {marker.position[0].toFixed(6)}, {marker.position[1].toFixed(6)}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                  <button 
+                    onClick={() => handleEditPin(marker)}
+                    className="text-indigo-600 hover:text-indigo-900 mr-4"
+                  >
+                    Edit
+                  </button>
+                  <button 
+                    onClick={() => handleDeletePin(marker.locationId)}
+                    className="text-red-600 hover:text-red-900"
+                  >
+                    Delete
+                  </button>
+                </td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+    </div>
+  </div>
+)}
           </div>
 
           {/* Instructions for add/edit mode */}
@@ -1007,6 +1196,7 @@ const [monthlyPickupCounts, setMonthlyPickupCounts] = useState([]);
           </div>
         </div>*/}
 
+
         {/* Footer with buttons */}
         <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
           <button
@@ -1022,9 +1212,12 @@ const [monthlyPickupCounts, setMonthlyPickupCounts] = useState([]);
           </button>
           */}
         </div>
+        
       </div>
     </div>
+
   </div>
+  
 )}
 
     </div>
