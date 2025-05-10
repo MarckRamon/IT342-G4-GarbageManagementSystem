@@ -17,6 +17,10 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        
+        // Add BuildConfig fields
+        buildConfigField("String", "DEBUG_API_URL", "\"https://asia-southeast1-garbagems-a062a.cloudfunctions.net\"")
+        buildConfigField("String", "RELEASE_API_URL", "\"https://asia-southeast1-garbagems-a062a.cloudfunctions.net\"")
     }
 
     buildTypes {
@@ -38,18 +42,37 @@ android {
     buildFeatures {
         compose = true
         viewBinding = true
-        dataBinding = false
+        dataBinding = true
+        buildConfig = true
     }
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.8"
     }
     
-    // Handle AndroidX and Support Library conflicts
+    // Handle dependency conflicts
     configurations.all {
         resolutionStrategy {
+            // Force specific versions of core libraries
             force("androidx.core:core:1.12.0")
-            // Force using AndroidX versions and exclude Support Library
+            force("androidx.core:core-ktx:1.12.0")
+            
+            // Exclude old support libraries
             exclude(group = "com.android.support")
+        }
+    }
+    
+    // Fix duplicate class issues
+    packaging {
+        resources {
+            // Exclude META-INF files from Firebase libraries to prevent duplicates
+            excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            excludes += "META-INF/LICENSE"
+            excludes += "META-INF/LICENSE.txt"
+            excludes += "META-INF/NOTICE"
+            excludes += "META-INF/NOTICE.txt"
+            
+            // Add exclusion for duplicate class
+            pickFirst("com/google/firebase/Timestamp.class")
         }
     }
 }
@@ -77,6 +100,7 @@ dependencies {
     // Retrofit for API calls
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+    implementation("com.squareup.okhttp3:okhttp:4.11.0")  // Main OkHttp dependency
     implementation("com.squareup.okhttp3:logging-interceptor:4.11.0")
     
     // Coroutines
@@ -87,11 +111,21 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
     
-    // Firebase
-    implementation(platform("com.google.firebase:firebase-bom:32.7.2"))
+    // Firebase - Using BoM (Bill of Materials) for version coordination
+    implementation(platform("com.google.firebase:firebase-bom:32.7.0"))
+    
+    // Explicitly add firebase-common first to ensure its version is used
+    // This should ensure the Timestamp class is taken from here
+    implementation("com.google.firebase:firebase-common")
+    implementation("com.google.firebase:firebase-common-ktx")
+    
+    // Other Firebase dependencies
     implementation("com.google.firebase:firebase-auth-ktx")
     implementation("com.google.firebase:firebase-firestore-ktx")
     implementation("com.google.firebase:firebase-analytics-ktx")
+    implementation("com.google.firebase:firebase-functions-ktx")
+    implementation("com.google.firebase:firebase-messaging-ktx")
+    implementation("com.google.firebase:firebase-inappmessaging-display")
     
     // CircleImageView
     implementation("de.hdodenhof:circleimageview:3.1.0")
@@ -104,7 +138,7 @@ dependencies {
     
     // OpenStreetMap with osmdroid
     implementation("org.osmdroid:osmdroid-android:6.1.16")
-    
+
     // Testing
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")

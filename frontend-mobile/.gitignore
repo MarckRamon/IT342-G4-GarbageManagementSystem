@@ -33,3 +33,6 @@ bin/
 gen/
 out/
 tmp/
+
+# Large files
+gradle-8.2.1-bin.zip

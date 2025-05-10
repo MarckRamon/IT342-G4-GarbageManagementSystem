@@ -69,36 +69,41 @@ interface ApiService {
 
     // Pickup Location endpoints
     @GET("api/pickup-locations")
-    suspend fun getPickupLocations(): Response<PickupLocationResponse>
-    
+    suspend fun getPickupLocations(
+        @Header("Authorization") authToken: String
+    ): Response<PickupLocationResponse>
+
     @GET("api/pickup-locations/{id}")
-    suspend fun getPickupLocationById(@Path("id") id: String): Response<PickupLocationResponse>
+    suspend fun getPickupLocationById(
+        @Path("id") id: String,
+        @Header("Authorization") authToken: String
+    ): Response<PickupLocationResponse>
 
     // Feedback endpoints
     @GET("/api/feedback")
     suspend fun getAllFeedback(
         @Header("Authorization") authToken: String
     ): Response<List<Map<String, Any>>>
-    
+
     @GET("/api/feedback/{feedbackId}")
     suspend fun getFeedbackById(
         @Path("feedbackId") feedbackId: String,
         @Header("Authorization") authToken: String
     ): Response<Map<String, Any>>
-    
+
     @POST("/api/feedback")
     suspend fun createFeedback(
         @Header("Authorization") authToken: String,
         @Body feedbackRequest: Map<String, String>
     ): Response<Map<String, Any>>
-    
+
     // Alternative version with userId like other endpoints
     @GET("/api/feedback/user/{userId}")
     suspend fun getUserFeedback(
         @Path("userId") userId: String,
         @Header("Authorization") authToken: String
     ): Response<List<Map<String, Any>>>
-    
+
     @POST("/api/feedback/user/{userId}")
     suspend fun createUserFeedback(
         @Path("userId") userId: String,
@@ -108,44 +113,129 @@ interface ApiService {
 
     // Schedule endpoints
     @GET("/api/schedule")
-    suspend fun getAllSchedules(): Response<List<ScheduleResponse>>
-    
+    suspend fun getAllSchedules(
+        @Header("Authorization") authToken: String
+    ): Response<List<ScheduleResponse>>
+
     @GET("/api/schedule/{scheduleId}")
     suspend fun getScheduleById(
-        @Path("scheduleId") scheduleId: String
+        @Path("scheduleId") scheduleId: String,
+        @Header("Authorization") authToken: String
     ): Response<ScheduleResponse>
-    
+
     @GET("/api/schedule/user")
     suspend fun getUserSchedules(
         @Header("Authorization") authToken: String
     ): Response<List<ScheduleResponse>>
-    
+
     @POST("/api/schedule")
     suspend fun createSchedule(
         @Header("Authorization") authToken: String,
         @Body scheduleRequest: ScheduleRequest
     ): Response<ScheduleResponse>
-    
+
     @PUT("/api/schedule/{scheduleId}")
     suspend fun updateSchedule(
         @Path("scheduleId") scheduleId: String,
         @Header("Authorization") authToken: String,
         @Body scheduleRequest: ScheduleRequest
     ): Response<ScheduleResponse>
-    
+
     @DELETE("/api/schedule/{scheduleId}")
     suspend fun deleteSchedule(
         @Path("scheduleId") scheduleId: String,
         @Header("Authorization") authToken: String
     ): Response<Map<String, Any>>
 
+    // History endpoints
+    @GET("/api/history")
+    suspend fun getAllHistory(
+        @Header("Authorization") authToken: String
+    ): Response<List<HistoryResponse>>
+
+    @POST("/api/history")
+    suspend fun createHistory(
+        @Header("Authorization") authToken: String,
+        @Body historyRequest: Map<String, String>
+    ): Response<HistoryResponse>
+
+    // Missed Pickup endpoints
+    @GET("/api/missed")
+    suspend fun getAllMissed(
+        @Header("Authorization") authToken: String
+    ): Response<List<MissedResponse>>
+
+    @GET("/api/missed/{missedId}")
+    suspend fun getMissedById(
+        @Path("missedId") missedId: String,
+        @Header("Authorization") authToken: String
+    ): Response<MissedResponse>
+
+    @POST("/api/missed")
+    suspend fun createMissed(
+        @Header("Authorization") authToken: String,
+        @Body missedRequest: MissedRequest
+    ): Response<MissedResponse>
+
+    @PUT("/api/missed/{missedId}")
+    suspend fun updateMissed(
+        @Path("missedId") missedId: String,
+        @Header("Authorization") authToken: String,
+        @Body missedRequest: MissedRequest
+    ): Response<MissedResponse>
+
+    @DELETE("/api/missed/{missedId}")
+    suspend fun deleteMissed(
+        @Path("missedId") missedId: String,
+        @Header("Authorization") authToken: String
+    ): Response<MissedResponse>
+
+    @GET("/api/missed/schedule/{scheduleId}")
+    suspend fun getMissedByScheduleId(
+        @Path("scheduleId") scheduleId: String,
+        @Header("Authorization") authToken: String
+    ): Response<List<MissedResponse>>
+
+    @GET("/api/missed/user/{userId}")
+    suspend fun getMissedByUserId(
+        @Path("userId") userId: String,
+        @Header("Authorization") authToken: String
+    ): Response<List<MissedResponse>>
+
+    // Tip endpoints
+    @GET("/api/tip")
+    suspend fun getAllTips(
+        @Header("Authorization") authToken: String
+    ): Response<List<Tip>>
+
+    @GET("/api/tip/{tipId}")
+    suspend fun getTipById(
+        @Path("tipId") tipId: String,
+        @Header("Authorization") authToken: String
+    ): Response<Tip>
+
+    // Add or update the notification endpoint
+    @PUT("/api/users/{userId}/profile/notifications")
+    suspend fun updateNotificationSetting(
+        @Path("userId") userId: String,
+        @Header("Authorization") authToken: String,
+        @Body notificationSetting: Map<String, Boolean>
+    ): Response<Map<String, Any>>
+
+    // Get notification settings
+    @GET("/api/users/{userId}/profile/notifications")
+    suspend fun getNotificationSettings(
+        @Path("userId") userId: String,
+        @Header("Authorization") authToken: String
+    ): Response<Map<String, Boolean>>
+
     companion object {
         private const val TAG = "ApiService"
-        
+
         // For Android Emulator use 10.0.2.2 (special alias to your host loopback interface)
         // For real device testing on same WiFi network, use your computer's actual IP address
         // Change this to your backend server's address
-        private const val BASE_URL = "http://10.0.2.2:8080/" // Android emulator localhost
+        const val BASE_URL = "https://it342-g4-garbagemanagementsystem-kflf.onrender.com/" // Android emulator localhost
         // private const val BASE_URL = "http://192.168.1.100:8080/" // Example for real device testing
 
         fun create(): ApiService {
@@ -178,4 +268,4 @@ interface ApiService {
                 .create(ApiService::class.java)
         }
     }
-} 
+}

@@ -6,7 +6,6 @@ import android.util.Log
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
-import com.google.android.material.bottomnavigation.BottomNavigationView // Added import
 import com.google.android.material.button.MaterialButton
 import com.example.GarbageMS.utils.ApiService
 import kotlinx.coroutines.CoroutineScope
@@ -30,7 +29,6 @@ class ProfileActivity : BaseActivity() {
         supportActionBar?.hide()
         initViews()
         setupClickListeners()
-        setupBottomNavigation() // Added call
         loadUserData()
     }
 
@@ -58,36 +56,13 @@ class ProfileActivity : BaseActivity() {
 
         findViewById<LinearLayout>(R.id.configureNotificationsButton).setOnClickListener {
             val intent = Intent(this, NotificationsActivity::class.java)
+            intent.putExtra("SHOW_SETTINGS", true)
             startActivity(intent)
         }
 
         findViewById<MaterialButton>(R.id.logoutButton).setOnClickListener {
             sessionManager.logout()
             navigateToLogin()
-        }
-
-        // Removed comment about removed elements
-    }
-
-    private fun setupBottomNavigation() {
-        val bottomNavigationView = findViewById<BottomNavigationView>(R.id.bottomNavigation)
-
-        bottomNavigationView.setOnItemSelectedListener { item ->
-            when (item.itemId) {
-                R.id.navigation_home -> {
-                    val intent = Intent(this, HomeActivity::class.java)
-                    intent.flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
-                    startActivity(intent)
-                    true
-                }
-                R.id.navigation_schedule -> {
-                    val intent = Intent(this, ScheduleActivity::class.java)
-                    intent.flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
-                    startActivity(intent)
-                    true
-                }
-                else -> false
-            }
         }
     }
 
