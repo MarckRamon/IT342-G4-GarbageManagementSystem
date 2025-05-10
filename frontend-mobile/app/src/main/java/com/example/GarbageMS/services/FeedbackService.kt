@@ -320,7 +320,7 @@ class FeedbackService private constructor() {
                 
                 // Create request with the same URL and headers as Postman
                 val request = okhttp3.Request.Builder()
-                    .url("https://it342-g4-garbagemanagementsystem-kflf.onrender.com/api/feedback/user/$userId")
+                    .url("http://10.0.2.2:8080/api/feedback/user/$userId")
                     .addHeader("Authorization", authHeader)
                     .addHeader("Content-Type", "application/json")
                     .post(requestBody)
