@@ -36,7 +36,16 @@ class TipService private constructor() {
     suspend fun getAllTips(): List<Tip> {
         return withContext(Dispatchers.IO) {
             try {
-                val response = apiService.getAllTips()
+                // Get JWT token from session manager
+                val token = sessionManager.getToken()
+                if (token.isNullOrEmpty()) {
+                    Log.e(TAG, "No auth token available")
+                    return@withContext emptyList()
+                }
+
+                val authHeader = "Bearer $token"
+                val response = apiService.getAllTips(authHeader)
+                
                 if (response.isSuccessful && response.body() != null) {
                     response.body()!!
                 } else {
@@ -53,7 +62,16 @@ class TipService private constructor() {
     suspend fun getTipById(tipId: String): Tip? {
         return withContext(Dispatchers.IO) {
             try {
-                val response = apiService.getTipById(tipId)
+                // Get JWT token from session manager
+                val token = sessionManager.getToken()
+                if (token.isNullOrEmpty()) {
+                    Log.e(TAG, "No auth token available")
+                    return@withContext null
+                }
+
+                val authHeader = "Bearer $token"
+                val response = apiService.getTipById(tipId, authHeader)
+                
                 if (response.isSuccessful && response.body() != null) {
                     response.body()!!
                 } else {

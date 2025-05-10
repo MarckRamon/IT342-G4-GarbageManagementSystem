@@ -39,8 +39,19 @@ class HistoryService private constructor() {
      */
     suspend fun getAllHistory(): Result<List<History>> = withContext(Dispatchers.IO) {
         try {
+            if (!::sessionManager.isInitialized) {
+                Log.e(TAG, "SessionManager not initialized!")
+                return@withContext Result.failure(IOException("SessionManager not initialized"))
+            }
+            
+            val token = sessionManager.getToken()
+            if (token.isNullOrEmpty()) {
+                Log.e(TAG, "No auth token available")
+                return@withContext Result.failure(IOException("No authentication token available"))
+            }
+
             Log.d(TAG, "Getting all history records")
-            val response = apiService.getAllHistory()
+            val response = apiService.getAllHistory("Bearer $token")
             
             Log.d(TAG, "getAllHistory response code: ${response.code()}")
             

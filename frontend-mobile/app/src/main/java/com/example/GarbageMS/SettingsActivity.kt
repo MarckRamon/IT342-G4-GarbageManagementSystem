@@ -262,8 +262,9 @@ class SettingsActivity : BaseActivity() {
     
     private fun saveNotificationPreferences() {
         // Save notification preferences to persistent storage
-        sessionManager.setInAppNotificationsEnabled(inAppNotificationsEnabled)
-        sessionManager.setPushNotificationsEnabled(pushNotificationsEnabled)
+        // Use the new unified notification setting
+        // Enable notifications if either in-app or push notifications are enabled
+        sessionManager.setNotificationsEnabled(inAppNotificationsEnabled || pushNotificationsEnabled)
         
         Toast.makeText(this, "Settings saved", Toast.LENGTH_SHORT).show()
         finish() // Return to previous screen

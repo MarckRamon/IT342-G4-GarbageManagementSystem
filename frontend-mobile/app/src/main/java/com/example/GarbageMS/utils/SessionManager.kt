@@ -45,6 +45,7 @@ class SessionManager private constructor(context: Context) {
         private const val KEY_PUSH_NOTIFICATIONS = "push_notifications_enabled"
         private const val KEY_UNREAD_NOTIFICATION_COUNT = "unread_notification_count"
         private const val KEY_LAST_NOTIFICATION_COUNT_UPDATE = "last_notification_count_update"
+        private const val KEY_NOTIFICATIONS_ENABLED = "notifications_enabled"
         
         // Keep a single instance to avoid multiple timers
         @Volatile
@@ -156,22 +157,13 @@ class SessionManager private constructor(context: Context) {
     }
     
     // Notification preferences
-    fun setInAppNotificationsEnabled(enabled: Boolean) {
-        editor.putBoolean(KEY_IN_APP_NOTIFICATIONS, enabled)
+    fun setNotificationsEnabled(enabled: Boolean) {
+        editor.putBoolean(KEY_NOTIFICATIONS_ENABLED, enabled)
         editor.apply()
     }
     
-    fun getInAppNotificationsEnabled(): Boolean {
-        return prefs.getBoolean(KEY_IN_APP_NOTIFICATIONS, true)
-    }
-    
-    fun setPushNotificationsEnabled(enabled: Boolean) {
-        editor.putBoolean(KEY_PUSH_NOTIFICATIONS, enabled)
-        editor.apply()
-    }
-    
-    fun getPushNotificationsEnabled(): Boolean {
-        return prefs.getBoolean(KEY_PUSH_NOTIFICATIONS, true)
+    fun getNotificationsEnabled(): Boolean {
+        return prefs.getBoolean(KEY_NOTIFICATIONS_ENABLED, true)
     }
     
     fun saveFCMToken(token: String) {
@@ -541,10 +533,10 @@ class SessionManager private constructor(context: Context) {
     }
     
     fun isInAppNotificationsEnabled(): Boolean {
-        return getInAppNotificationsEnabled()
+        return getNotificationsEnabled()
     }
     
     fun isPushNotificationsEnabled(): Boolean {
-        return getPushNotificationsEnabled()
+        return getNotificationsEnabled()
     }
 } 

@@ -47,6 +47,8 @@ class ScheduleAdapter : RecyclerView.Adapter<ScheduleAdapter.ScheduleViewHolder>
     private var sessionManager: SessionManager? = null
     private var isServiceInitialized = false
     private var context: Context? = null
+    private val locationNameCache = com.example.GarbageMS.utils.LocationNameCache.getInstance()
+    private val directLocationFetcher = com.example.GarbageMS.utils.DirectLocationFetcher.getInstance()
 
     fun updateSchedules(newScheduleList: List<Schedule>) {
         scheduleList = newScheduleList
@@ -56,19 +58,19 @@ class ScheduleAdapter : RecyclerView.Adapter<ScheduleAdapter.ScheduleViewHolder>
     fun setOnItemClickListener(listener: (Schedule) -> Unit) {
         onItemClickListener = listener
     }
-    
+
     fun setOnRemindMeClickListener(listener: (Schedule) -> Unit) {
         onRemindMeClickListener = listener
     }
-    
+
     fun setOnCompleteClickListener(listener: (Schedule) -> Unit) {
         onCompleteClickListener = listener
     }
-    
+
     fun setOnReportClickListener(listener: (Schedule) -> Unit) {
         onReportClickListener = listener
     }
-    
+
     fun initialize(sessionManager: SessionManager, context: Context) {
         this.sessionManager = sessionManager
         this.context = context
@@ -76,6 +78,14 @@ class ScheduleAdapter : RecyclerView.Adapter<ScheduleAdapter.ScheduleViewHolder>
         reminderService.setContext(context)
         scheduleService.initialize(sessionManager)
         scheduleService.setContext(context)
+        locationNameCache.initialize(sessionManager)
+
+        // Set token for direct location fetcher
+        val token = sessionManager.getToken()
+        if (!token.isNullOrEmpty()) {
+            directLocationFetcher.setToken(token)
+        }
+
         isServiceInitialized = true
         Log.d(TAG, "ScheduleAdapter initialized with SessionManager and Context")
     }
@@ -83,15 +93,15 @@ class ScheduleAdapter : RecyclerView.Adapter<ScheduleAdapter.ScheduleViewHolder>
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ScheduleViewHolder {
         val view = LayoutInflater.from(parent.context)
             .inflate(R.layout.item_schedule, parent, false)
-            
+
         // Initialize services if not already done
         if (!isServiceInitialized) {
             initializeServices(parent.context)
         }
-        
+
         return ScheduleViewHolder(view)
     }
-    
+
     private fun initializeServices(context: Context) {
         if (sessionManager == null) {
             sessionManager = SessionManager.getInstance(context)
@@ -122,46 +132,45 @@ class ScheduleAdapter : RecyclerView.Adapter<ScheduleAdapter.ScheduleViewHolder>
         private val btnComplete: Button = itemView.findViewById(R.id.btnComplete)
 
         fun bind(schedule: Schedule) {
-            // Improve location display
-            val locationDisplay = when {
-                schedule.locationId.contains("location-id-from-pickup-locations") -> {
-                    "Community Pickup Location" // Friendly name for standard pickup location
-                }
-                schedule.locationId.isEmpty() -> {
-                    "No location specified"
-                }
-                else -> {
-                    // Try to extract a meaningful name from the locationId if it follows a pattern
-                    val parts = schedule.locationId.split("-")
-                    if (parts.size > 1) {
-                        // Capitalize each word for a nicer display
-                        parts.subList(1, parts.size).joinToString(" ") { 
-                            it.replaceFirstChar { char -> 
-                                if (char.isLowerCase()) char.titlecase() else char.toString() 
-                            }
-                        }
-                    } else {
-                        schedule.locationId // Fallback to the original ID
-                    }
-                }
-            }
-            
-            locationText.text = locationDisplay
+            // Set initial location name from the Schedule object
+            locationText.text = schedule.getLocationDisplayName()
             dateText.text = schedule.pickupDate
             timeText.text = schedule.pickupTime
             statusText.text = schedule.status
-            
+
             // Debug - log schedule details
             Log.d(TAG, "Binding schedule: ${schedule.scheduleId}, " +
                     "location: ${schedule.locationId}, " +
                     "date: ${schedule.pickupDate}, " +
                     "time: ${schedule.pickupTime}, " +
                     "status: ${schedule.status}")
-                    
+
+            // Try to get a better location name using the direct fetcher
+            if (isServiceInitialized) {
+                CoroutineScope(Dispatchers.IO).launch {
+                    try {
+                        // Use the direct fetcher to get the location name
+                        Log.d(TAG, "Using direct fetcher to get location name for ID: ${schedule.locationId}")
+                        val locationName = directLocationFetcher.getLocationName(schedule.locationId)
+                        Log.d(TAG, "Direct fetcher returned location name: $locationName for ID: ${schedule.locationId}")
+
+                        // Always update the UI with the fetched name
+                        withContext(Dispatchers.Main) {
+                            locationText.text = locationName
+                            // Also update the schedule object for future reference
+                            schedule.locationName = locationName
+                            Log.d(TAG, "Updated location display to: $locationName")
+                        }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Error getting location name from direct fetcher: ${e.message}", e)
+                    }
+                }
+            }
+
             // Check if the schedule is past or today's date for Report button
             val scheduleDate = DateConverter.stringToLocalDate(schedule.pickupDate)
             val today = LocalDate.now()
-            val isPastOrToday = scheduleDate != null && 
+            val isPastOrToday = scheduleDate != null &&
                               (scheduleDate.isBefore(today) || scheduleDate.isEqual(today))
             val isCompleted = schedule.status.equals("COMPLETED", ignoreCase = true)
 
@@ -172,7 +181,7 @@ class ScheduleAdapter : RecyclerView.Adapter<ScheduleAdapter.ScheduleViewHolder>
                     // Show Remind Me button for PENDING schedules
                     btnRemindMe.visibility = View.VISIBLE
                     btnComplete.visibility = View.GONE // Always hide Complete button as only admins can complete
-                    
+
                     // Show Report button for past or today's PENDING schedules
                     btnReport.visibility = if (isPastOrToday) View.VISIBLE else View.GONE
                 }
@@ -200,27 +209,27 @@ class ScheduleAdapter : RecyclerView.Adapter<ScheduleAdapter.ScheduleViewHolder>
             itemView.setOnClickListener {
                 onItemClickListener?.invoke(schedule)
             }
-            
+
             // Set click listener for the Report button
             btnReport.setOnClickListener {
                 onReportClickListener?.invoke(schedule)
             }
-            
+
             // Set click listener for the Remind Me button
             btnRemindMe.setOnClickListener {
                 // Notify the parent activity
                 onRemindMeClickListener?.invoke(schedule)
-                
+
                 // Create a reminder through the Reminder API
                 createReminderForSchedule(schedule)
-                
+
                 // Show immediate feedback
                 Toast.makeText(
                     itemView.context,
                     "Setting reminder for pickup...",
                     Toast.LENGTH_SHORT
                 ).show()
-                
+
                 // Navigate to Home screen with the schedule ID to show the reminder
                 val intent = Intent(itemView.context, HomeActivity::class.java)
                 intent.putExtra("SHOW_REMINDER_SCHEDULE_ID", schedule.scheduleId)
@@ -228,18 +237,18 @@ class ScheduleAdapter : RecyclerView.Adapter<ScheduleAdapter.ScheduleViewHolder>
                 itemView.context.startActivity(intent)
             }
         }
-        
+
         private fun createReminderForSchedule(schedule: Schedule) {
             // Extract date and time from schedule
             val dateStr = schedule.pickupDate // Format: "yyyy-MM-dd"
             val timeStr = schedule.pickupTime // Format: "HH:mm" or "h:mm AM/PM"
-            
+
             Log.d(TAG, "Creating reminder for schedule: ${schedule.scheduleId}, date: $dateStr, time: $timeStr")
-            
+
             try {
                 // Set context for the reminder service to enable notifications
                 reminderService.setContext(itemView.context)
-                
+
                 // DEBUG MODE: Send an immediate test notification
                 // Remove this in production or change to false
                 val debugMode = false
@@ -249,7 +258,7 @@ class ScheduleAdapter : RecyclerView.Adapter<ScheduleAdapter.ScheduleViewHolder>
                         "Testing notifications: Will try to connect to backend API...",
                         Toast.LENGTH_LONG
                     ).show()
-                    
+
                     // Create a dialog to show the user we're testing notifications
                     AlertDialog.Builder(itemView.context)
                         .setTitle("Testing Notifications")
@@ -269,7 +278,7 @@ class ScheduleAdapter : RecyclerView.Adapter<ScheduleAdapter.ScheduleViewHolder>
                         .setNeutralButton("Cancel", null)
                         .show()
                 }
-                
+
                 // Parse date
                 val localDate = DateConverter.stringToLocalDate(dateStr)
                 if (localDate == null) {
@@ -281,23 +290,23 @@ class ScheduleAdapter : RecyclerView.Adapter<ScheduleAdapter.ScheduleViewHolder>
                     ).show()
                     return
                 }
-                
+
                 // Parse time - handle both 12-hour and 24-hour formats
                 var hour = 0
                 var minute = 0
-                
+
                 try {
                     if (timeStr.contains(":")) {
                         val timeParts = timeStr.split(":")
-                        
+
                         // Extract hour
                         hour = timeParts[0].trim().toInt()
-                        
+
                         // Check for AM/PM format
                         val isPM = timeStr.contains("PM", ignoreCase = true)
                         if (isPM && hour < 12) hour += 12
                         if (!isPM && hour == 12) hour = 0
-                        
+
                         // Extract minutes - remove AM/PM suffix if present
                         val minuteStr = timeParts[1].replace("AM", "").replace("PM", "").trim()
                         minute = minuteStr.toInt()
@@ -319,12 +328,12 @@ class ScheduleAdapter : RecyclerView.Adapter<ScheduleAdapter.ScheduleViewHolder>
                     ).show()
                     return
                 }
-                
+
                 Log.d(TAG, "Parsed time - Hour: $hour, Minute: $minute")
-                
+
                 // Create calendar for the reminder time
                 val calendar = Calendar.getInstance()
-                
+
                 // For testing: set reminder to 15 seconds from now (TESTING ONLY)
                 if (debugMode) {
                     // Current time + 15 seconds
@@ -346,11 +355,11 @@ class ScheduleAdapter : RecyclerView.Adapter<ScheduleAdapter.ScheduleViewHolder>
                         set(Calendar.MILLISECOND, 0)
                     }
                 }
-                
+
                 val reminderDate = calendar.time
-                
+
                 Log.d(TAG, "Setting reminder for: ${SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(reminderDate)}")
-                
+
                 // Create reminder request with a descriptive message
                 val reminderRequest = ReminderRequest(
                     title = "GMS Trash Pickup Reminder",
@@ -358,19 +367,19 @@ class ScheduleAdapter : RecyclerView.Adapter<ScheduleAdapter.ScheduleViewHolder>
                     reminderDate = reminderDate,
                     scheduleId = schedule.scheduleId
                 )
-                
+
                 // Call the API in a coroutine
                 CoroutineScope(Dispatchers.IO).launch {
                     try {
                         Log.d(TAG, "Calling createReminder API for schedule: ${schedule.scheduleId}")
                         val result = reminderService.createReminder(reminderRequest)
-                        
+
                         withContext(Dispatchers.Main) {
                             if (result.isSuccess) {
                                 val response = result.getOrNull()
                                 if (response != null && response.reminderId != null) {
                                     Log.d(TAG, "Reminder created successfully with ID: ${response.reminderId}")
-                                    
+
                                     // Show success message
                                     Toast.makeText(
                                         itemView.context,
@@ -383,7 +392,7 @@ class ScheduleAdapter : RecyclerView.Adapter<ScheduleAdapter.ScheduleViewHolder>
                             } else {
                                 val error = result.exceptionOrNull()
                                 Log.e(TAG, "Error creating reminder: ${error?.message}")
-                                
+
                                 Toast.makeText(
                                     itemView.context,
                                     "Failed to create reminder: ${error?.message ?: "Unknown error"}",
@@ -393,7 +402,7 @@ class ScheduleAdapter : RecyclerView.Adapter<ScheduleAdapter.ScheduleViewHolder>
                         }
                     } catch (e: Exception) {
                         Log.e(TAG, "Exception creating reminder: ${e.message}", e)
-                        
+
                         withContext(Dispatchers.Main) {
                             Toast.makeText(
                                 itemView.context,
@@ -413,4 +422,4 @@ class ScheduleAdapter : RecyclerView.Adapter<ScheduleAdapter.ScheduleViewHolder>
             }
         }
     }
-} 
+}

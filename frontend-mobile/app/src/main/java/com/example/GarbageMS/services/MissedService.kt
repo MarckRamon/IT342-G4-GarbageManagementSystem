@@ -98,7 +98,13 @@ class MissedService private constructor() {
             try {
                 Log.d(TAG, "Getting all missed pickups")
                 
-                val response = apiService.getAllMissed()
+                val token = sessionManager.getToken()
+                if (token.isNullOrEmpty()) {
+                    Log.e(TAG, "No auth token available")
+                    return@withContext Result.failure(IOException("Authentication required"))
+                }
+                
+                val response = apiService.getAllMissed("Bearer $token")
                 
                 if (response.isSuccessful) {
                     val missedResponses = response.body()
@@ -141,7 +147,13 @@ class MissedService private constructor() {
             try {
                 Log.d(TAG, "Getting missed pickups for user: $userId")
                 
-                val response = apiService.getMissedByUserId(userId)
+                val token = sessionManager.getToken()
+                if (token.isNullOrEmpty()) {
+                    Log.e(TAG, "No auth token available")
+                    return@withContext Result.failure(IOException("Authentication required"))
+                }
+                
+                val response = apiService.getMissedByUserId(userId, "Bearer $token")
                 
                 if (response.isSuccessful) {
                     val missedResponses = response.body()
@@ -184,7 +196,13 @@ class MissedService private constructor() {
             try {
                 Log.d(TAG, "Getting missed pickups for schedule: $scheduleId")
                 
-                val response = apiService.getMissedByScheduleId(scheduleId)
+                val token = sessionManager.getToken()
+                if (token.isNullOrEmpty()) {
+                    Log.e(TAG, "No auth token available")
+                    return@withContext Result.failure(IOException("Authentication required"))
+                }
+                
+                val response = apiService.getMissedByScheduleId(scheduleId, "Bearer $token")
                 
                 if (response.isSuccessful) {
                     val missedResponses = response.body()

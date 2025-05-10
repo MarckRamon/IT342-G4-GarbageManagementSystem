@@ -29,7 +29,7 @@ class LoginActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         sessionManager = SessionManager.getInstance(this)
-        
+
         // Check if user is already logged in
         if (sessionManager.isLoggedIn()) {
             navigateToHome()
@@ -75,22 +75,18 @@ class LoginActivity : AppCompatActivity() {
             // Navigate to Forgot Password screen
             startActivity(Intent(this, ForgotPasswordActivity::class.java))
         }
-
-        binding.googleButtonContainer.setOnClickListener {
-            Toast.makeText(this, "Google sign-in functionality coming soon", Toast.LENGTH_SHORT).show()
-        }
     }
 
     private fun loginUser(email: String, password: String) {
         // Show loading
         showLoading(true)
-        
+
         val loginRequest = LoginRequest(email, password)
-        
+
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val response = apiService.login(loginRequest)
-                
+
                 withContext(Dispatchers.Main) {
                     if (response.isSuccessful) {
                         val loginResponse = response.body()
@@ -103,15 +99,15 @@ class LoginActivity : AppCompatActivity() {
                                     sessionManager.saveToken(loginResponse.token)
                                     sessionManager.saveUserId(loginResponse.userId)
                                     sessionManager.saveUserType(loginResponse.role)
-                                    
+
                                     Log.d(TAG, "Login successful: userId=${loginResponse.userId}, role=${loginResponse.role}")
-                                    
+
                                     // Navigate to home screen
                                     navigateToHome()
                                 } else {
                                     showLoading(false)
-                                    Toast.makeText(this@LoginActivity, 
-                                        "Access denied: Only USER accounts are allowed", 
+                                    Toast.makeText(this@LoginActivity,
+                                        "Access denied: Only USER accounts are allowed",
                                         Toast.LENGTH_LONG).show()
                                 }
                             } else {
@@ -139,13 +135,13 @@ class LoginActivity : AppCompatActivity() {
             }
         }
     }
-    
+
     private fun navigateToHome() {
         val intent = Intent(this, HomeActivity::class.java)
         startActivity(intent)
         finish()
     }
-    
+
     private fun showLoading(show: Boolean) {
         if (show) {
             binding.btnLogin.isEnabled = false

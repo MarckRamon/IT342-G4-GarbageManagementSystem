@@ -46,6 +46,8 @@ class HomeActivity : BaseActivity() {
     private val scheduleService = ScheduleService.getInstance()
     private val reminderService = ReminderService.getInstance()
     private val tipService = TipService.getInstance()
+    private val locationNameCache = com.example.GarbageMS.utils.LocationNameCache.getInstance()
+    private val directLocationFetcher = com.example.GarbageMS.utils.DirectLocationFetcher.getInstance()
     private val TAG = "HomeActivity"
     private var currentReminder: Reminder? = null
     private lateinit var tipAdapter: TipAdapter
@@ -65,13 +67,20 @@ class HomeActivity : BaseActivity() {
         reminderService.setContext(applicationContext)
         tipService.initialize(sessionManager)
         tipService.setContext(applicationContext)
+        locationNameCache.initialize(sessionManager)
+
+        // Set token for direct location fetcher
+        val token = sessionManager.getToken()
+        if (!token.isNullOrEmpty()) {
+            directLocationFetcher.setToken(token)
+        }
 
         // Set context for services
         scheduleService.setContext(applicationContext)
 
         // Ensure FCM token is available
         refreshFCMToken()
-        
+
         // Load user profile data
         loadUserData()
 
@@ -80,37 +89,37 @@ class HomeActivity : BaseActivity() {
         setupTipsRecyclerView()
         setupListeners()
         setupBottomNavigation()
-        
+
         // Check if we need to display a specific reminder
         handleShowReminderIntent()
-        
+
         // Load user's closest pickup schedule
         loadNextPickupInfo()
-        
+
         // Load tips
         loadTips()
     }
-    
+
     override fun onResume() {
         super.onResume()
-        
+
         // Check for any updated data
         loadNextPickupInfo()
         loadTips()
     }
-    
+
     private fun setupUI() {
         // Set welcome message
         val userEmail = sessionManager.getUserId() ?: "User"
         binding.tvWelcome.text = "Welcome, $userEmail!"
-        
+
         // Add long-press handler for notification testing
         binding.tvWelcome.setOnLongClickListener {
             testPushNotifications()
             true
         }
     }
-    
+
     private fun setupTipsRecyclerView() {
         // Initialize empty adapter
         tipAdapter = TipAdapter(emptyList())
@@ -118,13 +127,13 @@ class HomeActivity : BaseActivity() {
             layoutManager = LinearLayoutManager(this@HomeActivity)
             adapter = tipAdapter
         }
-        
+
         // Setup refresh listener
         binding.tipsRefreshLayout.setOnRefreshListener {
             loadTips()
         }
     }
-    
+
     private fun testPushNotifications() {
         // Show a dialog to confirm the notification test
         AlertDialog.Builder(this)
@@ -133,7 +142,7 @@ class HomeActivity : BaseActivity() {
             .setPositiveButton("Yes") { _, _ ->
                 // Test notifications using our diagnostic function
                 reminderService.logFCMTokenStatus(this)
-                
+
                 // Also try sending via FirebaseMessaging
                 val fcmToken = sessionManager.getFCMToken()
                 if (fcmToken != null) {
@@ -149,7 +158,7 @@ class HomeActivity : BaseActivity() {
 
     private fun showFCMToken() {
         val fcmToken = sessionManager.getFCMToken() ?: "Token not available"
-        
+
         AlertDialog.Builder(this)
             .setTitle("FCM Token")
             .setMessage("Your FCM token is:\n\n$fcmToken\n\nWould you like to test notifications?")
@@ -186,7 +195,7 @@ class HomeActivity : BaseActivity() {
             sessionManager.logout()
             navigateToLogin()
         }
-        
+
         // Add a long press listener for testing notifications
         binding.btnNotifications.setOnLongClickListener {
             // Show a test notification
@@ -198,30 +207,30 @@ class HomeActivity : BaseActivity() {
             Toast.makeText(this, "Test notification sent", Toast.LENGTH_SHORT).show()
             true
         }
-        
+
         // Add a click listener on button to show FCM token
         binding.btnProfile.setOnLongClickListener {
             // Show FCM token dialog
             showFCMToken()
             true
         }
-        
+
         // Handle close button click on the reminder card
         binding.closeReminderButton.setOnClickListener {
             // Always show a confirmation dialog
             AlertDialog.Builder(this)
                 .setTitle(if (currentReminder != null) "Delete Reminder" else "Hide Pickup Info")
-                .setMessage(if (currentReminder != null) 
-                    "Are you sure you want to delete this reminder?" 
+                .setMessage(if (currentReminder != null)
+                    "Are you sure you want to delete this reminder?"
                     else "Are you sure you want to hide this pickup information?")
                 .setPositiveButton("Yes") { dialog, _ ->
                     if (currentReminder != null && currentReminder?.reminderId?.isNotEmpty() == true) {
                         // Save reminder to notifications before deleting
                         addReminderToNotifications(currentReminder!!)
-                        
+
                         // Delete the actual reminder
                         deleteReminder(currentReminder?.reminderId ?: "")
-                        
+
                         // Give a short delay to ensure notification is saved
                         CoroutineScope(Dispatchers.Main).launch {
                             delay(300) // 300ms delay
@@ -230,9 +239,9 @@ class HomeActivity : BaseActivity() {
                             startActivity(intent)
                         }
                     } else {
-                        // Add pickup info to notifications 
+                        // Add pickup info to notifications
                         addPickupInfoToNotifications()
-                        
+
                         // Just hide the card if it's not a reminder
                         binding.nextPickupCard.visibility = View.GONE
                         Log.d(TAG, "Hiding pickup info card")
@@ -241,7 +250,7 @@ class HomeActivity : BaseActivity() {
                             "Pickup information hidden. Check notifications for details.",
                             Toast.LENGTH_SHORT
                         ).show()
-                        
+
                         // Give a short delay to ensure notification is saved
                         CoroutineScope(Dispatchers.Main).launch {
                             delay(300) // 300ms delay
@@ -288,7 +297,7 @@ class HomeActivity : BaseActivity() {
     private fun loadUserData() {
         val token = sessionManager.getToken()
         val userId = sessionManager.getUserId()
-        
+
         if (token == null || userId == null) {
             Log.e(TAG, "Token or userId is null")
             Toast.makeText(this, "Session expired. Please login again.", Toast.LENGTH_LONG).show()
@@ -296,14 +305,14 @@ class HomeActivity : BaseActivity() {
             navigateToLogin()
             return
         }
-        
+
         // Set a default welcome message even before API call completes
         binding.tvWelcome.text = "Welcome back!"
-        
+
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val response = apiService.getProfile(userId, "Bearer $token")
-                
+
                 withContext(Dispatchers.Main) {
                     if (response.isSuccessful) {
                         val profileResponse = response.body()
@@ -325,12 +334,12 @@ class HomeActivity : BaseActivity() {
                     } else {
                         val errorCode = response.code()
                         Log.e(TAG, "Failed to load user profile: ${response.code()} - ${response.message()}")
-                        
+
                         // Only log out if we get a 401 Unauthorized
                         // For 404 Not Found, it might just be that the endpoint doesn't exist
                         if (errorCode == 401) {
                             withContext(Dispatchers.Main) {
-                                Toast.makeText(this@HomeActivity, 
+                                Toast.makeText(this@HomeActivity,
                                     "Your session has expired. Please login again.",
                                     Toast.LENGTH_LONG).show()
                                 sessionManager.logout()
@@ -345,7 +354,7 @@ class HomeActivity : BaseActivity() {
             }
         }
     }
-    
+
     private fun loadTips() {
         CoroutineScope(Dispatchers.IO).launch {
             try {
@@ -353,13 +362,13 @@ class HomeActivity : BaseActivity() {
                 withContext(Dispatchers.Main) {
                     // Store the tips list
                     tipsList = tips
-                    
+
                     // Update the adapter
                     tipAdapter.updateTips(tips)
-                    
+
                     // Hide the refresh indicator if it's showing
                     binding.tipsRefreshLayout.isRefreshing = false
-                    
+
                     // Show/hide the tips section based on data
                     if (tips.isEmpty()) {
                         binding.tipsSectionTitle.visibility = View.GONE
@@ -389,7 +398,7 @@ class HomeActivity : BaseActivity() {
                 try {
                     // Get the reminder from the service - you'll need to implement this
                     // val reminder = reminderService.getReminder(reminderId)
-                    
+
                     // For now, just show a message
                     withContext(Dispatchers.Main) {
                         Toast.makeText(
@@ -404,15 +413,15 @@ class HomeActivity : BaseActivity() {
             }
         }
     }
-    
+
     private fun displayReminderCard(reminder: Reminder) {
         // Store the current reminder for possible later operations
         currentReminder = reminder
-        
+
         // Set the reminder card content and make it visible
         binding.nextPickupCard.visibility = View.VISIBLE
         binding.nextPickupTitle.text = "Reminder: ${reminder.title}"
-        
+
         // Format date if available, otherwise use the provided time
         val timeText = if (reminder.reminderDate != null) {
             SimpleDateFormat("MMM dd, yyyy 'at' h:mm a", Locale.getDefault()).format(reminder.reminderDate)
@@ -420,7 +429,7 @@ class HomeActivity : BaseActivity() {
             reminder.scheduledTime.ifEmpty { "Unknown time" }
         }
         binding.nextPickupTimeText.text = timeText
-        
+
         // Show or hide additional fields based on availability
         val message = reminder.getDescriptionText()
         if (message.isNotEmpty()) {
@@ -429,22 +438,60 @@ class HomeActivity : BaseActivity() {
         } else {
             binding.nextPickupMessage.visibility = View.GONE
         }
-        
+
         // Set the location if available
         if (reminder.location.isNotEmpty()) {
-            binding.nextPickupLocation.text = "Location: ${reminder.location}"
+            // Use a default location name initially
+            var locationName = reminder.location
+
+            // Set initial location text and make it visible
+            binding.nextPickupLocation.text = "Location: $locationName"
             binding.nextPickupLocation.visibility = View.VISIBLE
+
+            // Try to get a user-friendly location name in a coroutine
+            CoroutineScope(Dispatchers.IO).launch {
+                try {
+                    // First check if it's a valid schedule ID
+                    val scheduleResult = scheduleService.getScheduleById(reminder.scheduleId)
+                    val schedule = scheduleResult.getOrNull()
+
+                    val formattedName = if (schedule != null) {
+                        schedule.getLocationDisplayName()
+                    } else {
+                        // Otherwise use the same formatting logic as in Schedule
+                        val parts = reminder.location.split("-")
+                        if (parts.size > 1) {
+                            parts.subList(1, parts.size).joinToString(" ") {
+                                it.replaceFirstChar { char ->
+                                    if (char.isLowerCase()) char.titlecase() else char.toString()
+                                }
+                            }
+                        } else {
+                            reminder.location
+                        }
+                    }
+
+                    // Update UI on main thread only if the formatted name is different
+                    if (formattedName != locationName) {
+                        withContext(Dispatchers.Main) {
+                            binding.nextPickupLocation.text = "Location: $formattedName"
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error getting location name", e)
+                }
+            }
         } else {
             binding.nextPickupLocation.visibility = View.GONE
         }
-        
+
         // Ensure the reminder card is at the top of the screen
         binding.nextPickupCard.post {
             // Scroll to the top to ensure the reminder is visible
             binding.tipsRecyclerView.smoothScrollToPosition(0)
         }
     }
-    
+
     private fun loadNextPickupInfo() {
         CoroutineScope(Dispatchers.IO).launch {
             try {
@@ -453,7 +500,7 @@ class HomeActivity : BaseActivity() {
                 loadNextSchedule()
             } catch (e: Exception) {
                 Log.e(TAG, "Error fetching reminders", e)
-                
+
                 withContext(Dispatchers.Main) {
                     // If there's an error with reminders, try to show the next schedule
                     loadNextSchedule()
@@ -461,7 +508,7 @@ class HomeActivity : BaseActivity() {
             }
         }
     }
-    
+
     private fun loadNextSchedule() {
         CoroutineScope(Dispatchers.IO).launch {
             try {
@@ -472,23 +519,23 @@ class HomeActivity : BaseActivity() {
                 } else {
                     emptyList()
                 }
-                
+
                 withContext(Dispatchers.Main) {
                     if (schedules.isNotEmpty()) {
                         // Sort schedules by date
                         val today = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
                             .format(Date())
-                        
+
                         // Find the next upcoming schedule (not in the past)
-                        val upcomingSchedules = schedules.filter { 
-                            schedule -> schedule.pickupDate >= today 
+                        val upcomingSchedules = schedules.filter {
+                            schedule -> schedule.pickupDate >= today
                         }
-                        
+
                         // Sort the upcoming schedules by date
-                        val sortedSchedules = upcomingSchedules.sortedBy { 
-                            schedule -> schedule.pickupDate 
+                        val sortedSchedules = upcomingSchedules.sortedBy {
+                            schedule -> schedule.pickupDate
                         }
-                        
+
                         if (sortedSchedules.isNotEmpty()) {
                             // Display the closest upcoming schedule
                             displayScheduleCard(sortedSchedules.first())
@@ -503,7 +550,7 @@ class HomeActivity : BaseActivity() {
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Error fetching schedules", e)
-                
+
                 withContext(Dispatchers.Main) {
                     // Hide the card if we can't fetch any data
                     binding.nextPickupCard.visibility = View.GONE
@@ -511,15 +558,15 @@ class HomeActivity : BaseActivity() {
             }
         }
     }
-    
+
     private fun displayScheduleCard(schedule: Schedule) {
         // Store the current reminder as null since we're showing a schedule
         currentReminder = null
-        
+
         // Set the schedule card content and make it visible
         binding.nextPickupCard.visibility = View.VISIBLE
         binding.nextPickupTitle.text = "Next Pickup"
-        
+
         // Format the date
         try {
             val inputFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
@@ -530,57 +577,65 @@ class HomeActivity : BaseActivity() {
         } catch (e: Exception) {
             binding.nextPickupTimeText.text = "${schedule.pickupDate} at ${schedule.pickupTime}"
         }
-        
+
         // Set a default message
         binding.nextPickupMessage.text = "Remember to prepare your waste for collection."
         binding.nextPickupMessage.visibility = View.VISIBLE
-        
+
         // Set the location if available
         if (schedule.locationId.isNotEmpty()) {
-            binding.nextPickupLocation.text = "Location: ${getLocationDisplayName(schedule.locationId)}"
+            // Set a default location name initially
+            val defaultName = schedule.getLocationDisplayName()
+            binding.nextPickupLocation.text = "Location: $defaultName"
             binding.nextPickupLocation.visibility = View.VISIBLE
+
+            // Try to get a better location name using the direct fetcher
+            CoroutineScope(Dispatchers.IO).launch {
+                try {
+                    // Use the direct fetcher to get the location name
+                    Log.d(TAG, "Using direct fetcher to get location name for ID: ${schedule.locationId}")
+                    val locationName = directLocationFetcher.getLocationName(schedule.locationId)
+                    Log.d(TAG, "Direct fetcher returned location name: $locationName for ID: ${schedule.locationId}")
+
+                    // Always update the UI with the fetched name
+                    withContext(Dispatchers.Main) {
+                        binding.nextPickupLocation.text = "Location: $locationName"
+                        // Also update the schedule object for future reference
+                        schedule.locationName = locationName
+                        Log.d(TAG, "Updated location display to: $locationName")
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error getting location name from cache: ${e.message}", e)
+                }
+            }
         } else {
             binding.nextPickupLocation.visibility = View.GONE
         }
     }
-    
-    // Helper method to get a user-friendly location name
-    private fun getLocationDisplayName(locationId: String): String {
-        if (locationId.isEmpty()) {
-            return "No location specified"
-        }
-        
-        // Try to extract a meaningful name from the locationId if it follows a pattern
-        val parts = locationId.split("-")
-        if (parts.size > 1) {
-            // Get all parts after the first one
-            return parts.subList(1, parts.size).joinToString(" ")
-        }
-        
-        return locationId
-    }
-    
+
+    // We now use LocationNameCache instead of this method
+
     private fun deleteReminder(reminderId: String) {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 // Simulate successful deletion for now
                 val success = true // reminderService.deleteReminder(reminderId)
-                
+
                 withContext(Dispatchers.Main) {
                     if (success) {
                         // Clear the current reminder
                         currentReminder = null
-                        
+
                         // Hide the reminder card
                         binding.nextPickupCard.visibility = View.GONE
-                        
+
                         // Show a toast to confirm deletion
                         Toast.makeText(
                             this@HomeActivity,
                             "Reminder deleted successfully",
                             Toast.LENGTH_SHORT
                         ).show()
-                        
+
                         // Load next pickup info again (schedules may still exist)
                         loadNextSchedule()
                     } else {
@@ -593,7 +648,7 @@ class HomeActivity : BaseActivity() {
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Error deleting reminder", e)
-                
+
                 withContext(Dispatchers.Main) {
                     Toast.makeText(
                         this@HomeActivity,
@@ -616,7 +671,7 @@ class HomeActivity : BaseActivity() {
                     val token = task.result
                     Log.d(TAG, "New FCM token obtained: ${token.take(10)}...")
                     sessionManager.setFCMToken(token)
-                    
+
                     // Send token to the server
                     updateTokenOnServer(token)
                 } else {
@@ -627,14 +682,14 @@ class HomeActivity : BaseActivity() {
             Log.d(TAG, "FCM token available: ${currentToken.take(10)}...")
         }
     }
-    
+
     private fun updateTokenOnServer(token: String) {
         val userId = sessionManager.getUserId()
         if (userId.isNullOrEmpty()) {
             Log.e(TAG, "User ID not available, cannot update FCM token on server")
             return
         }
-        
+
         // Use coroutine to perform network operation
         CoroutineScope(Dispatchers.IO).launch {
             try {
@@ -644,16 +699,16 @@ class HomeActivity : BaseActivity() {
                 val jsonBody = JSONObject()
                 jsonBody.put("fcmToken", token)
                 jsonBody.put("userId", userId)
-                
+
                 val requestBody = jsonBody.toString()
                     .toRequestBody("application/json".toMediaType())
-                
+
                 val jwtToken = sessionManager.getToken()
                 if (jwtToken.isNullOrEmpty()) {
                     Log.e(TAG, "JWT token not available, cannot update FCM token")
                     return@launch
                 }
-                
+
                 // Build request
                 val request = Request.Builder()
                     .url("${reminderService.getApiBaseUrl()}/api/users/${userId}/fcm-token")
@@ -661,10 +716,10 @@ class HomeActivity : BaseActivity() {
                     .header("Authorization", "Bearer $jwtToken")
                     .header("Content-Type", "application/json")
                     .build()
-                
+
                 // Execute request
                 val response = client.newCall(request).execute()
-                
+
                 withContext(Dispatchers.Main) {
                     if (response.isSuccessful) {
                         Log.d(TAG, "FCM token updated on server successfully")
@@ -680,7 +735,7 @@ class HomeActivity : BaseActivity() {
 
     private fun addReminderToNotifications(reminder: Reminder) {
         val userId = sessionManager.getUserId() ?: return
-        
+
         // Create a notification from the reminder
         val notification = hashMapOf(
             "title" to "Reminder: ${reminder.title}",
@@ -691,7 +746,7 @@ class HomeActivity : BaseActivity() {
             "userId" to userId,
             "referenceId" to reminder.reminderId
         )
-        
+
         // Add to Firestore
         val db = FirebaseFirestore.getInstance()
         try {
@@ -712,12 +767,12 @@ class HomeActivity : BaseActivity() {
 
     private fun addPickupInfoToNotifications() {
         val userId = sessionManager.getUserId() ?: return
-        
+
         // Get current pickup information from the UI
         val title = binding.nextPickupTitle.text.toString()
         val time = binding.nextPickupTimeText.text.toString()
         val location = binding.nextPickupLocation.text.toString()
-        
+
         // Create notification data
         val notification = hashMapOf(
             "title" to title,
@@ -728,7 +783,7 @@ class HomeActivity : BaseActivity() {
             "userId" to userId,
             "referenceId" to ""
         )
-        
+
         // Add to Firestore
         val db = FirebaseFirestore.getInstance()
         try {
@@ -746,10 +801,10 @@ class HomeActivity : BaseActivity() {
             handleFirestoreError(e)
         }
     }
-    
+
     private fun handleFirestoreError(e: Exception) {
         val errorMessage = when {
-            e.message?.contains("PERMISSION_DENIED") == true -> 
+            e.message?.contains("PERMISSION_DENIED") == true ->
                 "Firestore permission denied. Need to update security rules."
             e.message?.contains("NULL_VALUE") == true ->
                 "Error with data format. Please try again."
@@ -759,7 +814,7 @@ class HomeActivity : BaseActivity() {
                 "Service unavailable. Check your internet connection."
             else -> "Database error: ${e.message}"
         }
-        
+
         Toast.makeText(
             this@HomeActivity,
             errorMessage,
