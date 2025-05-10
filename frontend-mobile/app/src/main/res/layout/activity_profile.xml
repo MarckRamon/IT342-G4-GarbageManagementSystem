@@ -173,7 +173,7 @@
                         app:tint="@color/grey"/>
                 </LinearLayout>
 
-                <!-- Settings (formerly Configure Notifications) -->
+                <!-- Configure Notifications -->
                 <LinearLayout
                     android:id="@+id/configureNotificationsButton"
                     android:layout_width="match_parent"
@@ -186,14 +186,14 @@
                     <ImageView
                         android:layout_width="24dp"
                         android:layout_height="24dp"
-                        android:src="@drawable/ic_settings"
+                        android:src="@drawable/ic_notification"
                         app:tint="@color/grey"/>
 
                     <TextView
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="Settings"
+                        android:text="Configure Notifications"
                         android:textSize="16sp"
                         android:textColor="@color/black"
                         android:layout_marginStart="16dp"/>
@@ -227,8 +227,21 @@
         app:iconTint="@color/black"
         app:iconGravity="textStart"
         app:iconPadding="8dp"
-        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintBottom_toTopOf="@+id/bottomNavigation"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"/>
+
+    <!-- Bottom Navigation -->
+    <com.google.android.material.bottomnavigation.BottomNavigationView
+        android:id="@+id/bottomNavigation"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:background="@color/secondary"
+        app:itemIconTint="@color/white"
+        app:itemTextColor="@color/white"
+        app:menu="@menu/bottom_nav_menu"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

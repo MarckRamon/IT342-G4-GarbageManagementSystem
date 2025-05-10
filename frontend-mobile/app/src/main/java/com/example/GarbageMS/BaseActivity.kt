@@ -3,17 +3,13 @@ package com.example.GarbageMS
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
-import android.view.View
-import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.example.GarbageMS.ui.SessionTimeoutDialog
 import com.example.GarbageMS.utils.SessionManager
-import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 
 /**
@@ -24,7 +20,6 @@ abstract class BaseActivity : AppCompatActivity(), SessionTimeoutDialog.SessionT
     
     protected lateinit var sessionManager: SessionManager
     private val TAG = "BaseActivity"
-    private val db = FirebaseFirestore.getInstance()
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -66,9 +61,6 @@ abstract class BaseActivity : AppCompatActivity(), SessionTimeoutDialog.SessionT
         // Only verify with backend if the activity is requiring authentication
         if (requiresAuthentication()) {
             validateToken()
-            
-            // Update notification badge count
-            updateNotificationBadge()
         }
     }
     
@@ -176,8 +168,6 @@ abstract class BaseActivity : AppCompatActivity(), SessionTimeoutDialog.SessionT
                 val expiry = jsonObject.getLong("exp")
                 val currentTime = System.currentTimeMillis() / 1000
                 return expiry > currentTime
-            } else {
-                return true
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error validating token locally: ${e.message}", e)
@@ -185,97 +175,5 @@ abstract class BaseActivity : AppCompatActivity(), SessionTimeoutDialog.SessionT
         
         // If we can't check expiry, assume it's valid
         return true
-    }
-    
-    /**
-     * Updates the notification badge count in the UI
-     * Call this method from activities that have a notification badge
-     */
-    protected fun updateNotificationBadge() {
-        val userId = sessionManager.getUserId()
-        if (userId.isEmpty()) return
-        
-        CoroutineScope(Dispatchers.IO).launch {
-            try {
-                // Check if we have a cached count
-                var unreadCount = sessionManager.getUnreadNotificationCount()
-                
-                // If no cached count or it's been more than 5 minutes, fetch from Firestore
-                if (unreadCount == -1 || System.currentTimeMillis() - sessionManager.getLastNotificationCountUpdateTime() > 5 * 60 * 1000) {
-                    // Query unread notifications count from Firestore
-                    val notificationsSnapshot = db.collection("notifications")
-                        .whereEqualTo("userId", userId)
-                        .whereEqualTo("isRead", false)
-                        .get()
-                        .await()
-                    
-                    unreadCount = notificationsSnapshot.size()
-                    
-                    // Update cache
-                    sessionManager.setUnreadNotificationCount(unreadCount)
-                }
-                
-                // Update UI on main thread
-                withContext(Dispatchers.Main) {
-                    // Try to find notification badge view if it exists
-                    try {
-                        val notificationBadgeId = resources.getIdentifier("notificationBadge", "id", packageName)
-                        if (notificationBadgeId != 0) {
-                            val notificationBadge = findViewById<TextView>(notificationBadgeId)
-                            if (notificationBadge != null) {
-                                updateBadgeText(notificationBadge, unreadCount)
-                            } else {
-                                // Badge view is null, can't update
-                                Log.d(TAG, "Notification badge view is null")
-                            }
-                        } else {
-                            // Badge ID not found
-                            Log.d(TAG, "Notification badge ID not found")
-                        }
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Error finding notification badge view", e)
-                    }
-                }
-            } catch (e: Exception) {
-                Log.e(TAG, "Error updating notification badge", e)
-            }
-        }
-    }
-    
-    /**
-     * Updates the notification badge with a specific count
-     * Use this for immediate UI updates without querying Firestore
-     */
-    protected fun updateNotificationBadgeWithCount(count: Int) {
-        try {
-            val notificationBadgeId = resources.getIdentifier("notificationBadge", "id", packageName)
-            if (notificationBadgeId != 0) {
-                val notificationBadge = findViewById<TextView>(notificationBadgeId)
-                if (notificationBadge != null) {
-                    updateBadgeText(notificationBadge, count)
-                } else {
-                    // Badge view is null, can't update
-                    Log.d(TAG, "Notification badge view is null")
-                }
-            } else {
-                // Badge ID not found
-                Log.d(TAG, "Notification badge ID not found")
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error updating notification badge with count", e)
-        }
-    }
-    
-    private fun updateBadgeText(badge: TextView, count: Int) {
-        if (count > 0) {
-            badge.visibility = View.VISIBLE
-            var text = count.toString()
-            if (count > 99) {
-                text = "99+"
-            }
-            badge.text = text
-        } else {
-            badge.visibility = View.GONE
-        }
     }
 } 

@@ -39,13 +39,6 @@ class SessionManager private constructor(context: Context) {
         private const val TOKEN_EXPIRY = "token_expiry"
         private const val KEY_LAST_ACTIVITY = "last_activity"
         private const val SESSION_TIMEOUT = 3600L // 5 seconds for testing
-        private const val KEY_USER_EMAIL = "user_email"
-        private const val KEY_FCM_TOKEN = "fcm_token"
-        private const val KEY_IN_APP_NOTIFICATIONS = "in_app_notifications_enabled"
-        private const val KEY_PUSH_NOTIFICATIONS = "push_notifications_enabled"
-        private const val KEY_UNREAD_NOTIFICATION_COUNT = "unread_notification_count"
-        private const val KEY_LAST_NOTIFICATION_COUNT_UPDATE = "last_notification_count_update"
-        private const val KEY_NOTIFICATIONS_ENABLED = "notifications_enabled"
         
         // Keep a single instance to avoid multiple timers
         @Volatile
@@ -104,8 +97,8 @@ class SessionManager private constructor(context: Context) {
         Log.d(TAG, "UserId saved: $userId")
     }
     
-    fun getUserId(): String {
-        return prefs.getString(USER_ID_KEY, "") ?: ""
+    fun getUserId(): String? {
+        return prefs.getString(USER_ID_KEY, null)
     }
     
     fun saveUserType(userType: String) {
@@ -132,73 +125,10 @@ class SessionManager private constructor(context: Context) {
     fun logout() {
         Log.d(TAG, "Logging out user")
         cancelSessionTimeout()
-        
-        // Store reminder data temporarily
-        val reminderData = mutableMapOf<String, Any?>()
-        reminderData["reminder_title"] = prefs.getString("reminder_title", null)
-        reminderData["reminder_message"] = prefs.getString("reminder_message", null)
-        reminderData["reminder_date"] = prefs.getString("reminder_date", null)
-        reminderData["reminder_schedule_id"] = prefs.getString("reminder_schedule_id", null)
-        
-        // Clear all preferences
         editor.clear()
         editor.apply()
-        
-        // Restore reminder data
-        reminderData.forEach { (key, value) ->
-            if (value != null) {
-                editor.putString(key, value as String)
-            }
-        }
-        editor.apply()
-        
         sessionTimeoutDialogShown = false
         stopExpiryTimer()
-    }
-    
-    // Notification preferences
-    fun setNotificationsEnabled(enabled: Boolean) {
-        editor.putBoolean(KEY_NOTIFICATIONS_ENABLED, enabled)
-        editor.apply()
-    }
-    
-    fun getNotificationsEnabled(): Boolean {
-        return prefs.getBoolean(KEY_NOTIFICATIONS_ENABLED, true)
-    }
-    
-    fun saveFCMToken(token: String) {
-        editor.putString(KEY_FCM_TOKEN, token)
-        editor.apply()
-        Log.d(TAG, "FCM token saved")
-    }
-    
-    fun getFCMToken(): String? {
-        return prefs.getString(KEY_FCM_TOKEN, null)
-    }
-    
-    // Notification count methods
-    fun setUnreadNotificationCount(count: Int) {
-        editor.putInt(KEY_UNREAD_NOTIFICATION_COUNT, count)
-        editor.putLong(KEY_LAST_NOTIFICATION_COUNT_UPDATE, System.currentTimeMillis())
-        editor.apply()
-        Log.d(TAG, "Updated unread notification count: $count")
-    }
-    
-    fun getUnreadNotificationCount(): Int {
-        return prefs.getInt(KEY_UNREAD_NOTIFICATION_COUNT, -1)
-    }
-    
-    fun getLastNotificationCountUpdateTime(): Long {
-        return prefs.getLong(KEY_LAST_NOTIFICATION_COUNT_UPDATE, 0)
-    }
-    
-    fun incrementUnreadNotificationCount() {
-        val currentCount = getUnreadNotificationCount()
-        if (currentCount >= 0) {
-            setUnreadNotificationCount(currentCount + 1)
-        } else {
-            setUnreadNotificationCount(1)
-        }
     }
     
     // Session timeout handling
@@ -478,13 +408,6 @@ class SessionManager private constructor(context: Context) {
      * @return The email string or null if not found or not logged in
      */
     fun getUserEmail(): String? {
-        // First try to get from SharedPreferences
-        val savedEmail = prefs.getString(KEY_USER_EMAIL, null)
-        if (!savedEmail.isNullOrEmpty()) {
-            return savedEmail
-        }
-        
-        // If not in SharedPreferences, try to get from token
         val token = getToken() ?: return null
         return extractEmailFromToken(token)
     }
@@ -513,30 +436,5 @@ class SessionManager private constructor(context: Context) {
             }
             return false
         }
-    }
-
-    fun saveUserEmail(email: String) {
-        editor.putString(KEY_USER_EMAIL, email)
-        editor.apply()
-        Log.d(TAG, "User email saved")
-    }
-
-    fun clearSession() {
-        editor.clear()
-        editor.apply()
-        Log.d(TAG, "Session cleared")
-    }
-
-    // For backward compatibility with existing code
-    fun setFCMToken(token: String) {
-        saveFCMToken(token)
-    }
-    
-    fun isInAppNotificationsEnabled(): Boolean {
-        return getNotificationsEnabled()
-    }
-    
-    fun isPushNotificationsEnabled(): Boolean {
-        return getNotificationsEnabled()
     }
 } 
