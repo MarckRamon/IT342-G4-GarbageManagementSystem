@@ -60,8 +60,42 @@
             android:name="com.example.GarbageMS.MapActivity"
             android:exported="false"
             android:theme="@style/Theme.Vermigo"/>
-        <activity android:name="com.example.GarbageMS.NotificationsActivity" />
-        <activity android:name="com.example.GarbageMS.SecurityQuestionsActivity" />
+        <activity
+            android:name="com.example.GarbageMS.SettingsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Vermigo"/>
+        <activity
+            android:name="com.example.GarbageMS.HistoryActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Vermigo"/>
+        <activity
+            android:name="com.example.GarbageMS.MissedReportsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Vermigo"/>
+        <activity
+            android:name="com.example.GarbageMS.NotificationsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Vermigo"/>
+        <activity
+            android:name="com.example.garbagemanagement.activities.NotificationsActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Vermigo"/>
+
+        <!-- FCM Service -->
+        <service
+            android:name="com.example.GarbageMS.services.FCMService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+        
+        <!-- Notification Alarm Receiver -->
+        <receiver 
+            android:name="com.example.GarbageMS.receivers.NotificationAlarmReceiver"
+            android:enabled="true"
+            android:exported="false" />
+            
     </application>
 
     <uses-permission android:name="android.permission.INTERNET" />
@@ -69,5 +103,11 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="29" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
 
 </manifest>

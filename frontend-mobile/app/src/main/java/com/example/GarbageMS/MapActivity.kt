@@ -66,8 +66,9 @@ class MapActivity : BaseActivity() {
         // BaseActivity already handles session checks
         supportActionBar?.hide()
         
-        // Initialize feedbackService with the session manager
+        // Initialize services with the session manager
         feedbackService.initialize(sessionManager)
+        pickupLocationService.initialize(sessionManager)
         
         // Initialize map
         mapView = findViewById(R.id.mapView)
